@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --app --src-dir --no-git --yes)",
+      "Bash(npx create-next-app@latest app-temp --typescript --tailwind --app --src-dir --no-git --yes)",
+      "Bash(cp -r app-temp/node_modules .)",
+      "Bash(cp -r app-temp/public .)",
+      "Bash(cp -r app-temp/src .)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx shadcn@latest init --yes --defaults)"
+    ]
+  }
+}
