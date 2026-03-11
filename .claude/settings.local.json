@@ -8,7 +8,12 @@
       "Bash(cp -r app-temp/src .)",
       "Bash(npm install:*)",
       "Bash(npx prisma:*)",
-      "Bash(npx shadcn@latest init --yes --defaults)"
+      "Bash(npx shadcn@latest init --yes --defaults)",
+      "Bash(npx shadcn@latest add button table badge input label card dialog dropdown-menu select sheet separator skeleton --yes)",
+      "Bash(npx shadcn@latest add toast --yes)",
+      "Bash(npx shadcn@latest add sonner --yes)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)"
     ]
   }
 }
