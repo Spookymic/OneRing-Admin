@@ -5,56 +5,93 @@ Ce document permet de reprendre le projet rapidement entre deux sessions Claude.
 ## Résumé du projet
 
 Outil Next.js + TypeScript remplaçant les consoles M365 (Entra, Exchange, Admin Center).
-Auth SSO Microsoft. Appels Microsoft Graph API. Audit log + rollback. Échéance : 31/03/2026.
+Auth SSO Microsoft. Appels Microsoft Graph API. Audit log + rollback. Echéance : 31/03/2026.
 
-## État d'avancement
+## Etat d'avancement
 
-| Phase                        | Statut       | Notes |
-| ---------------------------- | ------------ | ----- |
-| Cadrage                      | Terminé      |       |
-| Documentation initiale       | Terminé      |       |
-| Initialisation du projet     | À faire      |       |
-| Authentification MSAL        | À faire      |       |
-| Liste utilisateurs           | À faire      |       |
-| Réinitialisation mot de passe | À faire     |       |
-| Gestion groupes              | À faire      |       |
-| Gestion membres              | À faire      |       |
-| Gestion licences             | À faire      |       |
-| Audit log                    | À faire      |       |
-| Rollback                     | À faire      |       |
+| Phase                        | Statut   | Notes                                    |
+| ---------------------------- | -------- | ---------------------------------------- |
+| Cadrage                      | Termine  |                                          |
+| Documentation initiale       | Termine  |                                          |
+| Initialisation du projet     | Termine  | Next.js 16, Prisma v7, shadcn/ui v4      |
+| Infrastructure Docker        | Termine  | docker-compose + PostgreSQL 16           |
+| Authentification MSAL        | Termine  | NextAuth v4 + Azure AD provider          |
+| Liste utilisateurs           | Termine  | Page /dashboard/users                    |
+| Reinitialisation MDP         | Termine  | Dialog + API route + audit               |
+| Gestion groupes              | Termine  | Page /dashboard/groups avec filtres      |
+| Gestion membres              | Termine  | Page /dashboard/groups/[id]              |
+| Gestion licences             | Termine  | Page /dashboard/licenses                 |
+| Audit log                    | Termine  | Page /dashboard/audit + PostgreSQL       |
+| Rollback                     | A faire  | payloadBefore present, UI manquante      |
 
-## Fichiers clés à lire en priorité
+## Adaptations techniques notables (vs spec initiale)
 
-1. [CLAUDE.md](../CLAUDE.md) — Règles et conventions du projet
-2. [docs/Architecture.md](Architecture.md) — Stack et choix techniques
-3. `src/services/graph/` — Point d'entrée de toute la logique métier
-4. `prisma/schema.prisma` — Modèle de données (une fois créé)
+- **Prisma v7** : n'accepte plus `url` dans `schema.prisma`. Connexion via `prisma.config.ts` + adaptateur `PrismaPg`.
+- **shadcn/ui v4** : `Button` sans `asChild` (base-ui). Les liens sont wrappés avec `<Link>` natif.
+- **Next.js 15/16** : `params` est une `Promise<{...}>` dans les routes dynamiques — `await params` obligatoire.
+- **Toast** : composant `toast` supprime du registry shadcn v4, remplace par `sonner` + hook de compatibilite `src/hooks/use-toast.ts`.
 
-## Décisions techniques actées
+## Fichiers cles
 
-- SSO Microsoft via MSAL Node (server-side) + NextAuth adapter
-- Pas de rôle applicatif : les droits sont ceux du compte connecté
-- PostgreSQL pour l'audit log (pas de stockage en mémoire)
-- Un seul fichier de service par domaine Graph (`users.ts`, `groups.ts`, etc.)
-- Validation Zod obligatoire côté serveur avant tout appel Graph
+```text
+src/
+  app/
+    api/
+      auth/[...nextauth]/route.ts   # Handler NextAuth
+      users/route.ts                # GET liste utilisateurs
+      users/[id]/reset-password/    # POST reset MDP
+      groups/route.ts               # GET liste groupes
+      groups/[id]/members/route.ts  # GET/POST membres
+      licenses/route.ts             # GET SKUs
+      licenses/[userId]/route.ts    # POST assigner/retirer
+      audit/route.ts                # GET historique
+    dashboard/
+      users/page.tsx
+      groups/page.tsx
+      groups/[id]/page.tsx
+      licenses/page.tsx
+      audit/page.tsx
+  services/
+    graph/users.ts
+    graph/groups.ts
+    graph/licenses.ts
+    audit.ts
+  lib/
+    auth.ts      # Config NextAuth
+    graph.ts     # Factory GraphClient
+    prisma.ts    # Singleton PrismaClient
+prisma/
+  schema.prisma  # 5 modeles : AuditLog, Account, Session, User, VerificationToken
+prisma.config.ts # Connexion Prisma v7
+```
 
-## Points de vigilance
+## Prochaines actions prioritaires
 
-- Toujours vérifier que le compte connecté a bien les rôles admin avant d'exposer une action
-- La réinitialisation de mot de passe n'est pas rollbackable — toujours en informer l'utilisateur
-- Les boîtes partagées et les listes de distribution s'administrent via Graph mais avec des endpoints différents des groupes M365 classiques
-- Tester sur un tenant de dev avant tout déploiement
+1. **Rollback UI** — ajouter un bouton "Annuler" sur les lignes d'audit rollbackables (GROUP_MEMBER_ADD/REMOVE, LICENSE_ASSIGN/REMOVE)
+2. **Validation droits admin** — verifier au login que le compte connecte a bien un role admin sur le tenant (appel `/me/memberOf`)
+3. **Tests** — ajouter tests des API routes avec MSW pour mocker Graph API
+4. **Gestion erreurs Graph** — affichage lisible des erreurs 403/throttling Microsoft Graph
 
-## Prochaine action
-
-Initialiser le projet Next.js et configurer l'authentification MSAL.
+## Commandes utiles
 
 ```bash
-npx create-next-app@latest . --typescript --tailwind --app --src-dir
+# Developement local
+docker compose up -d postgres
+npx prisma migrate dev
+npm run dev
+
+# Build et deploiement
+docker compose up -d --build
+
+# Migrations en prod
+docker compose exec app npx prisma migrate deploy
+
+# Logs
+docker compose logs -f app
 ```
 
 ## Questions ouvertes
 
-- Hébergement : Azure Static Web Apps, Vercel, ou self-hosted ?
-- Base de données : Neon (serverless) ou Supabase ?
-- Faut-il un tableau de bord / dashboard ou uniquement des vues liste ?
+- Hebergement cible : Azure Container Apps, VPS, ou on-premise ?
+- Faut-il une page de dashboard/accueil avec des metriques (nb users, groupes, licences utilisees) ?
+- Gestion des boites partagees via Exchange Online (endpoint different de /groups) ?
