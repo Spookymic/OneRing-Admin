@@ -1,6 +1,21 @@
 services:
+  migrate:
+    build:
+      context: .
+      target: builder
+    working_dir: /app
+    command: sh docker-entrypoint.sh
+    environment:
+      DATABASE_URL: postgresql://m365admin:${POSTGRES_PASSWORD:-changeme}@postgres:5432/m365admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   app:
-    build: .
+    build:
+      context: .
+      target: runner
     ports:
       - "${APP_PORT:-3001}:3000"
     environment:
@@ -11,6 +26,8 @@ services:
       AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
       AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     restart: unless-stopped
