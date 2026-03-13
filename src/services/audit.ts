@@ -3,9 +3,19 @@ import { prisma } from "@/lib/prisma";
 export type AuditAction =
   | "GROUP_MEMBER_ADD"
   | "GROUP_MEMBER_REMOVE"
+  | "GROUP_OWNER_ADD"
+  | "GROUP_OWNER_REMOVE"
+  | "GROUP_CREATE"
   | "LICENSE_ASSIGN"
   | "LICENSE_REMOVE"
-  | "PASSWORD_RESET";
+  | "PASSWORD_RESET"
+  | "ACCOUNT_DISABLE"
+  | "ACCOUNT_ENABLE"
+  | "ROLE_ASSIGN"
+  | "ROLE_REMOVE"
+  | "OOO_UPDATE"
+  | "TEAMS_STATUS_UPDATE"
+  | "ADMIN_SETTINGS_UPDATE";
 
 interface AuditParams {
   userId: string;
@@ -33,8 +43,13 @@ export async function logAudit(params: AuditParams) {
   });
 }
 
-export async function getAuditLogs(limit = 100) {
+export async function getAuditLogs(limit = 100, days?: number) {
+  const since =
+    days && days > 0
+      ? new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+      : undefined;
   return prisma.auditLog.findMany({
+    where: since ? { createdAt: { gte: since } } : undefined,
     orderBy: { createdAt: "desc" },
     take: limit,
   });

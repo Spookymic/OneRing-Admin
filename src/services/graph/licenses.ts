@@ -1,4 +1,4 @@
-import type { Client } from "@microsoft/microsoft-graph-client";
+import { graphFetch } from "@/lib/graph";
 
 export interface SubscribedSku {
   skuId: string;
@@ -7,29 +7,29 @@ export interface SubscribedSku {
   prepaidUnits: { enabled: number; suspended: number; warning: number };
 }
 
-export async function listSubscribedSkus(client: Client): Promise<SubscribedSku[]> {
-  const response = await client.api("/subscribedSkus").get();
-  return response.value;
+export async function listSubscribedSkus(accessToken: string): Promise<SubscribedSku[]> {
+  const data = await graphFetch<{ value: SubscribedSku[] }>(accessToken, "/subscribedSkus");
+  return data.value;
 }
 
 export async function assignLicense(
-  client: Client,
+  accessToken: string,
   userId: string,
   skuId: string
 ): Promise<void> {
-  await client.api(`/users/${userId}/assignLicense`).post({
-    addLicenses: [{ skuId }],
-    removeLicenses: [],
+  await graphFetch(accessToken, `/users/${userId}/assignLicense`, {
+    method: "POST",
+    body: JSON.stringify({ addLicenses: [{ skuId }], removeLicenses: [] }),
   });
 }
 
 export async function removeLicense(
-  client: Client,
+  accessToken: string,
   userId: string,
   skuId: string
 ): Promise<void> {
-  await client.api(`/users/${userId}/assignLicense`).post({
-    addLicenses: [],
-    removeLicenses: [skuId],
+  await graphFetch(accessToken, `/users/${userId}/assignLicense`, {
+    method: "POST",
+    body: JSON.stringify({ addLicenses: [], removeLicenses: [skuId] }),
   });
 }

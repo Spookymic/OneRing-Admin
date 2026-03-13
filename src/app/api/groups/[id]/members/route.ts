@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
-import { getGraphClient } from "@/lib/graph";
 import { listGroupMembers, addGroupMember, removeGroupMember, getGroup } from "@/services/graph/groups";
 import { getUser } from "@/services/graph/users";
 import { logAudit } from "@/services/audit";
@@ -14,10 +13,10 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   }
   const { id } = await params;
   try {
-    const client = getGraphClient(session.accessToken);
-    const members = await listGroupMembers(client, id);
+    const members = await listGroupMembers(session.accessToken, id);
     return NextResponse.json(members);
   } catch (error: any) {
+    console.error("[/api/groups/[id]/members GET]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -39,14 +38,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   try {
-    const client = getGraphClient(session.accessToken);
+    const token = session.accessToken;
     const [group, user] = await Promise.all([
-      getGroup(client, id),
-      getUser(client, parsed.data.userId),
+      getGroup(token, id),
+      getUser(token, parsed.data.userId),
     ]);
 
     if (parsed.data.action === "add") {
-      await addGroupMember(client, id, parsed.data.userId);
+      await addGroupMember(token, id, parsed.data.userId);
       await logAudit({
         userId: session.user.email,
         userUpn: session.user.email,
@@ -58,7 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         payloadAfter: { addedUserId: parsed.data.userId, addedUserName: user.displayName },
       });
     } else {
-      await removeGroupMember(client, id, parsed.data.userId);
+      await removeGroupMember(token, id, parsed.data.userId);
       await logAudit({
         userId: session.user.email,
         userUpn: session.user.email,
@@ -73,6 +72,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[/api/groups/[id]/members POST]", error);
+    const msg: string = error.message ?? "";
+    if (msg.includes("on-premise") || msg.includes("hosted on") || msg.includes("inactive") || msg.includes("MailboxNotEnabled")) {
+      return NextResponse.json({ error: "exchange_managed" }, { status: 422 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

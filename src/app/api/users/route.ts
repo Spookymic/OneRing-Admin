@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getGraphClient } from "@/lib/graph";
 import { listUsers } from "@/services/graph/users";
 
 export async function GET() {
@@ -10,10 +9,10 @@ export async function GET() {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
   try {
-    const client = getGraphClient(session.accessToken);
-    const users = await listUsers(client);
+    const users = await listUsers(session.accessToken);
     return NextResponse.json(users);
   } catch (error: any) {
+    console.error("[/api/users]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

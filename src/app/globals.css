@@ -47,73 +47,100 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ─── Conserto Brand Palette ────────────────────────────────────── */
+/* Dark Blue: #01031B  |  Pink: #D8346E  |  White: #FFFFFF          */
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Base */
+  --background: #FFFFFF;
+  --foreground: #01031B;
+
+  /* Card */
+  --card: #FFFFFF;
+  --card-foreground: #01031B;
+
+  /* Popover */
+  --popover: #FFFFFF;
+  --popover-foreground: #01031B;
+
+  /* Primary = Pink */
+  --primary: #D8346E;
+  --primary-foreground: #FFFFFF;
+
+  /* Secondary = light tint of dark blue */
+  --secondary: #F0F0F6;
+  --secondary-foreground: #01031B;
+
+  /* Muted */
+  --muted: #F0F0F6;
+  --muted-foreground: #5C5C7A;
+
+  /* Accent = very light pink */
+  --accent: #FAE8EF;
+  --accent-foreground: #01031B;
+
+  /* Destructive (red kept for semantic error states) */
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  /* Borders & inputs */
+  --border: #E2E2EC;
+  --input: #E2E2EC;
+  --ring: #D8346E;
+
+  /* Border radius — matches brand card radius (16px) */
+  --radius: 1rem;
+
+  /* Charts — brand palette shades */
+  --chart-1: #D8346E;
+  --chart-2: #01031B;
+  --chart-3: #8C1F47;
+  --chart-4: #F5A0C0;
+  --chart-5: #FAD0E0;
+
+  /* Sidebar — Dark Blue background */
+  --sidebar: #01031B;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #D8346E;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255, 255, 255, 0.10);
+  --sidebar-ring: #D8346E;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Dark mode — Dark Blue bg, White text, Pink accents */
+  --background: #01031B;
+  --foreground: #FFFFFF;
+  --card: #0A0D2E;
+  --card-foreground: #FFFFFF;
+  --popover: #0A0D2E;
+  --popover-foreground: #FFFFFF;
+  --primary: #D8346E;
+  --primary-foreground: #FFFFFF;
+  --secondary: #1A1D3D;
+  --secondary-foreground: #FFFFFF;
+  --muted: #1A1D3D;
+  --muted-foreground: #9999B8;
+  --accent: #3D1228;
+  --accent-foreground: #FFFFFF;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --border: rgba(255, 255, 255, 0.10);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #D8346E;
+  --chart-1: #D8346E;
+  --chart-2: #F5A0C0;
+  --chart-3: #8C1F47;
+  --chart-4: #FAD0E0;
+  --chart-5: #FAE8EF;
+  --sidebar: #01031B;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #D8346E;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255, 255, 255, 0.10);
+  --sidebar-ring: #D8346E;
 }
 
 @layer base {
@@ -126,4 +153,57 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ─── Accessibility Filters ─────────────────────────────────────── */
+body.a11y-monochrome {
+  filter: grayscale(1);
+}
+
+body.a11y-high-contrast {
+  /* Fond blanc pur, texte noir pur — aucun filtre */
+  --background: #FFFFFF;
+  --foreground: #000000;
+  --card: #FFFFFF;
+  --card-foreground: #000000;
+  --popover: #FFFFFF;
+  --popover-foreground: #000000;
+  --muted-foreground: #000000;
+  --secondary: #E0E0E0;
+  --secondary-foreground: #000000;
+  --muted: #E0E0E0;
+  --accent: #E0E0E0;
+  --accent-foreground: #000000;
+  --border: #000000;
+  --input: #000000;
+}
+
+/* Fond blanc dans le contenu principal */
+body.a11y-high-contrast main {
+  background-color: #FFFFFF !important;
+}
+
+/* Correction des couleurs en opacité réduite (ex: text-[#01031B]/40) */
+body.a11y-high-contrast main [class*="01031B"] {
+  color: #000000 !important;
+}
+
+/* Correction des classes grises Tailwind */
+body.a11y-high-contrast main .text-gray-400,
+body.a11y-high-contrast main .text-gray-500,
+body.a11y-high-contrast main .text-gray-600,
+body.a11y-high-contrast main .text-gray-700 {
+  color: #000000 !important;
+}
+
+body.a11y-protanopia {
+  filter: url(#a11y-protanopia);
+}
+
+body.a11y-deuteranopia {
+  filter: url(#a11y-deuteranopia);
+}
+
+body.a11y-tritanopia {
+  filter: url(#a11y-tritanopia);
 }

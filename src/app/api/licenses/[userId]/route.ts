@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
-import { getGraphClient } from "@/lib/graph";
 import { assignLicense, removeLicense } from "@/services/graph/licenses";
 import { getUser } from "@/services/graph/users";
 import { logAudit } from "@/services/audit";
@@ -10,6 +9,7 @@ import { logAudit } from "@/services/audit";
 const schema = z.object({
   skuId: z.string().uuid(),
   action: z.enum(["assign", "remove"]),
+  skuName: z.string().optional(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
@@ -24,10 +24,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   try {
-    const client = getGraphClient(session.accessToken);
-    const user = await getUser(client, userId);
+    const token = session.accessToken;
+    const user = await getUser(token, userId);
     if (parsed.data.action === "assign") {
-      await assignLicense(client, userId, parsed.data.skuId);
+      await assignLicense(token, userId, parsed.data.skuId);
       await logAudit({
         userId: session.user.email,
         userUpn: session.user.email,
@@ -36,10 +36,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
         targetName: user.displayName,
         targetType: "User",
         payloadBefore: { assignedLicenses: user.assignedLicenses },
-        payloadAfter: { addedSkuId: parsed.data.skuId },
+        payloadAfter: { addedSkuId: parsed.data.skuId, skuName: parsed.data.skuName },
       });
     } else {
-      await removeLicense(client, userId, parsed.data.skuId);
+      await removeLicense(token, userId, parsed.data.skuId);
       await logAudit({
         userId: session.user.email,
         userUpn: session.user.email,
@@ -47,12 +47,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
         targetId: userId,
         targetName: user.displayName,
         targetType: "User",
-        payloadBefore: { removedSkuId: parsed.data.skuId },
+        payloadBefore: { removedSkuId: parsed.data.skuId, skuName: parsed.data.skuName },
         payloadAfter: { assignedLicenses: user.assignedLicenses },
       });
     }
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error("[/api/licenses/[userId]]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

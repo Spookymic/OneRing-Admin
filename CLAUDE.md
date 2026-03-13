@@ -19,13 +19,30 @@ Cible : administrateurs M365. Echeance MVP : 31/03/2026.
 - Les droits sont ceux du compte connecte — pas de role applicatif custom
 - Token Graph recupere via le callback `jwt` de NextAuth, passe aux services via `getServerSession`
 - Appeler `getGraphClient(session.accessToken)` depuis `src/lib/graph.ts` dans chaque API route
+- **JWT pur** : pas de PrismaAdapter (supprime pour eviter boucle auth)
 
 ## Points techniques importants
 
 - **Prisma v7** : connexion configuree dans `prisma.config.ts` (pas dans `schema.prisma`)
 - **Next.js 16** : `params` est une `Promise<{...}>` dans les routes dynamiques — toujours `await params`
-- **shadcn/ui v4** : `Button` n'a plus de prop `asChild` — wrapper avec `<Link>` natif
+- **shadcn/ui v4** : base sur `@base-ui/react`, `Button` n'a plus de prop `asChild` — wrapper avec `<Link>` natif
 - **Toast** : utiliser `src/hooks/use-toast.ts` (wrapper sonner) — ne pas importer depuis shadcn directement
+- **Select onValueChange** : peut recevoir `string | null` — toujours fournir une valeur par defaut (`v ?? "all"`)
+- **listUsers** : ne filtre plus par `userType eq 'Member'` — retourne tous les comptes. Le tri et filtre par type sont cote client via `detectAccountType()` de `src/lib/account-types.ts`
+
+## Types de comptes utilisateurs
+
+La detection du type se fait cote client dans `src/lib/account-types.ts` :
+
+| Type      | Label            | Criteres (heuristique)                                      |
+|-----------|------------------|-------------------------------------------------------------|
+| user      | Utilisateur      | Member, actif, avec licences                                |
+| guest     | Invite           | userType = 'Guest'                                          |
+| shared    | Boite partagee   | Member, sans licence, mail present                          |
+| room      | Salle            | UPN/displayName contient "room" ou "salle"                  |
+| equipment | Equipement       | UPN/displayName contient "equip", "ressource", "imprimante" |
+| service   | Compte service   | Member, sans licence, sans mail                             |
+| disabled  | Desactive        | accountEnabled = false avec licences                        |
 
 ## Conventions de code
 
@@ -33,39 +50,64 @@ Cible : administrateurs M365. Echeance MVP : 31/03/2026.
 - Validation Zod obligatoire cote serveur avant tout appel Graph API
 - Les appels Microsoft Graph passent uniquement par `src/services/graph/`
 - Audit obligatoire dans chaque mutation via `logAudit()` de `src/services/audit.ts`
+- Actions audit : `GROUP_MEMBER_ADD/REMOVE`, `GROUP_OWNER_ADD/REMOVE`, `GROUP_CREATE`, `LICENSE_ASSIGN/REMOVE`, `PASSWORD_RESET`
 
 ## Structure des dossiers
 
 ```text
 src/
   app/
-    api/          # API Routes Next.js (auth, users, groups, licenses, audit)
-    auth/         # Pages signin et error
-    dashboard/    # Pages UI (users, groups, groups/[id], licenses, audit)
+    api/
+      users/route.ts              # GET tous les comptes (sans filtre userType)
+      users/[id]/groups/route.ts  # GET/POST groupes d'un utilisateur
+      users/[id]/reset-password/  # POST reset MDP
+      groups/route.ts             # GET liste + POST creation
+      groups/[id]/members/        # GET/POST membres
+      groups/[id]/owners/         # GET/POST owners
+      licenses/route.ts           # GET SKUs
+      licenses/[userId]/route.ts  # POST assigner/retirer
+      audit/route.ts              # GET historique
+    dashboard/
+      page.tsx          # Tableau de bord principal (stats + SKUs + audit recent)
+      users/page.tsx
+      groups/page.tsx
+      groups/[id]/page.tsx
+      licenses/page.tsx
+      audit/page.tsx
   components/
-    layout/       # Sidebar
-    users/        # Composants specifiques utilisateurs
-    groups/       # Composants specifiques groupes
-    ui/           # Composants shadcn/ui
+    layout/
+      sidebar.tsx       # Navigation avec lien Dashboard
+    users/
+      reset-password-dialog.tsx
+      user-groups-sheet.tsx     # Panneau lateral groupes utilisateur
+    groups/
+      add-member-dialog.tsx     # Ajout membre/owner
+      create-group-dialog.tsx   # Creation de groupe
+    ui/                 # Composants shadcn/ui
   services/
-    graph/        # Wrappers Microsoft Graph API (users, groups, licenses)
-    audit.ts      # Service de journalisation
+    graph/
+      users.ts          # listUsers, getUser, listUserMemberOf, resetUserPassword
+      groups.ts         # CRUD groupes + membres + owners
+      licenses.ts       # listSubscribedSkus, assignLicense, removeLicense
+    audit.ts            # logAudit, getAuditLogs
   lib/
-    auth.ts       # Config NextAuth
-    graph.ts      # Factory GraphClient
-    prisma.ts     # Singleton PrismaClient
+    auth.ts             # Config NextAuth (JWT pur)
+    graph.ts            # Factory GraphClient
+    prisma.ts           # Singleton PrismaClient
+    account-types.ts    # detectAccountType, ACCOUNT_TYPE_CONFIG
+    license-names.ts    # SKU_FRIENDLY_NAMES, getSkuFriendlyName
   hooks/
-    use-toast.ts  # Wrapper sonner
+    use-toast.ts        # Wrapper sonner
   types/
     next-auth.d.ts
 ```
 
 ## Workflow de developpement
 
-1. `docker compose up -d postgres` puis `npx prisma migrate dev` puis `npm run dev`
+1. `docker compose up -d postgres` puis `npx prisma db push` puis `npm run dev`
 2. Tester les appels Graph sur un tenant de dev avant prod
 3. Utiliser `rtk` pour toutes les commandes (voir `~/.claude/CLAUDE.md`)
-4. Ne pas committer si TypeScript a des erreurs (`npm run build`)
+4. Ne pas committer si TypeScript a des erreurs (`npx tsc --noEmit`)
 
 ## Fichiers cles
 

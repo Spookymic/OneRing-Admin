@@ -1,140 +1,329 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { Users, UserPlus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { M365User } from "@/services/graph/users";
 import type { SubscribedSku } from "@/services/graph/licenses";
+import { getSkuFriendlyName } from "@/lib/license-names";
+import { apiFetch } from "@/lib/api";
 
 export default function LicensesPage() {
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const [selectedSku, setSelectedSku] = useState<SubscribedSku | null>(null);
+  const [search, setSearch] = useState("");
+  const [addSearch, setAddSearch] = useState("");
+
+  const { data: skus, isLoading: skusLoading } = useQuery<SubscribedSku[]>({
+    queryKey: ["skus"],
+    queryFn: () => apiFetch<SubscribedSku[]>("/api/licenses"),
+  });
+
   const { data: users, isLoading: usersLoading } = useQuery<M365User[]>({
     queryKey: ["users"],
-    queryFn: () => fetch("/api/users").then((r) => r.json()),
+    queryFn: () => apiFetch<M365User[]>("/api/users"),
+    enabled: !!selectedSku,
   });
 
-  const { data: skus } = useQuery<SubscribedSku[]>({
-    queryKey: ["skus"],
-    queryFn: () => fetch("/api/licenses").then((r) => r.json()),
-  });
+  // Auto-open SKU from URL param (e.g. navigating from dashboard)
+  useEffect(() => {
+    const skuId = searchParams.get("sku");
+    if (skuId && skus) {
+      const sku = skus.find((s) => s.skuId === skuId);
+      if (sku) {
+        setSelectedSku(sku);
+        router.replace("/dashboard/licenses");
+      }
+    }
+  }, [searchParams, skus, router]);
 
   const mutation = useMutation({
-    mutationFn: ({ userId, skuId, action }: { userId: string; skuId: string; action: "assign" | "remove" }) =>
-      fetch(`/api/licenses/${userId}`, {
+    mutationFn: ({
+      userId, skuId, skuName, action,
+    }: { userId: string; skuId: string; skuName: string; action: "assign" | "remove" }) =>
+      apiFetch(`/api/licenses/${userId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skuId, action }),
-      }).then((r) => r.json()),
+        body: JSON.stringify({ skuId, skuName, action }),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["skus"] });
       queryClient.invalidateQueries({ queryKey: ["audit"] });
       toast({ title: "Licence mise à jour" });
     },
-    onError: (err: any) => toast({ title: "Erreur", description: err.message, variant: "destructive" }),
+    onError: (err: any) =>
+      toast({ title: "Erreur", description: err.message, variant: "destructive" }),
   });
 
-  const filtered = users?.filter(
+  const licensedUsers = selectedSku
+    ? (users?.filter((u) => u.assignedLicenses.some((l) => l.skuId === selectedSku.skuId)) ?? [])
+    : [];
+
+  const filteredLicensed = licensedUsers.filter(
     (u) =>
+      search === "" ||
       u.displayName.toLowerCase().includes(search.toLowerCase()) ||
       u.userPrincipalName.toLowerCase().includes(search.toLowerCase())
   );
 
+  const unlicensedUsers = selectedSku
+    ? (users
+        ?.filter(
+          (u) =>
+            !u.assignedLicenses.some((l) => l.skuId === selectedSku.skuId) &&
+            u.userType !== "Guest" &&
+            u.accountEnabled &&
+            (addSearch === "" ||
+              u.displayName.toLowerCase().includes(addSearch.toLowerCase()) ||
+              u.userPrincipalName.toLowerCase().includes(addSearch.toLowerCase()))
+        )
+        .slice(0, 10) ?? [])
+    : [];
+
+  const totalConsumed = skus?.reduce((a, s) => a + s.consumedUnits, 0) ?? 0;
+  const totalEnabled = skus?.reduce((a, s) => a + s.prepaidUnits.enabled, 0) ?? 0;
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">Licences</h2>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Licences</h2>
+          <p className="text-sm text-[#01031B]/50 mt-0.5">
+            Gestion des abonnements Microsoft 365
+          </p>
+        </div>
         {skus && (
-          <div className="text-sm text-gray-500">
-            {skus.length} SKU(s) disponible(s)
-          </div>
+          <Badge variant="secondary">
+            {totalConsumed} / {totalEnabled} utilisées
+          </Badge>
         )}
       </div>
-      <Input
-        placeholder="Rechercher un utilisateur..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="mb-4 max-w-sm"
-      />
-      <div className="rounded-md border bg-white">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Utilisateur</TableHead>
-              <TableHead>Licences actives</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {usersLoading
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 3 }).map((_, j) => (
-                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              : filtered?.map((user) => {
-                  const userSkuIds = user.assignedLicenses.map((l) => l.skuId);
-                  const userSkuNames = skus
-                    ?.filter((s) => userSkuIds.includes(s.skuId))
-                    .map((s) => s.skuPartNumber) ?? [];
 
-                  return (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <div className="font-medium">{user.displayName}</div>
-                        <div className="text-gray-500 text-xs">{user.userPrincipalName}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {userSkuNames.length > 0
-                            ? userSkuNames.map((name) => (
-                                <Badge key={name} variant="secondary" className="text-xs">{name}</Badge>
-                              ))
-                            : <span className="text-gray-400 text-sm">Aucune</span>}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {skus?.map((sku) => {
-                            const assigned = userSkuIds.includes(sku.skuId);
-                            return (
-                              <Button
-                                key={sku.skuId}
-                                size="sm"
-                                variant={assigned ? "destructive" : "outline"}
-                                className="text-xs h-7"
-                                onClick={() =>
-                                  mutation.mutate({
-                                    userId: user.id,
-                                    skuId: sku.skuId,
-                                    action: assigned ? "remove" : "assign",
-                                  })
-                                }
-                                disabled={mutation.isPending}
-                              >
-                                {assigned ? "Retirer" : "Assigner"} {sku.skuPartNumber}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-          </TableBody>
-        </Table>
+      {/* SKU cards grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {skusLoading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="p-5">
+                <Skeleton className="h-20 w-full" />
+              </Card>
+            ))
+          : skus?.map((sku) => {
+              const name = getSkuFriendlyName(sku.skuPartNumber);
+              const total = sku.prepaidUnits.enabled;
+              const pct = total > 0 ? Math.round((sku.consumedUnits / total) * 100) : 0;
+              const isFull = sku.consumedUnits >= total && total > 0;
+              const isSelected = selectedSku?.skuId === sku.skuId;
+
+              return (
+                <Card
+                  key={sku.skuId}
+                  className={`p-5 space-y-3 cursor-pointer hover:border-[#D8346E] hover:shadow-sm transition-all ${
+                    isSelected ? "border-[#D8346E] shadow-sm bg-[#D8346E]/5" : ""
+                  }`}
+                  onClick={() => {
+                    setSelectedSku(isSelected ? null : sku);
+                    setSearch("");
+                    setAddSearch("");
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium leading-tight">{name}</p>
+                    {isFull && (
+                      <Badge variant="destructive" className="text-xs shrink-0">Complet</Badge>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-[#01031B]/50">
+                      <span>{sku.consumedUnits} assigné{sku.consumedUnits !== 1 ? "s" : ""}</span>
+                      <span>{total} dispo.</span>
+                    </div>
+                    <div className="h-1.5 bg-[#01031B]/8 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          isFull ? "bg-destructive" : pct > 80 ? "bg-[#8C1F47]" : "bg-[#D8346E]"
+                        }`}
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={isSelected ? "default" : "outline"}
+                    className="w-full text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedSku(isSelected ? null : sku);
+                      setSearch("");
+                      setAddSearch("");
+                    }}
+                  >
+                    <Users className="h-3 w-3 mr-1" />
+                    Voir les bénéficiaires ({sku.consumedUnits})
+                  </Button>
+                </Card>
+              );
+            })}
       </div>
+
+      {/* Side sheet — beneficiaries */}
+      <Sheet open={!!selectedSku} onOpenChange={(open) => { if (!open) setSelectedSku(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto p-0">
+          {selectedSku && (
+            <>
+              <SheetHeader className="p-6 pb-4 border-b">
+                <SheetTitle className="text-lg">
+                  {getSkuFriendlyName(selectedSku.skuPartNumber)}
+                </SheetTitle>
+                <SheetDescription className="text-xs">{selectedSku.skuPartNumber}</SheetDescription>
+                <div className="flex items-center gap-2 pt-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {selectedSku.consumedUnits} / {selectedSku.prepaidUnits.enabled} utilisées
+                  </Badge>
+                  {selectedSku.consumedUnits >= selectedSku.prepaidUnits.enabled &&
+                    selectedSku.prepaidUnits.enabled > 0 && (
+                      <Badge variant="destructive" className="text-xs">Complet</Badge>
+                    )}
+                </div>
+              </SheetHeader>
+
+              <div className="p-6 space-y-6">
+                {/* Beneficiaries list */}
+                <div>
+                  <h3 className="font-medium text-sm flex items-center gap-2 mb-3">
+                    <Users className="h-4 w-4" />
+                    Bénéficiaires ({licensedUsers.length})
+                  </h3>
+                  <Input
+                    placeholder="Rechercher..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="mb-3"
+                  />
+                  {usersLoading ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton key={i} className="h-10 w-full" />
+                      ))}
+                    </div>
+                  ) : filteredLicensed.length === 0 ? (
+                    <p className="text-sm text-[#01031B]/40 text-center py-4">Aucun bénéficiaire</p>
+                  ) : (
+                    <div className="space-y-1 max-h-72 overflow-y-auto">
+                      {filteredLicensed.map((u) => (
+                        <div
+                          key={u.id}
+                          className="flex items-center justify-between rounded-md border px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{u.displayName}</p>
+                            <p className="text-xs text-[#01031B]/40 truncate">{u.userPrincipalName}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-500 hover:text-red-700 shrink-0 h-7 w-7 p-0 ml-2"
+                            onClick={() =>
+                              mutation.mutate({
+                                userId: u.id,
+                                skuId: selectedSku.skuId,
+                                skuName: getSkuFriendlyName(selectedSku.skuPartNumber),
+                                action: "remove",
+                              })
+                            }
+                            disabled={mutation.isPending}
+                            title="Retirer la licence"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Assign to user */}
+                <div>
+                  <h3 className="font-medium text-sm flex items-center gap-2 mb-3">
+                    <UserPlus className="h-4 w-4" />
+                    Assigner à un utilisateur
+                  </h3>
+                  {selectedSku.consumedUnits >= selectedSku.prepaidUnits.enabled &&
+                    selectedSku.prepaidUnits.enabled > 0 ? (
+                    <p className="text-sm text-red-500 text-center py-2">
+                      Toutes les licences disponibles sont utilisées.
+                    </p>
+                  ) : (
+                    <>
+                      <Input
+                        placeholder="Rechercher un utilisateur..."
+                        value={addSearch}
+                        onChange={(e) => setAddSearch(e.target.value)}
+                        className="mb-2"
+                      />
+                      {addSearch && (
+                        <div className="max-h-48 overflow-y-auto border rounded-md divide-y">
+                          {usersLoading ? (
+                            <p className="text-sm text-center py-3 text-[#01031B]/40">Chargement...</p>
+                          ) : unlicensedUsers.length === 0 ? (
+                            <p className="text-sm text-center py-3 text-[#01031B]/40">Aucun résultat</p>
+                          ) : (
+                            unlicensedUsers.map((u) => (
+                              <div
+                                key={u.id}
+                                className="flex items-center justify-between px-3 py-2"
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate">{u.displayName}</p>
+                                  <p className="text-xs text-[#01031B]/40 truncate">{u.userPrincipalName}</p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs h-7 ml-2 shrink-0"
+                                  onClick={() => {
+                                    mutation.mutate({
+                                      userId: u.id,
+                                      skuId: selectedSku.skuId,
+                                      skuName: getSkuFriendlyName(selectedSku.skuPartNumber),
+                                      action: "assign",
+                                    });
+                                    setAddSearch("");
+                                  }}
+                                  disabled={mutation.isPending}
+                                >
+                                  Assigner
+                                </Button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

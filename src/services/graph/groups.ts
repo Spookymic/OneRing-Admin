@@ -1,4 +1,4 @@
-import type { Client } from "@microsoft/microsoft-graph-client";
+import { graphFetch } from "@/lib/graph";
 
 export type GroupType = "unified" | "distribution" | "security" | "sharedMailbox";
 
@@ -11,6 +11,12 @@ export interface M365Group {
   mailEnabled: boolean;
   securityEnabled: boolean;
   membershipRule: string | null;
+  /** Propriétaire Exchange pour les listes de distribution classiques */
+  managedBy?: Array<{ id: string; displayName: string; userPrincipalName?: string }> | null;
+  /** Modération : seuls les expéditeurs authentifiés peuvent écrire */
+  requireSenderAuthenticationEnabled?: boolean | null;
+  /** M365 groups : empêcher les membres externes d'envoyer */
+  allowExternalSenders?: boolean | null;
 }
 
 function detectGroupType(group: M365Group): GroupType {
@@ -20,38 +26,178 @@ function detectGroupType(group: M365Group): GroupType {
   return "security";
 }
 
-export async function listGroups(client: Client): Promise<(M365Group & { type: GroupType })[]> {
-  const response = await client
-    .api("/groups")
-    .select("id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled,membershipRule")
-    .top(999)
-    .orderby("displayName")
-    .get();
-  return response.value.map((g: M365Group) => ({ ...g, type: detectGroupType(g) }));
+// SELECT réduit pour la liste (certains champs ne sont pas supportés en OData $filter sur tous les groupes)
+const LIST_SELECT =
+  "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled,membershipRule";
+
+// SELECT complet pour le détail d'un groupe
+const DETAIL_SELECT =
+  "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled," +
+  "membershipRule,requireSenderAuthenticationEnabled,allowExternalSenders";
+
+export async function listGroups(accessToken: string): Promise<(M365Group & { type: GroupType })[]> {
+  const params = new URLSearchParams({
+    $select: LIST_SELECT,
+    $top: "999",
+  });
+  const data = await graphFetch<{ value: M365Group[] }>(accessToken, `/groups?${params}`);
+  return data.value
+    .map((g) => ({ ...g, type: detectGroupType(g) }))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
-export async function getGroup(client: Client, groupId: string): Promise<M365Group & { type: GroupType }> {
-  const group = await client
-    .api(`/groups/${groupId}`)
-    .select("id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled,membershipRule")
-    .get();
+export async function getGroup(
+  accessToken: string,
+  groupId: string
+): Promise<M365Group & { type: GroupType }> {
+  const group = await graphFetch<M365Group>(
+    accessToken,
+    `/groups/${groupId}?$select=${DETAIL_SELECT}`
+  );
   return { ...group, type: detectGroupType(group) };
 }
 
-export async function listGroupMembers(client: Client, groupId: string): Promise<any[]> {
-  const response = await client
-    .api(`/groups/${groupId}/members`)
-    .select("id,displayName,userPrincipalName,mail,jobTitle")
-    .get();
-  return response.value;
+const MEMBER_SELECT = "id,displayName,userPrincipalName,mail,jobTitle";
+// Select minimal valide pour tous les types d'objets annuaire (user, contact, servicePrincipal)
+const OWNER_SELECT = "id,displayName,mail";
+
+export async function listGroupMembers(accessToken: string, groupId: string): Promise<any[]> {
+  const data = await graphFetch<{ value: any[] }>(
+    accessToken,
+    `/groups/${groupId}/members/microsoft.graph.user?$select=${MEMBER_SELECT}`
+  );
+  return data.value;
 }
 
-export async function addGroupMember(client: Client, groupId: string, userId: string): Promise<void> {
-  await client.api(`/groups/${groupId}/members/$ref`).post({
-    "@odata.id": `https://graph.microsoft.com/v1.0/directoryObjects/${userId}`,
+export async function listGroupOwners(accessToken: string, groupId: string): Promise<any[]> {
+  try {
+    // Utilise /owners sans cast microsoft.graph.user pour inclure DL et groupes de sécurité.
+    // Select réduit à id,displayName,mail car userPrincipalName/jobTitle n'existent pas sur les non-utilisateurs.
+    const data = await graphFetch<{ value: any[] }>(
+      accessToken,
+      `/groups/${groupId}/owners?$select=${OWNER_SELECT}`
+    );
+    return data.value;
+  } catch {
+    return [];
+  }
+}
+
+export async function addGroupMember(
+  accessToken: string,
+  groupId: string,
+  userId: string
+): Promise<void> {
+  await graphFetch(accessToken, `/groups/${groupId}/members/$ref`, {
+    method: "POST",
+    body: JSON.stringify({
+      "@odata.id": `https://graph.microsoft.com/v1.0/directoryObjects/${userId}`,
+    }),
   });
 }
 
-export async function removeGroupMember(client: Client, groupId: string, userId: string): Promise<void> {
-  await client.api(`/groups/${groupId}/members/${userId}/$ref`).delete();
+export async function addGroupOwner(
+  accessToken: string,
+  groupId: string,
+  userId: string
+): Promise<void> {
+  await graphFetch(accessToken, `/groups/${groupId}/owners/$ref`, {
+    method: "POST",
+    body: JSON.stringify({
+      "@odata.id": `https://graph.microsoft.com/v1.0/directoryObjects/${userId}`,
+    }),
+  });
+}
+
+export async function removeGroupMember(
+  accessToken: string,
+  groupId: string,
+  userId: string
+): Promise<void> {
+  await graphFetch(accessToken, `/groups/${groupId}/members/${userId}/$ref`, {
+    method: "DELETE",
+  });
+}
+
+export async function removeGroupOwner(
+  accessToken: string,
+  groupId: string,
+  userId: string
+): Promise<void> {
+  await graphFetch(accessToken, `/groups/${groupId}/owners/${userId}/$ref`, {
+    method: "DELETE",
+  });
+}
+
+/** Récupère le nombre de membres et d'owners pour chaque groupe via l'API $batch de Graph. */
+export async function listGroupCounts(
+  accessToken: string,
+  groupIds: string[]
+): Promise<Record<string, { memberCount: number; ownerCount: number }>> {
+  const results: Record<string, { memberCount: number; ownerCount: number }> = {};
+  if (groupIds.length === 0) return results;
+
+  // $batch : max 20 requêtes. Chaque groupe = 2 requêtes (membres + owners). Taille de chunk = 10.
+  const chunkSize = 10;
+  for (let i = 0; i < groupIds.length; i += chunkSize) {
+    const chunk = groupIds.slice(i, i + chunkSize);
+    const requests = chunk.flatMap((id, j) => [
+      {
+        id: `m${i + j}`,
+        method: "GET",
+        url: `/groups/${id}/members/$count`,
+        headers: { ConsistencyLevel: "eventual" },
+      },
+      {
+        id: `o${i + j}`,
+        method: "GET",
+        url: `/groups/${id}/owners/$count`,
+        headers: { ConsistencyLevel: "eventual" },
+      },
+    ]);
+
+    try {
+      const data = await graphFetch<{ responses: Array<{ id: string; status: number; body: unknown }> }>(
+        accessToken,
+        "/$batch",
+        { method: "POST", body: JSON.stringify({ requests }) }
+      );
+      chunk.forEach((id, j) => {
+        const memberResp = data.responses.find((r) => r.id === `m${i + j}`);
+        const ownerResp = data.responses.find((r) => r.id === `o${i + j}`);
+        results[id] = {
+          memberCount: memberResp?.status === 200 ? Number(memberResp.body) : 0,
+          ownerCount: ownerResp?.status === 200 ? Number(ownerResp.body) : 0,
+        };
+      });
+    } catch {
+      chunk.forEach((id) => { results[id] = { memberCount: 0, ownerCount: 0 }; });
+    }
+  }
+  return results;
+}
+
+export async function createGroup(
+  accessToken: string,
+  data: {
+    displayName: string;
+    description?: string;
+    groupType: "unified" | "security" | "distribution";
+    mailNickname: string;
+  }
+): Promise<M365Group> {
+  const isUnified = data.groupType === "unified";
+  const isDistribution = data.groupType === "distribution";
+  const body = {
+    displayName: data.displayName,
+    description: data.description ?? "",
+    mailNickname: data.mailNickname,
+    groupTypes: isUnified ? ["Unified"] : [],
+    mailEnabled: isUnified || isDistribution,
+    securityEnabled: !isDistribution,
+  };
+  return graphFetch<M365Group>(accessToken, "/groups", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }

@@ -1,4 +1,4 @@
-import type { Client } from "@microsoft/microsoft-graph-client";
+import { graphFetch } from "@/lib/graph";
 
 export interface M365User {
   id: string;
@@ -9,35 +9,165 @@ export interface M365User {
   department: string | null;
   accountEnabled: boolean;
   assignedLicenses: Array<{ skuId: string }>;
+  userType: string | null;
+  officeLocation: string | null;
+  mobilePhone: string | null;
+  businessPhones: string[];
+  createdDateTime: string | null;
+  employeeType: string | null;
 }
 
-export async function listUsers(client: Client): Promise<M365User[]> {
-  const response = await client
-    .api("/users")
-    .select("id,displayName,userPrincipalName,mail,jobTitle,department,accountEnabled,assignedLicenses")
-    .filter("userType eq 'Member'")
-    .top(999)
-    .orderby("displayName")
-    .get();
-  return response.value;
+export interface M365UserGroup {
+  id: string;
+  displayName: string;
+  description: string | null;
+  mail: string | null;
+  groupTypes: string[];
+  mailEnabled: boolean;
+  securityEnabled: boolean;
 }
 
-export async function getUser(client: Client, userId: string): Promise<M365User> {
-  return client
-    .api(`/users/${userId}`)
-    .select("id,displayName,userPrincipalName,mail,jobTitle,department,accountEnabled,assignedLicenses")
-    .get();
+const SELECT =
+  "id,displayName,userPrincipalName,mail,jobTitle,department,accountEnabled," +
+  "assignedLicenses,userType,officeLocation,mobilePhone,businessPhones," +
+  "createdDateTime,employeeType";
+
+export async function listUsers(accessToken: string): Promise<M365User[]> {
+  const params = new URLSearchParams({
+    $select: SELECT,
+    $top: "999",
+    $count: "true",
+  });
+  const data = await graphFetch<{ value: M365User[] }>(
+    accessToken,
+    `/users?${params}`,
+    { headers: { ConsistencyLevel: "eventual" } }
+  );
+  return data.value.sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
+export async function getUser(accessToken: string, userId: string): Promise<M365User> {
+  return graphFetch<M365User>(accessToken, `/users/${userId}?$select=${SELECT}`);
+}
+
+export async function listUserMemberOf(accessToken: string, userId: string): Promise<M365UserGroup[]> {
+  const params = new URLSearchParams({
+    $select: "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled",
+    $top: "100",
+  });
+  const data = await graphFetch<{ value: M365UserGroup[] }>(
+    accessToken,
+    `/users/${userId}/memberOf/microsoft.graph.group?${params}`
+  );
+  return data.value.sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
+export interface SignInLog {
+  id: string;
+  createdDateTime: string;
+  appDisplayName: string;
+  ipAddress: string | null;
+  status: {
+    errorCode: number;
+    failureReason: string | null;
+    additionalDetails: string | null;
+  };
+  location: {
+    city: string | null;
+    state: string | null;
+    countryOrRegion: string | null;
+  } | null;
+  clientAppUsed: string | null;
+}
+
+export async function listUserSignInLogs(
+  accessToken: string,
+  userId: string
+): Promise<SignInLog[]> {
+  const params = new URLSearchParams({
+    $filter: `userId eq '${userId}'`,
+    $top: "50",
+    $orderby: "createdDateTime desc",
+    $select: "id,createdDateTime,appDisplayName,ipAddress,status,location,clientAppUsed",
+  });
+  const data = await graphFetch<{ value: SignInLog[] }>(
+    accessToken,
+    `/auditLogs/signIns?${params}`
+  );
+  return data.value;
 }
 
 export async function resetUserPassword(
-  client: Client,
+  accessToken: string,
   userId: string,
   newPassword: string
 ): Promise<void> {
-  await client.api(`/users/${userId}`).patch({
-    passwordProfile: {
-      forceChangePasswordNextSignIn: true,
-      password: newPassword,
-    },
+  await graphFetch(accessToken, `/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      passwordProfile: {
+        forceChangePasswordNextSignIn: true,
+        password: newPassword,
+      },
+    }),
+  });
+}
+
+export async function updateUserEnabled(
+  accessToken: string,
+  userId: string,
+  enabled: boolean
+): Promise<void> {
+  await graphFetch(accessToken, `/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ accountEnabled: enabled }),
+  });
+}
+
+export interface AutomaticRepliesSetting {
+  status: "disabled" | "alwaysEnabled" | "scheduledStartAndEnd";
+  externalAudienceScope: "none" | "contactsOnly" | "all";
+  internalReplyMessage: string;
+  externalReplyMessage: string;
+  scheduledStartDateTime?: { dateTime: string; timeZone: string };
+  scheduledEndDateTime?: { dateTime: string; timeZone: string };
+}
+
+export interface MailboxSettings {
+  automaticRepliesSetting: AutomaticRepliesSetting;
+  timeZone: string | null;
+}
+
+export async function getMailboxSettings(
+  accessToken: string,
+  userId: string
+): Promise<MailboxSettings> {
+  return graphFetch<MailboxSettings>(accessToken, `/users/${userId}/mailboxSettings`);
+}
+
+export async function updateMailboxSettings(
+  accessToken: string,
+  userId: string,
+  settings: { automaticRepliesSetting: Partial<AutomaticRepliesSetting> }
+): Promise<void> {
+  await graphFetch(accessToken, `/users/${userId}/mailboxSettings`, {
+    method: "PATCH",
+    body: JSON.stringify(settings),
+  });
+}
+
+export async function setTeamsStatusMessage(
+  accessToken: string,
+  userId: string,
+  message: string
+): Promise<void> {
+  await graphFetch(accessToken, `/users/${userId}/presence/setStatusMessage`, {
+    method: "POST",
+    body: JSON.stringify({
+      statusMessage: {
+        message: { content: message, contentType: "text" },
+        expiryType: "never",
+      },
+    }),
   });
 }
