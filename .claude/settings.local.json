@@ -13,7 +13,23 @@
       "Bash(npx shadcn@latest add toast --yes)",
       "Bash(npx shadcn@latest add sonner --yes)",
       "Bash(npx tsc:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(netstat -ano)",
+      "Bash(docker compose:*)",
+      "Bash(docker context:*)",
+      "Bash(rtk tsc:*)",
+      "Bash(Start-Process \"C:/Program Files/Docker/Docker/Docker Desktop.exe\")",
+      "Bash(rtk npx:*)",
+      "Bash(mkdir -p \"c:\\\\Users\\\\aymeric.petit\\\\Projets-Git\\\\OneRing Admin\\\\src\\\\app\\\\api\\\\users\\\\[id]\\\\mailbox-settings\")",
+      "Bash(mkdir -p \"c:\\\\Users\\\\aymeric.petit\\\\Projets-Git\\\\OneRing Admin\\\\src\\\\app\\\\api\\\\users\\\\[id]\\\\teams-presence\")",
+      "Bash(mkdir -p \"c:\\\\Users\\\\aymeric.petit\\\\Projets-Git\\\\OneRing Admin\\\\src\\\\app\\\\api\\\\users\\\\[id]\\\\roles\")",
+      "WebFetch(domain:download.microsoft.com)",
+      "Bash(file_path=\"C:/Users/aymeric.petit/.claude/projects/c--Users-aymeric-petit-Projets-Git-OneRing-Admin/435ef685-f57a-465d-a48b-bfb8e0611107/tool-results/webfetch-1773326832404-71cb0g.bin\")",
+      "Read(//c/Users/aymeric.petit/Projets-Git/OneRing Admin/**)",
+      "Bash(python3 -:*)",
+      "Bash(python3 -c \":*)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(rtk git:*)"
     ]
   }
 }
