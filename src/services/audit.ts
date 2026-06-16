@@ -6,6 +6,8 @@ export type AuditAction =
   | "GROUP_OWNER_ADD"
   | "GROUP_OWNER_REMOVE"
   | "GROUP_CREATE"
+  | "DL_MEMBER_ADD"
+  | "DL_MEMBER_REMOVE"
   | "LICENSE_ASSIGN"
   | "LICENSE_REMOVE"
   | "PASSWORD_RESET"

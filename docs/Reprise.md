@@ -7,7 +7,7 @@ Ce document permet de reprendre le projet rapidement entre deux sessions Claude.
 Outil Next.js 16 + TypeScript remplaçant les consoles M365 (Entra, Exchange, Admin Center).
 Auth SSO Microsoft (NextAuth v4 + Azure AD). Appels Microsoft Graph API. Audit log PostgreSQL. Échéance : 31/03/2026.
 
-## Version actuelle : 1.9.0 (2026-03-13)
+## Version actuelle : 1.10.0 (2026-06-16)
 
 Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 
@@ -40,6 +40,9 @@ Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 | Noms licences officiels | Terminé | 609 entrées depuis référence Microsoft officielle |
 | Propriétaires groupes | Terminé | Sheet glissant, tri alpha, notice DL (limitation Graph API) |
 | Audit paramètres admin | Terminé | POST /api/audit, ADMIN_SETTINGS_UPDATE journalisé |
+| Pont Exchange — socle | Terminé | Sidecar `exo-bridge` (pwsh + Pode, app-only cert), `/health` + `/diag/dl` validés |
+| Pont Exchange — membres DL | Terminé | Add/Remove via bridge, garde `isExchangeAdmin`, audit `DL_MEMBER_ADD/REMOVE` |
+| Pont Exchange — owners DL + boîtes partagées | À faire | étapes 3-4 de l'ADR (managedBy, New-Mailbox, délégation) |
 | Rollback UI | À faire | payloadBefore présent, bouton UI manquant |
 
 ## Adaptations techniques notables
@@ -87,15 +90,19 @@ src/
     groups/
       add-member-dialog.tsx
       create-group-dialog.tsx
+  services/exchange/                      # Pont Exchange Online (sidecar) — non couvert par Graph
+    client.ts                             # bridgeFetch (X-Bridge-Secret, EXO_BRIDGE_URL)
+    distribution-groups.ts                # setDistributionGroupMember (add/remove)
   services/graph/
     users.ts                              # + updateUserEnabled, getMailboxSettings, updateMailboxSettings, setTeamsStatusMessage
-    groups.ts
+    groups.ts                             # + isExchangeManagedGroup
     licenses.ts
     roles.ts                              # listDirectoryRoles, listUserRoles, assignRole, removeRole
   lib/
     account-types.ts                      # detectAccountType, ACCOUNT_TYPE_CONFIG
     license-names.ts
     auth.ts                               # + signIn callback rôles AD
+    exchange-guard.ts                     # isExchangeAdmin — garde du canal app-only
     admin-settings.ts                     # + showDisableUser, showUserRoles
     use-sort.ts                           # Hook générique tri colonnes
   components/ui/
@@ -133,5 +140,5 @@ npx tsc --noEmit
 ## Questions ouvertes
 
 - Hébergement cible : Azure Container Apps, VPS, ou on-premise ?
-- Gestion des boîtes partagées via Exchange Online (endpoint `/places` vs heuristique actuelle) ?
+- **Pont Exchange Online** (DL, groupes mail-enabled, boîtes partagées) : cadré dans [ADR-001-pont-exchange.md](ADR-001-pont-exchange.md). Décision : sidecar PowerShell Docker on-premise, livraison par étapes (DL membres en premier). En attente du provisionnement tenant (app reg + certificat + rôle Exchange Admin).
 - Pagination côté serveur pour les tenants de très grande taille (> 999 utilisateurs) ?

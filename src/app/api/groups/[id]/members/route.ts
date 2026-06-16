@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
-import { listGroupMembers, addGroupMember, removeGroupMember, getGroup } from "@/services/graph/groups";
+import { listGroupMembers, addGroupMember, removeGroupMember, getGroupBasic, isExchangeManagedGroup } from "@/services/graph/groups";
 import { getUser } from "@/services/graph/users";
 import { logAudit } from "@/services/audit";
+import { isExchangeAdmin } from "@/lib/exchange-guard";
+import { setDistributionGroupMember } from "@/services/exchange/distribution-groups";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -40,9 +42,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const token = session.accessToken;
     const [group, user] = await Promise.all([
-      getGroup(token, id),
+      getGroupBasic(token, id),
       getUser(token, parsed.data.userId),
     ]);
+
+    // Listes de distribution / groupes mail-enabled : Graph ne gère pas les membres → pont Exchange.
+    if (isExchangeManagedGroup(group)) {
+      // Canal app-only : on réimpose les droits du compte connecté (cf. ADR-001 §4)
+      if (!(await isExchangeAdmin(token))) {
+        return NextResponse.json({ error: "exchange_forbidden" }, { status: 403 });
+      }
+      const groupSmtp = group.mail ?? id;
+      const member = user.userPrincipalName ?? user.mail ?? parsed.data.userId;
+      await setDistributionGroupMember({ groupSmtp, member, action: parsed.data.action });
+      await logAudit({
+        userId: session.user.email,
+        userUpn: session.user.email,
+        action: parsed.data.action === "add" ? "DL_MEMBER_ADD" : "DL_MEMBER_REMOVE",
+        targetId: id,
+        targetName: group.displayName,
+        targetType: "Group",
+        payloadBefore:
+          parsed.data.action === "remove" ? { removedMember: member, removedUserName: user.displayName } : {},
+        payloadAfter:
+          parsed.data.action === "add" ? { addedMember: member, addedUserName: user.displayName } : {},
+      });
+      return NextResponse.json({ success: true });
+    }
 
     if (parsed.data.action === "add") {
       await addGroupMember(token, id, parsed.data.userId);

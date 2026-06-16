@@ -2,6 +2,23 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.10.0] — 2026-06-16
+
+### Nouvelles fonctionnalités v1.10.0
+
+- **Pont Exchange Online** : nouveau service sidecar `exo-bridge` (PowerShell 7 + Pode, module `ExchangeOnlineManagement` v3, authentification application par certificat). Il expose une API REST interne consommée uniquement par l'app Next.js (réseau Docker interne, non publié) pour les opérations Exchange non couvertes par Microsoft Graph. Conception : [docs/ADR-001-pont-exchange.md](docs/ADR-001-pont-exchange.md).
+- **Gestion des membres de listes de distribution** : l'ajout et le retrait de membres sur les listes de distribution et les groupes de sécurité à extension de messagerie passent désormais par le pont (`Add`/`Remove-DistributionGroupMember`). La bannière « à faire dans Exchange Admin Center » disparaît pour ces groupes. Disponible depuis le panneau du groupe et depuis le panneau utilisateur.
+- **Garde de sécurité du canal app-only** : le pont agit avec un rôle Exchange Administrator applicatif. Avant chaque appel, `isExchangeAdmin()` re-vérifie que le compte connecté possède bien un rôle Exchange (ou Global Admin) — sinon `403`. Voir ADR-001 §4.
+- **Audit** : nouvelles actions `DL_MEMBER_ADD` / `DL_MEMBER_REMOVE`.
+- **Bouton de rafraîchissement** : icône dans le panneau du groupe pour recharger propriétaires et membres sans fermer/rouvrir le panneau (utile après le délai de propagation Exchange → Graph).
+
+### Corrections v1.10.0
+
+- **`getGroupBasic`** : les routes de mutation récupèrent le groupe avec un `$select` minimal. Les propriétés Exchange (`allowExternalSenders`, `requireSenderAuthenticationEnabled`) déclenchaient une erreur `[404] mailbox hosted on-premise` sur les listes de distribution, qui était mappée à tort en `exchange_managed`.
+- **Fenêtre « Ajouter au groupe »** : correction du dimensionnement. Les éléments `grid` à largeur minimale `auto` laissaient les longues adresses e-mail déborder horizontalement (ascenseur hors cadre, pied de page désaligné). Ajout de `min-w-0` + `truncate` et largeur portée à `sm:max-w-md`.
+
+---
+
 ## [1.9.0] — 2026-03-13
 
 ### Corrections v1.9.0

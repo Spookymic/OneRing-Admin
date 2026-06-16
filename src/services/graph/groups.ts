@@ -26,6 +26,15 @@ function detectGroupType(group: M365Group): GroupType {
   return "security";
 }
 
+/**
+ * Vrai si la gestion des membres relève d'Exchange (et non de Graph) : listes de
+ * distribution classiques et groupes de sécurité à extension de messagerie.
+ * Les groupes Microsoft 365 (Unified) et les groupes de sécurité purs restent sur Graph.
+ */
+export function isExchangeManagedGroup(group: Pick<M365Group, "mailEnabled" | "groupTypes">): boolean {
+  return group.mailEnabled && !(group.groupTypes ?? []).includes("Unified");
+}
+
 // SELECT réduit pour la liste (certains champs ne sont pas supportés en OData $filter sur tous les groupes)
 const LIST_SELECT =
   "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled,membershipRule";
@@ -53,6 +62,22 @@ export async function getGroup(
   const group = await graphFetch<M365Group>(
     accessToken,
     `/groups/${groupId}?$select=${DETAIL_SELECT}`
+  );
+  return { ...group, type: detectGroupType(group) };
+}
+
+/**
+ * Variante légère pour les mutations : `$select` sans propriétés Exchange
+ * (`allowExternalSenders`, `requireSenderAuthenticationEnabled`) qui déclenchent une
+ * erreur « mailbox hosted on-premise » sur les listes de distribution.
+ */
+export async function getGroupBasic(
+  accessToken: string,
+  groupId: string
+): Promise<M365Group & { type: GroupType }> {
+  const group = await graphFetch<M365Group>(
+    accessToken,
+    `/groups/${groupId}?$select=${LIST_SELECT}`
   );
   return { ...group, type: detectGroupType(group) };
 }

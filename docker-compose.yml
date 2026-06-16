@@ -25,11 +25,30 @@ services:
       AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
       AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
       AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
+      EXO_BRIDGE_URL: http://exo-bridge:8080
+      EXO_BRIDGE_SECRET: ${EXO_BRIDGE_SECRET}
     depends_on:
       migrate:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
+      exo-bridge:
+        condition: service_started
+    restart: unless-stopped
+
+  # Pont Exchange Online (cmdlets non couvertes par Graph) — voir docs/ADR-001-pont-exchange.md
+  # Aucun port publie : accessible uniquement par 'app' sur le reseau Docker interne.
+  exo-bridge:
+    build:
+      context: ./exo-bridge
+    environment:
+      EXO_APP_ID: ${EXO_APP_ID}
+      EXO_ORG: ${EXO_ORG}
+      EXO_CERT_PATH: /certs/onering-exo.pfx
+      EXO_CERT_PASSWORD: ${EXO_CERT_PASSWORD}
+      EXO_BRIDGE_SECRET: ${EXO_BRIDGE_SECRET}
+    volumes:
+      - ./exo-bridge/secrets:/certs:ro
     restart: unless-stopped
 
   postgres:

@@ -7,3 +7,7 @@ node_modules
 /src/generated/prisma
 .next
 out
+
+# Certificat prive du pont Exchange (ne jamais committer)
+exo-bridge/secrets/*
+!exo-bridge/secrets/.gitkeep

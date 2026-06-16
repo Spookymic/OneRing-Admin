@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Crown, Users, Trash2, UserPlus, AlertCircle } from "lucide-react";
+import { Crown, Users, Trash2, UserPlus, AlertCircle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo, useEffect } from "react";
 import type { M365Group, GroupType } from "@/services/graph/groups";
@@ -49,17 +49,23 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
   // Réinitialiser la bannière Exchange quand on change de groupe
   useEffect(() => { setExchangeError(false); }, [groupId]);
 
-  const { data: owners, isLoading: ownersLoading } = useQuery<Member[]>({
+  const { data: owners, isLoading: ownersLoading, isFetching: ownersFetching } = useQuery<Member[]>({
     queryKey: ["group-owners", groupId],
     queryFn: () => apiFetch<Member[]>(`/api/groups/${groupId}/owners`),
     enabled: open && !!groupId,
   });
 
-  const { data: members, isLoading: membersLoading } = useQuery<Member[]>({
+  const { data: members, isLoading: membersLoading, isFetching: membersFetching } = useQuery<Member[]>({
     queryKey: ["group-members", groupId],
     queryFn: () => apiFetch<Member[]>(`/api/groups/${groupId}/members`),
     enabled: open && !!groupId,
   });
+
+  const refreshing = ownersFetching || membersFetching;
+  function handleRefresh() {
+    queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
+    queryClient.invalidateQueries({ queryKey: ["group-owners", groupId] });
+  }
 
   // Tri alphabétique — owners et membres affichés séparément, doublons autorisés
   const sortedOwners = useMemo(
@@ -83,6 +89,10 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
       toast({ title: "Membre retiré" });
     },
     onError: (err: any) => {
+      if (err.message === "exchange_forbidden") {
+        toast({ title: "Droits insuffisants", description: "Un rôle Exchange Administrator est requis pour modifier cette liste.", variant: "destructive" });
+        return;
+      }
       if (err.message === "exchange_managed") { setExchangeError(true); return; }
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     },
@@ -100,6 +110,10 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
       toast({ title: "Owner retiré" });
     },
     onError: (err: any) => {
+      if (err.message === "exchange_forbidden") {
+        toast({ title: "Droits insuffisants", description: "Un rôle Exchange Administrator est requis pour modifier cette liste.", variant: "destructive" });
+        return;
+      }
       if (err.message === "exchange_managed") { setExchangeError(true); return; }
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     },
@@ -124,13 +138,22 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
             )}
           </SheetHeader>
 
-          {!settings.hideMemberAdd && (
-            <div className="mb-4">
+          <div className="mb-4 flex items-center gap-2">
+            {!settings.hideMemberAdd && (
               <Button size="sm" onClick={() => setAddOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-1" />Ajouter
               </Button>
-            </div>
-          )}
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="Rafraîchir"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
 
           {exchangeError && (
             <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">

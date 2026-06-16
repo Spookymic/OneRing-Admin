@@ -61,7 +61,11 @@ export function AddMemberDialog({ groupId, open, onClose }: Props) {
       });
       onClose();
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+      const description =
+        err.message === "exchange_forbidden"
+          ? "Un rôle Exchange Administrator est requis pour modifier cette liste."
+          : err.message;
+      toast({ title: "Erreur", description, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -69,27 +73,27 @@ export function AddMemberDialog({ groupId, open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Ajouter au groupe</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0">
           <Input
             placeholder="Rechercher un utilisateur..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setSelectedUser(null); }}
           />
-          <div className="max-h-52 overflow-y-auto space-y-1 border rounded-md p-2">
+          <div className="max-h-52 overflow-y-auto space-y-1 border rounded-md p-2 min-w-0">
             {filtered?.map((user) => (
               <div
                 key={user.id}
-                className={`px-3 py-2 rounded cursor-pointer text-sm transition-colors ${
+                className={`px-3 py-2 rounded cursor-pointer text-sm transition-colors min-w-0 ${
                   selectedUser?.id === user.id ? "bg-blue-100 text-blue-800" : "hover:bg-gray-100"
                 }`}
                 onClick={() => setSelectedUser(user)}
               >
-                <div className="font-medium">{user.displayName}</div>
-                <div className="text-gray-500">{user.userPrincipalName}</div>
+                <div className="font-medium truncate">{user.displayName}</div>
+                <div className="text-gray-500 truncate">{user.userPrincipalName}</div>
               </div>
             ))}
           </div>

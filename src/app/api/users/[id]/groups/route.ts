@@ -3,9 +3,11 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { listUserMemberOf } from "@/services/graph/users";
-import { addGroupMember, removeGroupMember, addGroupOwner, removeGroupOwner, getGroup } from "@/services/graph/groups";
+import { addGroupMember, removeGroupMember, addGroupOwner, removeGroupOwner, getGroupBasic, isExchangeManagedGroup } from "@/services/graph/groups";
 import { getUser } from "@/services/graph/users";
 import { logAudit } from "@/services/audit";
+import { isExchangeAdmin } from "@/lib/exchange-guard";
+import { setDistributionGroupMember } from "@/services/exchange/distribution-groups";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -43,9 +45,37 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const token = session.accessToken;
     const { groupId, action, role } = parsed.data;
     const [group, user] = await Promise.all([
-      getGroup(token, groupId),
+      getGroupBasic(token, groupId),
       getUser(token, id),
     ]);
+
+    // Listes de distribution / groupes mail-enabled : membres via pont Exchange (pas Graph).
+    if (isExchangeManagedGroup(group)) {
+      if (!(await isExchangeAdmin(token))) {
+        return NextResponse.json({ error: "exchange_forbidden" }, { status: 403 });
+      }
+      if (role === "owner") {
+        // Propriétaires de DL = managedBy (étape 3 de l'ADR), pas encore implémenté.
+        return NextResponse.json(
+          { error: "Les propriétaires de listes de distribution ne sont pas encore gérés." },
+          { status: 422 }
+        );
+      }
+      const groupSmtp = group.mail ?? groupId;
+      const member = user.userPrincipalName ?? user.mail ?? id;
+      await setDistributionGroupMember({ groupSmtp, member, action });
+      await logAudit({
+        userId: session.user.email,
+        userUpn: session.user.email,
+        action: action === "add" ? "DL_MEMBER_ADD" : "DL_MEMBER_REMOVE",
+        targetId: id,
+        targetName: user.displayName,
+        targetType: "User",
+        payloadBefore: action === "remove" ? { groupId, groupName: group.displayName, role } : {},
+        payloadAfter: action === "add" ? { groupId, groupName: group.displayName, role } : {},
+      });
+      return NextResponse.json({ success: true });
+    }
 
     if (action === "add") {
       if (role === "owner") {

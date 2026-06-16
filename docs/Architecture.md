@@ -129,6 +129,8 @@ created_at     timestamptz   DEFAULT now()
 | GROUP_OWNER_ADD     | Ajout d'un owner                         |
 | GROUP_OWNER_REMOVE  | Retrait d'un owner                       |
 | GROUP_CREATE        | Création d'un nouveau groupe             |
+| DL_MEMBER_ADD       | Ajout membre liste distribution (Exch.)  |
+| DL_MEMBER_REMOVE    | Retrait membre liste distribution (Exch.)|
 | LICENSE_ASSIGN      | Attribution de licence à un utilisateur  |
 | LICENSE_REMOVE      | Retrait de licence                       |
 | PASSWORD_RESET      | Réinitialisation de mot de passe         |
