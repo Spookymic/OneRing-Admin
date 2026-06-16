@@ -6,11 +6,13 @@ Consommé **uniquement** par l'app Next.js sur le réseau Docker interne — **j
 
 Conception : [docs/ADR-001-pont-exchange.md](../docs/ADR-001-pont-exchange.md).
 
-## Prérequis (déjà provisionnés côté tenant)
+## Prérequis (côté tenant)
 
 - App registration avec permission applicative `Exchange.ManageAsApp` + admin consent
 - Service principal membre du rôle **Exchange Administrator**
 - Certificat : clé publique uploadée sur l'app, clé privée `.pfx` disponible
+
+➡️ Procédure pas à pas (création certificat, app, rôle, test) : [docs/Exchange-Bridge-Setup.md](../docs/Exchange-Bridge-Setup.md)
 
 ## Installation du certificat
 

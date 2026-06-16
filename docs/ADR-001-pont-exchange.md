@@ -109,6 +109,8 @@ Mesures obligatoires :
 
 ## 5. Prérequis à provisionner (côté tenant — action client)
 
+> Procédure détaillée pas à pas (commandes + portail) : [Exchange-Bridge-Setup.md](Exchange-Bridge-Setup.md).
+
 À faire **avant** toute implémentation :
 
 1. **App registration** dédiée (ou réutiliser l'existante) avec permission applicative
