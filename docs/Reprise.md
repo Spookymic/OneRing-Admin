@@ -7,7 +7,7 @@ Ce document permet de reprendre le projet rapidement entre deux sessions Claude.
 Outil Next.js 16 + TypeScript remplaçant les consoles M365 (Entra, Exchange, Admin Center).
 Auth SSO Microsoft (NextAuth v4 + Azure AD). Appels Microsoft Graph API. Audit log PostgreSQL. Échéance : 31/03/2026.
 
-## Version actuelle : 1.10.0 (2026-06-16)
+## Version actuelle : 1.11.0 (2026-06-17)
 
 Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 
@@ -42,7 +42,8 @@ Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 | Audit paramètres admin | Terminé | POST /api/audit, ADMIN_SETTINGS_UPDATE journalisé |
 | Pont Exchange — socle | Terminé | Sidecar `exo-bridge` (pwsh + Pode, app-only cert), `/health` + `/diag/dl` validés |
 | Pont Exchange — membres DL | Terminé | Add/Remove via bridge, garde `isExchangeAdmin`, audit `DL_MEMBER_ADD/REMOVE` |
-| Pont Exchange — owners DL + boîtes partagées | À faire | étapes 3-4 de l'ADR (managedBy, New-Mailbox, délégation) |
+| Pont Exchange — owners DL + création DL | Terminé | `ManagedBy` (lecture+écriture), `New-DistributionGroup`, audit `DL_OWNER_ADD/REMOVE`, `DL_CREATE` |
+| Pont Exchange — boîtes partagées | À faire | étape 4 de l'ADR (New-Mailbox -Shared, délégation FullAccess/SendAs/SendOnBehalf) |
 | Rollback UI | À faire | payloadBefore présent, bouton UI manquant |
 
 ## Adaptations techniques notables

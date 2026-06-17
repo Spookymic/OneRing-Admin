@@ -4,6 +4,8 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { listGroups, createGroup } from "@/services/graph/groups";
 import { logAudit } from "@/services/audit";
+import { isExchangeAdmin } from "@/lib/exchange-guard";
+import { createDistributionGroup } from "@/services/exchange/distribution-groups";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -37,6 +39,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   try {
+    // Listes de distribution : vraie DL via pont Exchange (Graph ne crée pas de DL classique).
+    if (parsed.data.groupType === "distribution") {
+      if (!(await isExchangeAdmin(session.accessToken))) {
+        return NextResponse.json({ error: "exchange_forbidden" }, { status: 403 });
+      }
+      const dl = await createDistributionGroup({
+        displayName: parsed.data.displayName,
+        alias: parsed.data.mailNickname,
+      });
+      await logAudit({
+        userId: session.user.email,
+        userUpn: session.user.email,
+        action: "DL_CREATE",
+        targetId: dl.id,
+        targetName: dl.displayName,
+        targetType: "Group",
+        payloadBefore: {},
+        payloadAfter: { mail: dl.mail, alias: parsed.data.mailNickname },
+      });
+      return NextResponse.json(dl, { status: 201 });
+    }
+
     const group = await createGroup(session.accessToken, parsed.data);
     await logAudit({
       userId: session.user.email,

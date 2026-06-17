@@ -131,6 +131,9 @@ created_at     timestamptz   DEFAULT now()
 | GROUP_CREATE        | Création d'un nouveau groupe             |
 | DL_MEMBER_ADD       | Ajout membre liste distribution (Exch.)  |
 | DL_MEMBER_REMOVE    | Retrait membre liste distribution (Exch.)|
+| DL_OWNER_ADD        | Ajout proprietaire DL (Exchange)         |
+| DL_OWNER_REMOVE     | Retrait proprietaire DL (Exchange)       |
+| DL_CREATE           | Creation liste de distribution (Exch.)   |
 | LICENSE_ASSIGN      | Attribution de licence à un utilisateur  |
 | LICENSE_REMOVE      | Retrait de licence                       |
 | PASSWORD_RESET      | Réinitialisation de mot de passe         |

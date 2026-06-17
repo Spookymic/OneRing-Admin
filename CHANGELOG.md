@@ -2,6 +2,18 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.11.0] — 2026-06-17
+
+### Nouvelles fonctionnalités v1.11.0
+
+- **Propriétaires de listes de distribution** : lecture et gestion (ajout/retrait) des propriétaires de DL via le pont Exchange (champ `ManagedBy`, `Set-DistributionGroup`). La notice « gérés dans Exchange Admin Center, non exposés par Graph » est remplacée par la liste réelle des propriétaires, modifiable depuis le panneau du groupe et le panneau utilisateur.
+- **Création de vraies listes de distribution** : le type « Distribution » du dialog de création passe désormais par `New-DistributionGroup` (pont Exchange) au lieu de créer un groupe mail-enabled approximatif via Graph. Les types Sécurité et Microsoft 365 restent sur Graph.
+- **Audit** : nouvelles actions `DL_OWNER_ADD`, `DL_OWNER_REMOVE`, `DL_CREATE`.
+
+Étape 3 de l'ADR du pont Exchange ([docs/ADR-001-pont-exchange.md](docs/ADR-001-pont-exchange.md)). Reste l'étape 4 (boîtes partagées : création + délégation).
+
+---
+
 ## [1.10.0] — 2026-06-16
 
 ### Nouvelles fonctionnalités v1.10.0

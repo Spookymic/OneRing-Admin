@@ -50,7 +50,7 @@ La detection du type se fait cote client dans `src/lib/account-types.ts` :
 - Validation Zod obligatoire cote serveur avant tout appel Graph API
 - Les appels Microsoft Graph passent uniquement par `src/services/graph/`
 - Audit obligatoire dans chaque mutation via `logAudit()` de `src/services/audit.ts`
-- Actions audit : `GROUP_MEMBER_ADD/REMOVE`, `GROUP_OWNER_ADD/REMOVE`, `GROUP_CREATE`, `DL_MEMBER_ADD/REMOVE`, `LICENSE_ASSIGN/REMOVE`, `PASSWORD_RESET`
+- Actions audit : `GROUP_MEMBER_ADD/REMOVE`, `GROUP_OWNER_ADD/REMOVE`, `GROUP_CREATE`, `DL_MEMBER_ADD/REMOVE`, `DL_OWNER_ADD/REMOVE`, `DL_CREATE`, `LICENSE_ASSIGN/REMOVE`, `PASSWORD_RESET`
 
 ## Structure des dossiers
 

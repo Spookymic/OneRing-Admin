@@ -7,7 +7,7 @@ import { addGroupMember, removeGroupMember, addGroupOwner, removeGroupOwner, get
 import { getUser } from "@/services/graph/users";
 import { logAudit } from "@/services/audit";
 import { isExchangeAdmin } from "@/lib/exchange-guard";
-import { setDistributionGroupMember } from "@/services/exchange/distribution-groups";
+import { setDistributionGroupMember, setDistributionGroupOwner } from "@/services/exchange/distribution-groups";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -54,20 +54,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       if (!(await isExchangeAdmin(token))) {
         return NextResponse.json({ error: "exchange_forbidden" }, { status: 403 });
       }
-      if (role === "owner") {
-        // Propriétaires de DL = managedBy (étape 3 de l'ADR), pas encore implémenté.
-        return NextResponse.json(
-          { error: "Les propriétaires de listes de distribution ne sont pas encore gérés." },
-          { status: 422 }
-        );
-      }
       const groupSmtp = group.mail ?? groupId;
       const member = user.userPrincipalName ?? user.mail ?? id;
-      await setDistributionGroupMember({ groupSmtp, member, action });
+      if (role === "owner") {
+        await setDistributionGroupOwner({ groupSmtp, member, action });
+      } else {
+        await setDistributionGroupMember({ groupSmtp, member, action });
+      }
       await logAudit({
         userId: session.user.email,
         userUpn: session.user.email,
-        action: action === "add" ? "DL_MEMBER_ADD" : "DL_MEMBER_REMOVE",
+        action:
+          role === "owner"
+            ? action === "add" ? "DL_OWNER_ADD" : "DL_OWNER_REMOVE"
+            : action === "add" ? "DL_MEMBER_ADD" : "DL_MEMBER_REMOVE",
         targetId: id,
         targetName: user.displayName,
         targetType: "User",

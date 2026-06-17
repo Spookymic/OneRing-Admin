@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
-import { listGroupOwners, addGroupOwner, removeGroupOwner, getGroup } from "@/services/graph/groups";
+import { listGroupOwners, addGroupOwner, removeGroupOwner, getGroupBasic, isExchangeManagedGroup } from "@/services/graph/groups";
 import { getUser } from "@/services/graph/users";
 import { logAudit } from "@/services/audit";
+import { isExchangeAdmin } from "@/lib/exchange-guard";
+import { listDistributionGroupOwners, setDistributionGroupOwner } from "@/services/exchange/distribution-groups";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -13,6 +15,12 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   }
   const { id } = await params;
   try {
+    const group = await getGroupBasic(session.accessToken, id);
+    // Listes de distribution : owners = ManagedBy, non exposé par Graph → pont Exchange.
+    if (isExchangeManagedGroup(group)) {
+      const owners = await listDistributionGroupOwners(group.mail ?? id);
+      return NextResponse.json(owners);
+    }
     const owners = await listGroupOwners(session.accessToken, id);
     return NextResponse.json(owners);
   } catch (error: any) {
@@ -40,9 +48,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const token = session.accessToken;
     const [group, user] = await Promise.all([
-      getGroup(token, id),
+      getGroupBasic(token, id),
       getUser(token, parsed.data.userId),
     ]);
+
+    // Listes de distribution : propriétaires gérés via ManagedBy (pont Exchange).
+    if (isExchangeManagedGroup(group)) {
+      if (!(await isExchangeAdmin(token))) {
+        return NextResponse.json({ error: "exchange_forbidden" }, { status: 403 });
+      }
+      const groupSmtp = group.mail ?? id;
+      const member = user.userPrincipalName ?? user.mail ?? parsed.data.userId;
+      await setDistributionGroupOwner({ groupSmtp, member, action: parsed.data.action });
+      await logAudit({
+        userId: session.user.email,
+        userUpn: session.user.email,
+        action: parsed.data.action === "add" ? "DL_OWNER_ADD" : "DL_OWNER_REMOVE",
+        targetId: id,
+        targetName: group.displayName,
+        targetType: "Group",
+        payloadBefore:
+          parsed.data.action === "remove" ? { removedMember: member, removedUserName: user.displayName } : {},
+        payloadAfter:
+          parsed.data.action === "add" ? { addedMember: member, addedUserName: user.displayName } : {},
+      });
+      return NextResponse.json({ success: true });
+    }
 
     if (parsed.data.action === "add") {
       await addGroupOwner(token, id, parsed.data.userId);

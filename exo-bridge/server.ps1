@@ -107,4 +107,100 @@ Start-PodeServer -Threads 2 {
             Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
         }
     }
+
+    # --- Propriétaires d'une DL (champ ManagedBy) : lecture ---
+    # GET /dl/owners?group=<smtp>
+    Add-PodeRoute -Method Get -Path '/dl/owners' -ScriptBlock {
+        try {
+            $group = $WebEvent.Query['group']
+            if ([string]::IsNullOrWhiteSpace($group)) {
+                Write-PodeJsonResponse -Value @{ ok = $false; error = 'parametre group requis' }
+                return
+            }
+            Connect-ExoIfNeeded
+            $dg = Get-DistributionGroup -Identity $group -ErrorAction Stop
+            $owners = @()
+            foreach ($m in $dg.ManagedBy) {
+                $r = Get-Recipient -Identity $m -ErrorAction SilentlyContinue
+                if ($r) {
+                    $owners += @{
+                        id          = $r.ExternalDirectoryObjectId
+                        displayName = $r.DisplayName
+                        mail        = $r.PrimarySmtpAddress
+                    }
+                }
+            }
+            Write-PodeJsonResponse -Value @{ ok = $true; owners = @($owners) }
+        }
+        catch {
+            [Console]::Error.WriteLine("DL_OWNERS_GET_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
+    # --- Propriétaires d'une DL : ajout / retrait ---
+    # Body JSON : { groupSmtp, member, action: "add" | "remove" }
+    Add-PodeRoute -Method Post -Path '/dl/owners' -ScriptBlock {
+        try {
+            $group  = $WebEvent.Data.groupSmtp
+            $member = $WebEvent.Data.member
+            $action = $WebEvent.Data.action
+
+            if ([string]::IsNullOrWhiteSpace($group) -or
+                [string]::IsNullOrWhiteSpace($member) -or
+                $action -notin @('add', 'remove')) {
+                Write-PodeJsonResponse -Value @{ ok = $false; error = 'parametres invalides (groupSmtp, member, action)' }
+                return
+            }
+
+            Connect-ExoIfNeeded
+
+            if ($action -eq 'add') {
+                Set-DistributionGroup -Identity $group -ManagedBy @{ Add = $member } `
+                    -BypassSecurityGroupManagerCheck -ErrorAction Stop
+            }
+            else {
+                Set-DistributionGroup -Identity $group -ManagedBy @{ Remove = $member } `
+                    -BypassSecurityGroupManagerCheck -ErrorAction Stop
+            }
+
+            Write-PodeJsonResponse -Value @{ ok = $true }
+        }
+        catch {
+            [Console]::Error.WriteLine("DL_OWNERS_POST_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
+    # --- Création d'une liste de distribution ---
+    # Body JSON : { displayName, alias }
+    Add-PodeRoute -Method Post -Path '/dl' -ScriptBlock {
+        try {
+            $displayName = $WebEvent.Data.displayName
+            $alias       = $WebEvent.Data.alias
+
+            if ([string]::IsNullOrWhiteSpace($displayName) -or [string]::IsNullOrWhiteSpace($alias)) {
+                Write-PodeJsonResponse -Value @{ ok = $false; error = 'parametres invalides (displayName, alias)' }
+                return
+            }
+
+            Connect-ExoIfNeeded
+
+            $dg = New-DistributionGroup -Name $displayName -DisplayName $displayName `
+                -Alias $alias -Type Distribution -ErrorAction Stop
+
+            Write-PodeJsonResponse -Value @{
+                ok    = $true
+                group = @{
+                    id          = if ($dg.ExternalDirectoryObjectId) { $dg.ExternalDirectoryObjectId } else { $dg.Guid.ToString() }
+                    displayName = $dg.DisplayName
+                    mail        = $dg.PrimarySmtpAddress
+                }
+            }
+        }
+        catch {
+            [Console]::Error.WriteLine("DL_CREATE_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
 }

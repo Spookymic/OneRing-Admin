@@ -37,12 +37,19 @@ Le dossier `secrets/` est ignoré par git (sauf `.gitkeep`).
 
 Renseignées via `.env` à la racine et injectées par `docker-compose.yml`.
 
-## Endpoints (étape 1 — socle)
+## Endpoints
 
-| Méthode | Chemin | Auth | Description |
-| --- | --- | --- | --- |
-| GET | `/health` | non | Sonde légère : `{ status, org, exoConnected }`. N'ouvre pas de connexion. |
-| GET | `/diag/dl?top=5` | `X-Bridge-Secret` | Liste N listes de distribution — valide la chaîne app-only de bout en bout. |
+Toutes les routes (sauf `/health`) exigent l'en-tête `X-Bridge-Secret`.
+Convention : réponse HTTP 200 + `{ ok, error? }` (évite la page d'erreur HTML de Pode).
+
+| Méthode | Chemin | Description |
+| --- | --- | --- |
+| GET | `/health` | Sonde légère : `{ status, org, exoConnected }`. N'ouvre pas de connexion. *(sans auth)* |
+| GET | `/diag/dl?top=5` | Diagnostic : liste N listes de distribution (chaîne app-only de bout en bout). |
+| POST | `/dl/members` | `{ groupSmtp, member, action }` — ajout/retrait d'un membre de DL. |
+| GET | `/dl/owners?group=<smtp>` | Propriétaires (`ManagedBy`) d'une DL. |
+| POST | `/dl/owners` | `{ groupSmtp, member, action }` — ajout/retrait d'un propriétaire de DL. |
+| POST | `/dl` | `{ displayName, alias }` — création d'une liste de distribution. |
 
 ## Démarrer et tester
 

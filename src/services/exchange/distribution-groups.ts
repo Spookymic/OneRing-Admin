@@ -17,3 +17,47 @@ export async function setDistributionGroupMember(params: {
     body: JSON.stringify(params),
   });
 }
+
+export interface ExoOwner {
+  id: string;
+  displayName: string;
+  mail: string;
+}
+
+/** Lit les propriétaires (ManagedBy) d'une liste de distribution. */
+export async function listDistributionGroupOwners(groupSmtp: string): Promise<ExoOwner[]> {
+  const data = await bridgeFetch<{ owners?: ExoOwner[] }>(
+    `/dl/owners?group=${encodeURIComponent(groupSmtp)}`
+  );
+  return data.owners ?? [];
+}
+
+/** Ajoute ou retire un propriétaire (ManagedBy) d'une liste de distribution. */
+export async function setDistributionGroupOwner(params: {
+  groupSmtp: string;
+  member: string;
+  action: "add" | "remove";
+}): Promise<void> {
+  await bridgeFetch("/dl/owners", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+}
+
+export interface CreatedDistributionGroup {
+  id: string;
+  displayName: string;
+  mail: string;
+}
+
+/** Crée une vraie liste de distribution (New-DistributionGroup). */
+export async function createDistributionGroup(params: {
+  displayName: string;
+  alias: string;
+}): Promise<CreatedDistributionGroup> {
+  const data = await bridgeFetch<{ group: CreatedDistributionGroup }>("/dl", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+  return data.group;
+}

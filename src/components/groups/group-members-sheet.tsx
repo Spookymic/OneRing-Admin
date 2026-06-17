@@ -181,12 +181,6 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
             <div className="space-y-2 mb-6">
               {Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
             </div>
-          ) : group?.type === "distribution" ? (
-            <p className="text-xs text-[#01031B]/50 mb-6 leading-relaxed">
-              Les propriétaires des listes de distribution sont gérés via le champ&nbsp;
-              <span className="font-medium">Géré par</span> dans Exchange Admin Center et ne sont
-              pas exposés par l&apos;API Microsoft Graph.
-            </p>
           ) : sortedOwners.length > 0 ? (
             <div className="space-y-1 mb-6">
               {sortedOwners.map((o) => (
