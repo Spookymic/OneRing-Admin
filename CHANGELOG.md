@@ -2,6 +2,18 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.12.0] — 2026-06-18
+
+### Nouvelles fonctionnalités v1.12.0
+
+- **Boîtes aux lettres partagées** : nouvelle page « Boîtes partagées » (lien dans la sidebar) listant les boîtes partagées du tenant, avec création (`New-Mailbox -Shared`) via le pont Exchange.
+- **Délégations** : panneau latéral par boîte pour gérer les trois types de délégation — **Accès complet** (`Add/Remove-MailboxPermission`), **Envoyer en tant que** (`Add/Remove-RecipientPermission`), **Envoyer de la part de** (`Set-Mailbox -GrantSendOnBehalfTo`). Ajout via sélecteur d'utilisateur, retrait par ligne, bouton de rafraîchissement.
+- **Audit** : nouvelles actions `SHARED_MAILBOX_CREATE`, `MAILBOX_PERMISSION_ADD`, `MAILBOX_PERMISSION_REMOVE`.
+
+Étape 4 (dernière) de l'ADR du pont Exchange — le périmètre Exchange du CADRAGE (listes de distribution + boîtes partagées) est désormais couvert.
+
+---
+
 ## [1.11.0] — 2026-06-17
 
 ### Nouvelles fonctionnalités v1.11.0

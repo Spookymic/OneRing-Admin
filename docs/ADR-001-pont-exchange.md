@@ -140,7 +140,7 @@ Mesures obligatoires :
 | **1. Socle sidecar** ✅ | Image pwsh + Pode, `Connect-ExchangeOnline` app-only, endpoint `GET /health` | Sidecar qui se connecte à EXO |
 | **2. DL membres** ✅ | Endpoints membres DL + intégration dans `group-members-sheet`, retrait de la bannière, audit | DL gérables depuis l'app |
 | **3. DL owners + création** ✅ | `managedBy` (lecture+écriture) + `New-DistributionGroup` | DL complètes |
-| **4. Boîtes partagées** | Création + délégation Full Access / Send As / Send on Behalf | Périmètre CADRAGE complet |
+| **4. Boîtes partagées** ✅ | Création + délégation Full Access / Send As / Send on Behalf | Périmètre CADRAGE complet |
 
 ## 8. Risques et points ouverts
 

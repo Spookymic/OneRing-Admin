@@ -50,6 +50,10 @@ Convention : réponse HTTP 200 + `{ ok, error? }` (évite la page d'erreur HTML 
 | GET | `/dl/owners?group=<smtp>` | Propriétaires (`ManagedBy`) d'une DL. |
 | POST | `/dl/owners` | `{ groupSmtp, member, action }` — ajout/retrait d'un propriétaire de DL. |
 | POST | `/dl` | `{ displayName, alias }` — création d'une liste de distribution. |
+| GET | `/mailbox/shared` | Liste des boîtes aux lettres partagées. |
+| POST | `/mailbox/shared` | `{ displayName, alias }` — création d'une boîte partagée. |
+| GET | `/mailbox/permissions?mailbox=<smtp>` | Délégations : `{ fullAccess, sendAs, sendOnBehalf }`. |
+| POST | `/mailbox/permissions` | `{ mailbox, member, type, action }` — ajout/retrait d'une délégation. |
 
 ## Démarrer et tester
 

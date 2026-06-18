@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Users, Shield, History, LogOut, LayoutDashboard, Users2,
-  Settings, Eye, X, Check,
+  Settings, Eye, X, Check, Inbox,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/users", label: "Utilisateurs", icon: Users },
   { href: "/dashboard/groups", label: "Groupes", icon: Users2 },
+  { href: "/dashboard/mailboxes", label: "Boîtes partagées", icon: Inbox },
   { href: "/dashboard/licenses", label: "Licences", icon: Shield },
   { href: "/dashboard/audit", label: "Historique", icon: History },
   { href: "/dashboard/admin", label: "Administration", icon: Settings },
@@ -142,7 +143,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
           <LogOut className="h-4 w-4 mr-3" />
           Déconnexion
         </Button>
-        <p className="text-center text-white/25 text-xs pt-1">v1.11.0</p>
+        <p className="text-center text-white/25 text-xs pt-1">v1.12.0</p>
       </div>
     </aside>
   );

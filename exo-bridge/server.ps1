@@ -203,4 +203,157 @@ Start-PodeServer -Threads 2 {
             Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
         }
     }
+
+    # --- Boîtes partagées : liste ---
+    Add-PodeRoute -Method Get -Path '/mailbox/shared' -ScriptBlock {
+        try {
+            Connect-ExoIfNeeded
+            $list = @()
+            Get-Mailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited |
+                ForEach-Object {
+                    $list += @{
+                        id          = if ($_.ExternalDirectoryObjectId) { $_.ExternalDirectoryObjectId } else { $_.Guid.ToString() }
+                        displayName = $_.DisplayName
+                        mail        = $_.PrimarySmtpAddress
+                    }
+                }
+            Write-PodeJsonResponse -Value @{ ok = $true; mailboxes = @($list) }
+        }
+        catch {
+            [Console]::Error.WriteLine("MBX_LIST_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
+    # --- Boîte partagée : création ---
+    # Body JSON : { displayName, alias }
+    Add-PodeRoute -Method Post -Path '/mailbox/shared' -ScriptBlock {
+        try {
+            $displayName = $WebEvent.Data.displayName
+            $alias       = $WebEvent.Data.alias
+            if ([string]::IsNullOrWhiteSpace($displayName) -or [string]::IsNullOrWhiteSpace($alias)) {
+                Write-PodeJsonResponse -Value @{ ok = $false; error = 'parametres invalides (displayName, alias)' }
+                return
+            }
+            Connect-ExoIfNeeded
+            $m = New-Mailbox -Shared -Name $displayName -DisplayName $displayName -Alias $alias -ErrorAction Stop
+            Write-PodeJsonResponse -Value @{
+                ok      = $true
+                mailbox = @{
+                    id          = if ($m.ExternalDirectoryObjectId) { $m.ExternalDirectoryObjectId } else { $m.Guid.ToString() }
+                    displayName = $m.DisplayName
+                    mail        = $m.PrimarySmtpAddress
+                }
+            }
+        }
+        catch {
+            [Console]::Error.WriteLine("MBX_CREATE_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
+    # --- Délégations d'une boîte : lecture ---
+    # GET /mailbox/permissions?mailbox=<smtp>
+    Add-PodeRoute -Method Get -Path '/mailbox/permissions' -ScriptBlock {
+        try {
+            $mbx = $WebEvent.Query['mailbox']
+            if ([string]::IsNullOrWhiteSpace($mbx)) {
+                Write-PodeJsonResponse -Value @{ ok = $false; error = 'parametre mailbox requis' }
+                return
+            }
+            Connect-ExoIfNeeded
+
+            function Resolve-Trustee($identity) {
+                $r = Get-Recipient -Identity $identity -ErrorAction SilentlyContinue
+                if ($r) {
+                    return @{ id = $r.ExternalDirectoryObjectId; displayName = $r.DisplayName; mail = $r.PrimarySmtpAddress }
+                }
+                return @{ id = $null; displayName = "$identity"; mail = "$identity" }
+            }
+
+            $full = @()
+            Get-MailboxPermission -Identity $mbx | Where-Object {
+                $_.AccessRights -contains 'FullAccess' -and -not $_.IsInherited -and $_.User -notlike 'NT AUTHORITY\*'
+            } | ForEach-Object { $full += (Resolve-Trustee $_.User) }
+
+            $sendAs = @()
+            Get-RecipientPermission -Identity $mbx | Where-Object {
+                $_.AccessRights -contains 'SendAs' -and $_.Trustee -notlike 'NT AUTHORITY\*'
+            } | ForEach-Object { $sendAs += (Resolve-Trustee $_.Trustee) }
+
+            $onBehalf = @()
+            foreach ($t in (Get-Mailbox -Identity $mbx).GrantSendOnBehalfTo) {
+                $onBehalf += (Resolve-Trustee $t)
+            }
+
+            Write-PodeJsonResponse -Value @{
+                ok           = $true
+                fullAccess   = @($full)
+                sendAs       = @($sendAs)
+                sendOnBehalf = @($onBehalf)
+            }
+        }
+        catch {
+            [Console]::Error.WriteLine("MBX_PERM_GET_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
+    # --- Délégations d'une boîte : ajout / retrait ---
+    # Body JSON : { mailbox, member, type: fullAccess|sendAs|sendOnBehalf, action: add|remove }
+    Add-PodeRoute -Method Post -Path '/mailbox/permissions' -ScriptBlock {
+        try {
+            $mbx    = $WebEvent.Data.mailbox
+            $member = $WebEvent.Data.member
+            $type   = $WebEvent.Data.type
+            $action = $WebEvent.Data.action
+
+            if ([string]::IsNullOrWhiteSpace($mbx) -or
+                [string]::IsNullOrWhiteSpace($member) -or
+                $type -notin @('fullAccess', 'sendAs', 'sendOnBehalf') -or
+                $action -notin @('add', 'remove')) {
+                Write-PodeJsonResponse -Value @{ ok = $false; error = 'parametres invalides (mailbox, member, type, action)' }
+                return
+            }
+
+            Connect-ExoIfNeeded
+
+            switch ($type) {
+                'fullAccess' {
+                    if ($action -eq 'add') {
+                        Add-MailboxPermission -Identity $mbx -User $member -AccessRights FullAccess `
+                            -InheritanceType All -AutoMapping $true -ErrorAction Stop | Out-Null
+                    }
+                    else {
+                        Remove-MailboxPermission -Identity $mbx -User $member -AccessRights FullAccess `
+                            -Confirm:$false -ErrorAction Stop | Out-Null
+                    }
+                }
+                'sendAs' {
+                    if ($action -eq 'add') {
+                        Add-RecipientPermission -Identity $mbx -Trustee $member -AccessRights SendAs `
+                            -Confirm:$false -ErrorAction Stop | Out-Null
+                    }
+                    else {
+                        Remove-RecipientPermission -Identity $mbx -Trustee $member -AccessRights SendAs `
+                            -Confirm:$false -ErrorAction Stop | Out-Null
+                    }
+                }
+                'sendOnBehalf' {
+                    if ($action -eq 'add') {
+                        Set-Mailbox -Identity $mbx -GrantSendOnBehalfTo @{ Add = $member } -ErrorAction Stop
+                    }
+                    else {
+                        Set-Mailbox -Identity $mbx -GrantSendOnBehalfTo @{ Remove = $member } -ErrorAction Stop
+                    }
+                }
+            }
+
+            Write-PodeJsonResponse -Value @{ ok = $true }
+        }
+        catch {
+            [Console]::Error.WriteLine("MBX_PERM_POST_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
 }
