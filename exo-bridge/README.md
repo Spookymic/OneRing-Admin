@@ -69,10 +69,14 @@ docker compose exec app node -e "fetch('http://exo-bridge:8080/diag/dl?top=5',{h
 
 `/diag/dl` doit renvoyer la liste des DL → la chaîne fonctionne.
 
-## Note technique — connexion par runspace
+## Note technique — `-Threads 1` (un seul runspace)
 
-Pode traite les requêtes dans un pool de runspaces. Chaque runspace ouvre sa propre session
-EXO **à la première requête** (`Connect-ExchangeOnline` paresseux, puis réutilisé via le cache de
-jetons du module). À valider en étape 1 : un second appel à `/diag/dl` doit être nettement plus
-rapide que le premier (connexion déjà établie). Si la connexion ne « tient » pas entre requêtes,
-réduire `-Threads` à `1` dans `server.ps1`.
+Pode est lancé avec `-Threads 1` : un unique runspace traite toutes les requêtes. C'est
+**nécessaire** avec EXO v3 — l'état de connexion (`Get-ConnectionInformation`) est global au
+process, mais les cmdlets proxy (`Add/Remove-DistributionGroupMember`, etc.) ne sont importées
+que dans le runspace ayant appelé `Connect-ExchangeOnline`. Avec plusieurs runspaces, une requête
+pouvait tomber sur un runspace « connecté » mais dépourvu des cmdlets → erreur
+*« The term '…' is not recognized »* au premier appel, puis succès au second (autre runspace).
+
+La connexion est ouverte paresseusement à la première requête puis réutilisée. La concurrence
+n'est pas un enjeu pour ce bridge d'administration interne.

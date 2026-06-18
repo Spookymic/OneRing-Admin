@@ -20,7 +20,12 @@ if (-not (Test-Path $env:EXO_CERT_PATH)) {
     exit 1
 }
 
-Start-PodeServer -Threads 2 {
+# -Threads 1 : un seul runspace traite les requetes. Indispensable avec EXO v3 :
+# l'etat de connexion est global au process, mais les cmdlets proxy (Add/Remove-
+# DistributionGroupMember, etc.) ne sont importees que dans le runspace qui a appele
+# Connect-ExchangeOnline. Avec plusieurs runspaces, une requete pouvait tomber sur un
+# runspace "connecte" mais sans les cmdlets -> "term not recognized" au 1er appel.
+Start-PodeServer -Threads 1 {
 
     Add-PodeEndpoint -Address 0.0.0.0 -Port ([int]($env:BRIDGE_PORT ?? 8080)) -Protocol Http
 

@@ -54,6 +54,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("[/api/licenses/[userId]]", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const msg: string = error.message ?? "";
+    if (msg.includes("[403]")) {
+      return NextResponse.json(
+        {
+          error:
+            "Opération refusée par Microsoft Entra pour ce compte (403). Il détient probablement un rôle d'administrateur : seul un Administrateur général peut modifier ses licences (protection des comptes admin). Retirez son rôle admin ou utilisez un compte Administrateur général.",
+        },
+        { status: 403 }
+      );
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

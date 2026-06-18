@@ -2,7 +2,9 @@
 # Le domaine est injecté via la variable d'environnement APP_DOMAIN (docker-compose.yml).
 # Voir docs/Deploiement-domaine.md
 
-{$APP_DOMAIN} {
+# Fallback "localhost" si APP_DOMAIN n'est pas defini (evite un Caddyfile invalide).
+# Definir APP_DOMAIN dans .env pour servir le vrai domaine. Voir docs/Deploiement-domaine.md
+{$APP_DOMAIN:localhost} {
 	# Certificat signé par la CA interne de Caddy (réseau interne / LAN).
 	# Pour des certificats publiquement reconnus, voir docs/Deploiement-domaine.md (DNS-01).
 	tls internal

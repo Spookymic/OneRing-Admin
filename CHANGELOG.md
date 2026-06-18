@@ -2,6 +2,17 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.13.1] — 2026-06-18
+
+### Corrections v1.13.1
+
+- **Pont Exchange — `-Threads 1`** : le sidecar Pode tourne désormais sur un seul runspace. Corrige l'erreur « The term 'Remove-DistributionGroupMember' is not recognized » au premier clic (EXO v3 importe les cmdlets proxy uniquement dans le runspace qui s'est connecté ; un pool de runspaces provoquait l'échec au 1er appel, succès au 2nd).
+- **Caddyfile** : fallback `{$APP_DOMAIN:localhost}` — évite le crash en boucle de Caddy (« unrecognized global option: tls ») quand `APP_DOMAIN` n'est pas défini.
+- **Diagnostic Graph** : `graphFetch` logue désormais l'erreur Graph complète (`innerError`, request-id) et, sur 403, les scopes effectifs du jeton (`scp`).
+- **Licences — message 403** : message explicite quand l'opération est refusée par Entra sur un **compte protégé** (détenteur d'un rôle admin → seul un Administrateur général peut modifier ses licences). Ce n'est pas un défaut de droits du compte connecté.
+
+---
+
 ## [1.13.0] — 2026-06-18
 
 ### Nouvelles fonctionnalités v1.13.0
