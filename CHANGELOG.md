@@ -2,6 +2,15 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.13.0] — 2026-06-18
+
+### Nouvelles fonctionnalités v1.13.0
+
+- **Accès par nom de domaine en HTTPS** : ajout d'un reverse proxy **Caddy** (service `caddy`) comme point d'entrée unique sur `APP_DOMAIN`, avec TLS via la CA interne de Caddy (`tls internal`). Le conteneur `app` n'expose plus de port hôte (accès uniquement via Caddy). Requis car Azure AD n'autorise l'HTTP que pour `localhost`.
+- **Configuration** : nouvelles variables `APP_DOMAIN` + `NEXTAUTH_URL` en `https://`, `Caddyfile` à la racine. Guide complet : [docs/Deploiement-domaine.md](docs/Deploiement-domaine.md) (DNS, URI de redirection Azure AD, installation de la CA interne sur les postes).
+
+---
+
 ## [1.12.0] — 2026-06-18
 
 ### Nouvelles fonctionnalités v1.12.0

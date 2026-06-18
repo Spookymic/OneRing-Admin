@@ -7,7 +7,7 @@ Ce document permet de reprendre le projet rapidement entre deux sessions Claude.
 Outil Next.js 16 + TypeScript remplaçant les consoles M365 (Entra, Exchange, Admin Center).
 Auth SSO Microsoft (NextAuth v4 + Azure AD). Appels Microsoft Graph API. Audit log PostgreSQL. Échéance : 31/03/2026.
 
-## Version actuelle : 1.12.0 (2026-06-18)
+## Version actuelle : 1.13.0 (2026-06-18)
 
 Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 
@@ -144,6 +144,6 @@ npx tsc --noEmit
 
 ## Questions ouvertes
 
-- Hébergement cible : Azure Container Apps, VPS, ou on-premise ?
+- Hébergement cible : on-premise Docker. Accès par domaine HTTPS via Caddy (`tls internal`) — voir [Deploiement-domaine.md](Deploiement-domaine.md). Reste à trancher : domaine définitif + distribution de la CA interne (GPO) ou bascule DNS-01 pour des certificats publiquement reconnus.
 - **Pont Exchange Online** (DL, groupes mail-enabled, boîtes partagées) : cadré dans [ADR-001-pont-exchange.md](ADR-001-pont-exchange.md). Décision : sidecar PowerShell Docker on-premise, livraison par étapes (DL membres en premier). En attente du provisionnement tenant (app reg + certificat + rôle Exchange Admin).
 - Pagination côté serveur pour les tenants de très grande taille (> 999 utilisateurs) ?

@@ -1,0 +1,14 @@
+# OneRing Admin — reverse proxy HTTPS (interne)
+# Le domaine est injecté via la variable d'environnement APP_DOMAIN (docker-compose.yml).
+# Voir docs/Deploiement-domaine.md
+
+{$APP_DOMAIN} {
+	# Certificat signé par la CA interne de Caddy (réseau interne / LAN).
+	# Pour des certificats publiquement reconnus, voir docs/Deploiement-domaine.md (DNS-01).
+	tls internal
+
+	# Relaie vers le conteneur Next.js sur le réseau Docker interne.
+	reverse_proxy app:3000
+
+	encode gzip
+}

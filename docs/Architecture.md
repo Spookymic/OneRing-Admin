@@ -20,7 +20,19 @@
 
 ## Infrastructure Docker
 
-Trois services orchestrés par `docker-compose.yml` :
+Services orchestrés par `docker-compose.yml` : `caddy` (reverse proxy HTTPS), `app` (Next.js),
+`exo-bridge` (pont Exchange), `migrate` (schéma Prisma), `postgres`.
+
+```text
+Navigateur ──HTTPS──> caddy (:443) ──> app:3000 ──> exo-bridge:8080 (Exchange)
+                                          └────────> postgres:5432
+```
+
+- **`caddy`** : point d'entrée unique sur `APP_DOMAIN`, termine le TLS (`tls internal`), relaie vers `app:3000`. Seul service exposant des ports hôte (80/443). Voir [Deploiement-domaine.md](Deploiement-domaine.md).
+- **`app`** : Next.js standalone, plus aucun port publié (accès via Caddy uniquement). `NEXTAUTH_URL = https://<APP_DOMAIN>`.
+- **`exo-bridge`** : sidecar PowerShell (cmdlets Exchange non couvertes par Graph), non exposé. Voir [ADR-001-pont-exchange.md](ADR-001-pont-exchange.md).
+
+Variante historique (3 services) sans domaine :
 
 ```text
 ┌─────────────────────────────────────────────────────┐
@@ -40,7 +52,7 @@ Trois services orchestrés par `docker-compose.yml` :
 - **`migrate`** : stage `builder` du Dockerfile, exécute `prisma db push --accept-data-loss` puis s'arrête (`restart: no`)
 - **`app`** : stage `runner` allégé (standalone Next.js), dépend de `migrate`
 
-Port configurable via `APP_PORT` dans `.env` (défaut : 3001, le container interne reste sur :3000).
+Sans reverse proxy, on peut exposer `app` directement en décommentant `ports: ["127.0.0.1:3001:3000"]` (accès local de debug ; le SSO requiert toutefois le domaine HTTPS, cf. ci-dessus).
 
 ## Authentification et autorisation
 

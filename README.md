@@ -58,13 +58,14 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Accéder à l'application : `http://localhost` (port configurable via `APP_PORT` dans `.env`)
+Accéder à l'application : `https://<APP_DOMAIN>` (servi par Caddy en HTTPS).
+Mise en place du domaine et du certificat : voir [docs/Deploiement-domaine.md](docs/Deploiement-domaine.md).
 
 ## Configuration Azure AD
 
 Dans le portail Azure → App registrations → New registration :
 
-1. **Redirect URI** : `http://localhost/api/auth/callback/azure-ad` (adapter selon votre URL)
+1. **Redirect URI** : `https://<APP_DOMAIN>/api/auth/callback/azure-ad` (HTTPS obligatoire hors `localhost`)
 2. **Permissions API** (Microsoft Graph, type Delegated) :
    - `User.ReadWrite.All`
    - `Group.ReadWrite.All`
@@ -80,10 +81,10 @@ Dans le portail Azure → App registrations → New registration :
 AZURE_AD_CLIENT_ID=       # ID de l'application Azure AD
 AZURE_AD_CLIENT_SECRET=   # Secret client Azure AD
 AZURE_AD_TENANT_ID=       # ID du tenant Azure AD
-NEXTAUTH_URL=             # URL publique de l'app (ex: http://localhost)
+APP_DOMAIN=               # Nom de domaine servi par Caddy (ex: onering.example.local)
+NEXTAUTH_URL=             # URL HTTPS de l'app (https://<APP_DOMAIN>)
 NEXTAUTH_SECRET=          # Clé secrète (openssl rand -base64 32)
 POSTGRES_PASSWORD=        # Mot de passe PostgreSQL
-APP_PORT=                 # Port exposé (défaut: 3001)
 DATABASE_URL=             # URL PostgreSQL complète
 ```
 
