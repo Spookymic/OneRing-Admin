@@ -286,6 +286,25 @@ Start-PodeServer -Threads 1 {
         }
     }
 
+    # --- Conversion d'une boîte en boîte partagée (offboarding) ---
+    # Body JSON : { mailbox }
+    Add-PodeRoute -Method Post -Path '/mailbox/convert-to-shared' -ScriptBlock {
+        try {
+            $mbx = $WebEvent.Data.mailbox
+            if ([string]::IsNullOrWhiteSpace($mbx)) {
+                Write-PodeJsonResponse -Value @{ ok = $false; error = 'parametre mailbox requis' }
+                return
+            }
+            Connect-ExoIfNeeded
+            Set-Mailbox -Identity $mbx -Type Shared -ErrorAction Stop
+            Write-PodeJsonResponse -Value @{ ok = $true }
+        }
+        catch {
+            [Console]::Error.WriteLine("MBX_CONVERT_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
     # --- Délégations d'une boîte : lecture ---
     # GET /mailbox/permissions?mailbox=<smtp>
     Add-PodeRoute -Method Get -Path '/mailbox/permissions' -ScriptBlock {

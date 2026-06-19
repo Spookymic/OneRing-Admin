@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, ChevronDown, RotateCcw, AlertTriangle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronRight, ChevronDown, RotateCcw, AlertTriangle, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { apiFetch } from "@/lib/api";
 import type { GroupType } from "@/services/graph/groups";
 
 export interface GroupNode {
@@ -38,14 +40,34 @@ export function GroupTreeNode({
   const [expanded, setExpanded] = useState(false);
   const isCycle = ancestors.has(node.id);
 
-  const relatedIds = (direction === "children" ? childrenOf[node.id] : parentsOf[node.id]) ?? [];
-  const related = relatedIds.map((id) => nodeMap.get(id)).filter((n): n is GroupNode => !!n);
-  const hasChildren = related.length > 0 && !isCycle;
+  // Imbrication DL-dans-DL : non couverte par la carte Graph → chargée via le pont à l'expansion.
+  const isDLChildren = node.type === "distribution" && direction === "children";
+  const { data: lazyRelated, isLoading: lazyLoading } = useQuery<GroupNode[]>({
+    queryKey: ["group-relations", "children", node.id],
+    queryFn: () => apiFetch<GroupNode[]>(`/api/groups/${node.id}/relations?direction=children`),
+    enabled: expanded && isDLChildren && !isCycle,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const mapNodes = ((direction === "children" ? childrenOf[node.id] : parentsOf[node.id]) ?? [])
+    .map((id) => nodeMap.get(id))
+    .filter((n): n is GroupNode => !!n);
+
+  const related = (() => {
+    if (!isDLChildren) return mapNodes;
+    const merged = new Map<string, GroupNode>();
+    for (const n of mapNodes) merged.set(n.id, n);
+    for (const n of lazyRelated ?? []) merged.set(n.id, n);
+    return [...merged.values()].sort((a, b) => a.displayName.localeCompare(b.displayName));
+  })();
+
+  // Pour une DL on ne connaît pas les enfants sans interroger le pont → toujours dépliable.
+  const canExpand = !isCycle && (isDLChildren || related.length > 0);
+  const ti = typeLabels[node.type];
+  const indent = depth * 18 + 4;
 
   const childAncestors = new Set(ancestors);
   childAncestors.add(node.id);
-  const ti = typeLabels[node.type];
-  const indent = depth * 18 + 4;
 
   return (
     <div>
@@ -57,7 +79,7 @@ export function GroupTreeNode({
           <span className="w-5 flex justify-center text-amber-500" title="Référence circulaire">
             <RotateCcw className="h-3.5 w-3.5" />
           </span>
-        ) : hasChildren ? (
+        ) : canExpand ? (
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}
@@ -92,22 +114,32 @@ export function GroupTreeNode({
         </button>
       </div>
 
-      {expanded && hasChildren && (
+      {expanded && canExpand && (
         <div>
-          {related.map((c) => (
-            <GroupTreeNode
-              key={c.id}
-              node={c}
-              direction={direction}
-              childrenOf={childrenOf}
-              parentsOf={parentsOf}
-              nodeMap={nodeMap}
-              ownerlessSet={ownerlessSet}
-              ancestors={childAncestors}
-              depth={depth + 1}
-              onSelect={onSelect}
-            />
-          ))}
+          {isDLChildren && lazyLoading && related.length === 0 ? (
+            <div className="flex items-center gap-2 text-xs text-[#01031B]/40 py-1" style={{ paddingLeft: indent + 18 }}>
+              <Loader2 className="h-3 w-3 animate-spin" /> Chargement…
+            </div>
+          ) : related.length > 0 ? (
+            related.map((c) => (
+              <GroupTreeNode
+                key={c.id}
+                node={c}
+                direction={direction}
+                childrenOf={childrenOf}
+                parentsOf={parentsOf}
+                nodeMap={nodeMap}
+                ownerlessSet={ownerlessSet}
+                ancestors={childAncestors}
+                depth={depth + 1}
+                onSelect={onSelect}
+              />
+            ))
+          ) : (
+            <p className="text-xs text-[#01031B]/30 py-1" style={{ paddingLeft: indent + 18 }}>
+              {direction === "children" ? "Aucun groupe imbriqué" : "Membre d'aucun groupe"}
+            </p>
+          )}
         </div>
       )}
     </div>

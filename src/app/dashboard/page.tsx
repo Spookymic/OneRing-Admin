@@ -230,6 +230,30 @@ export default function DashboardPage() {
     (g) => !dismissed.has("group-no-owner") && !dismissed.has(`group-no-owner:${g.id}`)
   );
 
+  // Groupes M365/Sécurité sans aucun membre
+  const { data: emptyGroups } = useQuery<{ id: string; displayName: string; type: GroupType }[]>({
+    queryKey: ["empty-groups"],
+    queryFn: () => apiFetch<{ id: string; displayName: string; type: GroupType }[]>("/api/anomalies/empty-groups"),
+    staleTime: 5 * 60 * 1000,
+  });
+  const activeEmpty = (emptyGroups ?? []).filter(
+    (g) => !dismissed.has("group-empty") && !dismissed.has(`group-empty:${g.id}`)
+  );
+
+  function openGroupSheet(g: { id: string; displayName: string; type: GroupType }) {
+    setGroupSheet({
+      id: g.id,
+      displayName: g.displayName,
+      type: g.type,
+      mail: null,
+      description: null,
+      groupTypes: [],
+      mailEnabled: false,
+      securityEnabled: false,
+      membershipRule: null,
+    });
+  }
+
   const userStats = users
     ? {
         total: users.length,
@@ -526,6 +550,49 @@ export default function DashboardPage() {
                     className="text-amber-500 hover:text-amber-800 p-0.5"
                     title="Marquer comme normal"
                     onClick={() => dismissUser("group-no-owner", g.id)}
+                  >
+                    <EyeOff className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Groupes vides */}
+      {!usersLoading && activeEmpty.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            Groupes vides ({activeEmpty.length})
+          </h3>
+          <div className="rounded-lg border px-4 py-3 bg-[#D8346E]/5 border-[#D8346E]/20 text-[#D8346E]">
+            <p className="text-xs mb-2 opacity-80">
+              Groupes M365 / Sécurité sans aucun membre — candidats à la suppression ou au peuplement.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {activeEmpty.map((g) => (
+                <span
+                  key={g.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#D8346E]/30 bg-white/60 pl-2.5 pr-1 py-0.5 text-xs"
+                >
+                  <span className="text-[10px] font-semibold uppercase text-[#D8346E]/70 shrink-0">
+                    {GROUP_TYPE_SHORT[g.type] ?? g.type}
+                  </span>
+                  <button
+                    type="button"
+                    className="max-w-[220px] truncate hover:text-[#01031B] transition-colors"
+                    onClick={() => openGroupSheet(g)}
+                    title="Ouvrir le groupe"
+                  >
+                    {g.displayName}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-[#D8346E]/60 hover:text-[#01031B] p-0.5"
+                    title="Marquer comme normal"
+                    onClick={() => dismissUser("group-empty", g.id)}
                   >
                     <EyeOff className="h-3 w-3" />
                   </button>

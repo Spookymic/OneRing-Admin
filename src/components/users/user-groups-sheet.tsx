@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Trash2, UserPlus, Shield, Users, KeyRound, UserX, Wifi,
-  CheckCircle, XCircle, AlertCircle, Crown, BellOff, PowerOff, Power, Download,
+  CheckCircle, XCircle, AlertCircle, Crown, BellOff, PowerOff, Power, Download, UserMinus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -25,6 +25,7 @@ import type { DirectoryRole } from "@/services/graph/roles";
 import { getSkuFriendlyName } from "@/lib/license-names";
 import { apiFetch } from "@/lib/api";
 import { useAdminSettings } from "@/lib/admin-settings";
+import { OffboardingDialog } from "@/components/users/offboarding-dialog";
 
 interface Props {
   user: M365User;
@@ -58,6 +59,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
   const { toast } = useToast();
   const { settings } = useAdminSettings();
   const queryClient = useQueryClient();
+  const [offboardOpen, setOffboardOpen] = useState(false);
   const [tab, setTab] = useState<Tab>(initialTab ?? "groups");
 
   useEffect(() => {
@@ -371,7 +373,19 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                 Supprimer
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs h-7 text-red-600 border-red-200 hover:bg-red-50"
+              onClick={() => setOffboardOpen(true)}
+            >
+              <UserMinus className="h-3 w-3 mr-1" />
+              Offboarder
+            </Button>
           </div>
+          {offboardOpen && (
+            <OffboardingDialog user={user} open={offboardOpen} onClose={() => setOffboardOpen(false)} />
+          )}
 
           {/* Onglets */}
           <div className="flex gap-1 pt-2 overflow-x-auto pb-0.5 scrollbar-none">

@@ -14,6 +14,7 @@ export type AuditAction =
   | "SHARED_MAILBOX_CREATE"
   | "MAILBOX_PERMISSION_ADD"
   | "MAILBOX_PERMISSION_REMOVE"
+  | "USER_OFFBOARD"
   | "LICENSE_ASSIGN"
   | "LICENSE_REMOVE"
   | "PASSWORD_RESET"
@@ -49,6 +50,10 @@ export async function logAudit(params: AuditParams) {
       payloadAfter: params.payloadAfter ?? undefined,
     },
   });
+}
+
+export async function getAuditLog(id: string) {
+  return prisma.auditLog.findUnique({ where: { id } });
 }
 
 export async function getAuditLogs(limit = 100, days?: number) {

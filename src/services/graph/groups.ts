@@ -1,4 +1,4 @@
-import { graphFetch } from "@/lib/graph";
+import { graphFetch, graphFetchAll } from "@/lib/graph";
 
 export type GroupType = "unified" | "distribution" | "security" | "sharedMailbox";
 
@@ -51,8 +51,8 @@ export async function listGroups(accessToken: string): Promise<(M365Group & { ty
     $select: LIST_SELECT,
     $top: "999",
   });
-  const data = await graphFetch<{ value: M365Group[] }>(accessToken, `/groups?${params}`);
-  return data.value
+  const value = await graphFetchAll<M365Group>(accessToken, `/groups?${params}`);
+  return value
     .map((g) => ({ ...g, type: detectGroupType(g) }))
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 }

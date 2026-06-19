@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,11 +10,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useCallback } from "react";
-import { Download } from "lucide-react";
+import { Download, RotateCcw } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useSort } from "@/lib/use-sort";
 import { SortableHead } from "@/components/ui/sortable-head";
 import { useAdminSettings } from "@/lib/admin-settings";
+import { useToast } from "@/hooks/use-toast";
+
+// Doit rester aligné avec ROLLBACKABLE dans /api/audit/[id]/rollback
+const ROLLBACKABLE = new Set([
+  "LICENSE_ASSIGN", "LICENSE_REMOVE",
+  "GROUP_MEMBER_ADD", "GROUP_MEMBER_REMOVE", "GROUP_OWNER_ADD", "GROUP_OWNER_REMOVE",
+  "DL_MEMBER_ADD", "DL_MEMBER_REMOVE", "DL_OWNER_ADD", "DL_OWNER_REMOVE",
+  "MAILBOX_PERMISSION_ADD", "MAILBOX_PERMISSION_REMOVE",
+  "ACCOUNT_DISABLE", "ACCOUNT_ENABLE",
+]);
 
 const actionLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   GROUP_MEMBER_ADD:    { label: "Ajout membre",     variant: "default" },
@@ -153,12 +163,35 @@ function exportAuditCSV(logs: any[]) {
 export default function AuditPage() {
   const { settings } = useAdminSettings();
   const days = settings.auditRetentionDays;
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: logs, isLoading, error } = useQuery<any[]>({
     queryKey: ["audit", days],
     queryFn: () => apiFetch<any[]>(`/api/audit${days > 0 ? `?days=${days}` : ""}`),
     refetchInterval: 30000,
   });
+
+  const rollback = useMutation({
+    mutationFn: (logId: string) => apiFetch<{ summary?: string }>(`/api/audit/${logId}/rollback`, { method: "POST" }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(); // rafraîchit audit + utilisateurs/groupes/licences
+      toast({ title: "Action annulée", description: data?.summary });
+    },
+    onError: (err: any) => {
+      const description =
+        err.message === "exchange_forbidden"
+          ? "Un rôle Exchange Administrator est requis."
+          : err.message;
+      toast({ title: "Échec de l'annulation", description, variant: "destructive" });
+    },
+  });
+
+  function handleRollback(log: any) {
+    if (window.confirm(`Annuler cette action : « ${buildDescription(log)} » ?\nL'opération inverse sera exécutée et journalisée.`)) {
+      rollback.mutate(log.id);
+    }
+  }
 
   const getAuditSortVal = useCallback((log: any, column: AuditSortCol): string => {
     switch (column) {
@@ -212,6 +245,7 @@ export default function AuditPage() {
               <SortableHead label="Administrateur" col="userUpn"   activeCol={sortCol} dir={sortDir} onToggle={toggleSort} />
               <SortableHead label="Action"         col="action"    activeCol={sortCol} dir={sortDir} onToggle={toggleSort} />
               <th className="p-3 text-sm font-medium">Détail</th>
+              <th className="p-3 text-sm font-medium w-10"></th>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -237,11 +271,25 @@ export default function AuditPage() {
                     <TableCell className="text-sm text-gray-700">
                       {buildDescription(log)}
                     </TableCell>
+                    <TableCell className="text-right">
+                      {ROLLBACKABLE.has(log.action) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-[#01031B]/50 hover:text-[#D8346E]"
+                          onClick={() => handleRollback(log)}
+                          disabled={rollback.isPending}
+                          title="Annuler cette action (rollback)"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
             {!isLoading && logs?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-gray-400 py-8">
+                <TableCell colSpan={5} className="text-center text-gray-400 py-8">
                   Aucune modification enregistrée
                 </TableCell>
               </TableRow>

@@ -2,6 +2,22 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.16.0] — 2026-06-19
+
+### Nouvelles fonctionnalités v1.16.0
+
+- **Workflow d'offboarding** : bouton « Offboarder » dans la fiche utilisateur → désactive le compte, retire toutes les licences et toutes les appartenances aux groupes (Graph + pont pour les DL), avec une case optionnelle **« Convertir en boîte partagée »**. Rapport tolérant aux erreurs. Endpoint `/api/users/[id]/offboard`, audit `USER_OFFBOARD`.
+- **Rollback UI** : bouton « Annuler » sur les lignes d'audit réversibles (licences, membres/propriétaires, DL, délégations, activation/désactivation). Exécute l'action inverse et la journalise. `/api/audit/[id]/rollback`.
+- **Alerte groupes vides** : section tableau de bord listant les groupes M365/Sécurité sans aucun membre. `/api/anomalies/empty-groups` (via `$batch`).
+- **Imbrication DL-dans-DL** dans l'arborescence : les nœuds DL chargent leurs sous-groupes via le pont Exchange à l'expansion.
+
+### Corrections / robustesse v1.16.0
+
+- **Pagination** : `listUsers` / `listGroups` suivent `@odata.nextLink` (helper `graphFetchAll`) — fin de la troncature silencieuse au-delà de 999 objets.
+- **Throttling** : `graphFetch` et `graphBatch` réessaient en respectant l'en-tête `Retry-After` (429 / 503).
+
+---
+
 ## [1.15.1] — 2026-06-19
 
 ### Corrections v1.15.1

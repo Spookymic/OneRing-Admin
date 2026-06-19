@@ -1,4 +1,4 @@
-import { graphFetch } from "@/lib/graph";
+import { graphFetch, graphFetchAll } from "@/lib/graph";
 
 export interface M365User {
   id: string;
@@ -38,12 +38,12 @@ export async function listUsers(accessToken: string): Promise<M365User[]> {
     $top: "999",
     $count: "true",
   });
-  const data = await graphFetch<{ value: M365User[] }>(
+  const users = await graphFetchAll<M365User>(
     accessToken,
     `/users?${params}`,
     { headers: { ConsistencyLevel: "eventual" } }
   );
-  return data.value.sort((a, b) => a.displayName.localeCompare(b.displayName));
+  return users.sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
 export async function getUser(accessToken: string, userId: string): Promise<M365User> {

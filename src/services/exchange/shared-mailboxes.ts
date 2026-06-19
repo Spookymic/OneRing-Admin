@@ -38,6 +38,14 @@ export async function createSharedMailbox(params: {
   return data.mailbox;
 }
 
+/** Convertit une boîte utilisateur en boîte partagée (offboarding). */
+export async function convertToSharedMailbox(mailbox: string): Promise<void> {
+  await bridgeFetch("/mailbox/convert-to-shared", {
+    method: "POST",
+    body: JSON.stringify({ mailbox }),
+  });
+}
+
 /** Lit les délégations (Accès complet, Envoyer en tant que, Envoyer de la part de). */
 export async function listMailboxPermissions(mailbox: string): Promise<MailboxPermissions> {
   const data = await bridgeFetch<{ fullAccess?: MailboxDelegate[]; sendAs?: MailboxDelegate[]; sendOnBehalf?: MailboxDelegate[] }>(
