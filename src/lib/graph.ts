@@ -36,3 +36,36 @@ export async function graphFetch<T = unknown>(
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
+
+/**
+ * Exécute des requêtes GET Graph en lot via /$batch (20 par appel).
+ * Retourne une map id → { status, body }. Les URLs sont relatives (ex. "/groups/{id}/...").
+ */
+export async function graphBatch<T = any>(
+  accessToken: string,
+  requests: { id: string; url: string }[]
+): Promise<Record<string, { status: number; body: T }>> {
+  const out: Record<string, { status: number; body: T }> = {};
+  for (let i = 0; i < requests.length; i += 20) {
+    const chunk = requests.slice(i, i + 20);
+    const res = await fetch(`${GRAPH_API}/$batch`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requests: chunk.map((r) => ({ id: r.id, method: "GET", url: r.url })),
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(`[${res.status}] ${body.error?.message || "Graph $batch error"}`);
+    }
+    const data = await res.json();
+    for (const resp of data.responses ?? []) {
+      out[resp.id] = { status: resp.status, body: resp.body };
+    }
+  }
+  return out;
+}

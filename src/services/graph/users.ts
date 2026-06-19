@@ -62,6 +62,19 @@ export async function listUserMemberOf(accessToken: string, userId: string): Pro
   return data.value.sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
+/** Groupes dont l'utilisateur est propriétaire. */
+export async function listUserOwnedGroups(accessToken: string, userId: string): Promise<M365UserGroup[]> {
+  const params = new URLSearchParams({
+    $select: "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled",
+    $top: "100",
+  });
+  const data = await graphFetch<{ value: M365UserGroup[] }>(
+    accessToken,
+    `/users/${userId}/ownedObjects/microsoft.graph.group?${params}`
+  );
+  return data.value.sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
 export interface SignInLog {
   id: string;
   createdDateTime: string;

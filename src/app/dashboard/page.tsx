@@ -19,6 +19,7 @@ import { detectAccountType, ACCOUNT_TYPE_CONFIG } from "@/lib/account-types";
 import { getSkuFriendlyName } from "@/lib/license-names";
 import { apiFetch } from "@/lib/api";
 import { UserGroupsSheet } from "@/components/users/user-groups-sheet";
+import { GroupMembersSheet } from "@/components/groups/group-members-sheet";
 
 const actionLabels: Record<string, string> = {
   GROUP_MEMBER_ADD: "Ajout membre",
@@ -130,6 +131,7 @@ export default function DashboardPage() {
   const [manageAnomaly, setManageAnomaly] = useState<string | null>(null);
   const [anomalySheetUser, setAnomalySheetUser] = useState<M365User | null>(null);
   const [anomalySheetTab, setAnomalySheetTab] = useState<"groups" | "licenses">("licenses");
+  const [groupSheet, setGroupSheet] = useState<(M365Group & { type: GroupType }) | null>(null);
 
   useEffect(() => {
     try {
@@ -199,12 +201,26 @@ export default function DashboardPage() {
   });
 
   // Comptes désactivés / partagés encore membres de groupes (memberOf récupéré côté serveur)
-  const { data: orphanGroups } = useQuery<{ id: string; groupCount: number; groups: string[] }[]>({
+  type OwnedGroup = { id: string; displayName: string; type: GroupType; mail: string | null };
+  type OrphanInfo = { id: string; groups: string[]; ownedGroups: OwnedGroup[] };
+  const { data: orphanGroups } = useQuery<OrphanInfo[]>({
     queryKey: ["orphan-groups"],
-    queryFn: () => apiFetch<{ id: string; groupCount: number; groups: string[] }[]>("/api/anomalies/orphans"),
+    queryFn: () => apiFetch<OrphanInfo[]>("/api/anomalies/orphans"),
     staleTime: 5 * 60 * 1000,
   });
   const orphanGroupMap = new Map((orphanGroups ?? []).map((o) => [o.id, o]));
+  const hasMemberships = (id: string) => (orphanGroupMap.get(id)?.groups.length ?? 0) > 0;
+  const ownsGroups = (id: string) => (orphanGroupMap.get(id)?.ownedGroups.length ?? 0) > 0;
+
+  // Groupes M365/Sécurité sans propriétaire
+  const { data: ownerlessGroups } = useQuery<{ id: string; displayName: string; type: GroupType }[]>({
+    queryKey: ["ownerless-groups"],
+    queryFn: () => apiFetch<{ id: string; displayName: string; type: GroupType }[]>("/api/anomalies/ownerless"),
+    staleTime: 5 * 60 * 1000,
+  });
+  const activeOwnerless = (ownerlessGroups ?? []).filter(
+    (g) => !dismissed.has("group-no-owner") && !dismissed.has(`group-no-owner:${g.id}`)
+  );
 
   const userStats = users
     ? {
@@ -299,7 +315,14 @@ export default function DashboardPage() {
           id: "disabled-with-groups",
           label: "Comptes désactivés encore membres de groupes",
           hint: "À retirer des groupes lors de l'offboarding (accès résiduels).",
-          users: users.filter((u) => !u.accountEnabled && orphanGroupMap.has(u.id)),
+          users: users.filter((u) => !u.accountEnabled && hasMemberships(u.id)),
+          severity: "high" as const,
+        },
+        {
+          id: "disabled-owns-group",
+          label: "Comptes désactivés propriétaires d'un groupe",
+          hint: "Un propriétaire désactivé ne peut plus gérer le groupe — réattribuer la propriété.",
+          users: users.filter((u) => !u.accountEnabled && ownsGroups(u.id)),
           severity: "high" as const,
         },
         {
@@ -311,7 +334,7 @@ export default function DashboardPage() {
             return (
               u.accountEnabled &&
               (t === "shared" || t === "room" || t === "equipment") &&
-              orphanGroupMap.has(u.id)
+              hasMemberships(u.id)
             );
           }),
           severity: "low" as const,
@@ -450,6 +473,58 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Groupes sans propriétaire */}
+      {!usersLoading && activeOwnerless.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            Groupes sans propriétaire ({activeOwnerless.length})
+          </h3>
+          <div className="rounded-lg border px-4 py-3 bg-amber-50 border-amber-200 text-amber-700">
+            <p className="text-xs mb-2 opacity-80">
+              Sans propriétaire, personne ne peut gérer ces groupes (M365 / Sécurité). Cliquez sur un groupe pour lui ajouter un propriétaire.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {activeOwnerless.map((g) => (
+                <span
+                  key={g.id}
+                  className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white/60 pl-2.5 pr-1 py-0.5 text-xs"
+                >
+                  <button
+                    type="button"
+                    className="max-w-[220px] truncate hover:text-[#D8346E] transition-colors"
+                    onClick={() =>
+                      setGroupSheet({
+                        id: g.id,
+                        displayName: g.displayName,
+                        type: g.type,
+                        mail: null,
+                        description: null,
+                        groupTypes: [],
+                        mailEnabled: false,
+                        securityEnabled: false,
+                        membershipRule: null,
+                      })
+                    }
+                    title="Ouvrir le groupe (propriétaires)"
+                  >
+                    {g.displayName}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-amber-500 hover:text-amber-800 p-0.5"
+                    title="Marquer comme normal"
+                    onClick={() => dismissUser("group-no-owner", g.id)}
+                  >
+                    <EyeOff className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Dialog Gérer anomalie */}
       {manageAnomaly && (() => {
         const anomaly = allAnomalies.find((a) => a.id === manageAnomaly);
@@ -479,32 +554,69 @@ export default function DashboardPage() {
                       À traiter ({active.length})
                     </p>
                     <div className="space-y-1">
-                      {active.map((u) => (
-                        <div key={u.id} className="flex items-center justify-between rounded-md border px-3 py-2">
-                          <button
-                            type="button"
-                            className="min-w-0 text-left hover:text-[#D8346E] transition-colors flex-1"
-                            onClick={() => {
-                              setManageAnomaly(null);
-                              setAnomalySheetTab(anomaly.id.includes("with-groups") ? "groups" : "licenses");
-                              setAnomalySheetUser(u);
-                            }}
-                            title="Ouvrir la fiche utilisateur"
-                          >
-                            <p className="text-sm font-medium truncate">{u.displayName}</p>
-                            <p className="text-xs text-[#01031B]/40 truncate">{u.userPrincipalName}</p>
-                          </button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-xs h-7 ml-2 shrink-0 text-[#01031B]/50 hover:text-[#D8346E]"
-                            onClick={() => dismissUser(anomaly.id, u.id)}
-                          >
-                            <EyeOff className="h-3 w-3 mr-1" />
-                            Normal
-                          </Button>
-                        </div>
-                      ))}
+                      {active.map((u) => {
+                        const owned =
+                          anomaly.id === "disabled-owns-group"
+                            ? orphanGroupMap.get(u.id)?.ownedGroups ?? []
+                            : [];
+                        return (
+                          <div key={u.id} className="rounded-md border px-3 py-2">
+                            <div className="flex items-center justify-between">
+                              <button
+                                type="button"
+                                className="min-w-0 text-left hover:text-[#D8346E] transition-colors flex-1"
+                                onClick={() => {
+                                  setManageAnomaly(null);
+                                  setAnomalySheetTab(anomaly.id.includes("group") ? "groups" : "licenses");
+                                  setAnomalySheetUser(u);
+                                }}
+                                title="Ouvrir la fiche utilisateur"
+                              >
+                                <p className="text-sm font-medium truncate">{u.displayName}</p>
+                                <p className="text-xs text-[#01031B]/40 truncate">{u.userPrincipalName}</p>
+                              </button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-xs h-7 ml-2 shrink-0 text-[#01031B]/50 hover:text-[#D8346E]"
+                                onClick={() => dismissUser(anomaly.id, u.id)}
+                              >
+                                <EyeOff className="h-3 w-3 mr-1" />
+                                Normal
+                              </Button>
+                            </div>
+                            {owned.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                <span className="text-xs text-[#01031B]/40">Propriétaire de :</span>
+                                {owned.map((g) => (
+                                  <button
+                                    key={g.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setManageAnomaly(null);
+                                      setGroupSheet({
+                                        id: g.id,
+                                        displayName: g.displayName,
+                                        type: g.type,
+                                        mail: g.mail,
+                                        description: null,
+                                        groupTypes: [],
+                                        mailEnabled: false,
+                                        securityEnabled: false,
+                                        membershipRule: null,
+                                      });
+                                    }}
+                                    className="text-xs rounded-full border px-2 py-0.5 hover:border-[#D8346E] hover:text-[#D8346E] transition-colors"
+                                    title="Ouvrir le groupe (propriétaires)"
+                                  >
+                                    {g.displayName}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -778,6 +890,15 @@ export default function DashboardPage() {
           open={!!anomalySheetUser}
           onClose={() => setAnomalySheetUser(null)}
           initialTab={anomalySheetTab}
+        />
+      )}
+
+      {/* Panneau du groupe possédé (depuis l'alerte propriétaire désactivé) */}
+      {groupSheet && (
+        <GroupMembersSheet
+          group={groupSheet}
+          open={!!groupSheet}
+          onClose={() => setGroupSheet(null)}
         />
       )}
 

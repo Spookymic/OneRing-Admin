@@ -1,8 +1,22 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { listUsers, listUserMemberOf } from "@/services/graph/users";
+import { listUsers, listUserMemberOf, listUserOwnedGroups } from "@/services/graph/users";
 import { detectAccountType } from "@/lib/account-types";
+import type { GroupType } from "@/services/graph/groups";
+
+interface OwnedGroup {
+  id: string;
+  displayName: string;
+  type: GroupType;
+  mail: string | null;
+}
+
+function groupTypeOf(g: { groupTypes?: string[]; mailEnabled?: boolean; securityEnabled?: boolean }): GroupType {
+  if (g.groupTypes?.includes("Unified")) return "unified";
+  if (g.mailEnabled && !g.securityEnabled) return "distribution";
+  return "security";
+}
 
 // Groupes par défaut (tout le monde en est membre) : ne comptent pas comme anomalie.
 const EXCLUDED_GROUP_NAMES = new Set([
@@ -34,27 +48,32 @@ export async function GET() {
       return !u.accountEnabled || t === "shared" || t === "room" || t === "equipment";
     });
 
-    // Récupère memberOf par lots pour éviter le throttling Graph.
+    // Récupère memberOf + groupes possédés par lots pour éviter le throttling Graph.
     const CHUNK = 8;
-    const orphans: { id: string; groupCount: number; groups: string[] }[] = [];
+    const orphans: { id: string; groups: string[]; ownedGroups: OwnedGroup[] }[] = [];
     for (let i = 0; i < candidates.length; i += CHUNK) {
       const chunk = candidates.slice(i, i + CHUNK);
       const settled = await Promise.all(
         chunk.map(async (u) => {
-          try {
-            const groups = await listUserMemberOf(token, u.id);
-            const names = groups
-              .map((g) => g.displayName)
-              .filter((n) => !EXCLUDED_GROUP_NAMES.has((n ?? "").trim().toLowerCase()));
-            return { id: u.id, groups: names };
-          } catch {
-            return { id: u.id, groups: [] as string[] };
-          }
+          const [memberOf, owned] = await Promise.all([
+            listUserMemberOf(token, u.id).catch(() => []),
+            listUserOwnedGroups(token, u.id).catch(() => []),
+          ]);
+          const groups = memberOf
+            .map((g) => g.displayName)
+            .filter((n) => !EXCLUDED_GROUP_NAMES.has((n ?? "").trim().toLowerCase()));
+          const ownedGroups: OwnedGroup[] = owned.map((g) => ({
+            id: g.id,
+            displayName: g.displayName,
+            type: groupTypeOf(g),
+            mail: g.mail ?? null,
+          }));
+          return { id: u.id, groups, ownedGroups };
         })
       );
       for (const r of settled) {
-        if (r.groups.length > 0) {
-          orphans.push({ id: r.id, groupCount: r.groups.length, groups: r.groups });
+        if (r.groups.length > 0 || r.ownedGroups.length > 0) {
+          orphans.push(r);
         }
       }
     }

@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, ChevronDown, RotateCcw, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronDown, RotateCcw, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { apiFetch } from "@/lib/api";
 import type { GroupType } from "@/services/graph/groups";
 
 export interface GroupNode {
@@ -25,21 +23,24 @@ const typeLabels: Record<GroupType, { label: string; variant: "default" | "secon
 interface Props {
   node: GroupNode;
   direction: "children" | "parents";
+  childrenOf: Record<string, string[]>;
+  parentsOf: Record<string, string[]>;
+  nodeMap: Map<string, GroupNode>;
+  ownerlessSet: Set<string>;
   ancestors: Set<string>;
   depth: number;
   onSelect: (node: GroupNode) => void;
 }
 
-export function GroupTreeNode({ node, direction, ancestors, depth, onSelect }: Props) {
+export function GroupTreeNode({
+  node, direction, childrenOf, parentsOf, nodeMap, ownerlessSet, ancestors, depth, onSelect,
+}: Props) {
   const [expanded, setExpanded] = useState(false);
   const isCycle = ancestors.has(node.id);
 
-  const { data: children, isLoading } = useQuery<GroupNode[]>({
-    queryKey: ["group-relations", direction, node.id],
-    queryFn: () => apiFetch<GroupNode[]>(`/api/groups/${node.id}/relations?direction=${direction}`),
-    enabled: expanded && !isCycle,
-    staleTime: 5 * 60 * 1000,
-  });
+  const relatedIds = (direction === "children" ? childrenOf[node.id] : parentsOf[node.id]) ?? [];
+  const related = relatedIds.map((id) => nodeMap.get(id)).filter((n): n is GroupNode => !!n);
+  const hasChildren = related.length > 0 && !isCycle;
 
   const childAncestors = new Set(ancestors);
   childAncestors.add(node.id);
@@ -56,7 +57,7 @@ export function GroupTreeNode({ node, direction, ancestors, depth, onSelect }: P
           <span className="w-5 flex justify-center text-amber-500" title="Référence circulaire">
             <RotateCcw className="h-3.5 w-3.5" />
           </span>
-        ) : (
+        ) : hasChildren ? (
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}
@@ -65,7 +66,10 @@ export function GroupTreeNode({ node, direction, ancestors, depth, onSelect }: P
           >
             {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
+        ) : (
+          <span className="w-5" />
         )}
+
         <button
           type="button"
           onClick={() => onSelect(node)}
@@ -74,37 +78,36 @@ export function GroupTreeNode({ node, direction, ancestors, depth, onSelect }: P
           <span className="text-sm font-medium truncate">{node.displayName}</span>
           {ti && <Badge variant={ti.variant} className="text-[10px] shrink-0">{ti.label}</Badge>}
           {node.isTeam && <Badge variant="secondary" className="text-[10px] shrink-0">Teams</Badge>}
+          {ownerlessSet.has(node.id) && (
+            <Badge variant="destructive" className="text-[10px] shrink-0 gap-0.5">
+              <AlertTriangle className="h-2.5 w-2.5" /> Sans propriétaire
+            </Badge>
+          )}
+          {related.length > 0 && (
+            <span className="text-xs text-[#01031B]/40 shrink-0">({related.length})</span>
+          )}
           {node.mail && (
-            <span className="text-xs text-[#01031B]/40 truncate hidden sm:inline">{node.mail}</span>
+            <span className="text-xs text-[#01031B]/40 truncate hidden md:inline">{node.mail}</span>
           )}
         </button>
       </div>
 
-      {expanded && !isCycle && (
+      {expanded && hasChildren && (
         <div>
-          {isLoading ? (
-            <div
-              className="flex items-center gap-2 text-xs text-[#01031B]/40 py-1"
-              style={{ paddingLeft: indent + 18 }}
-            >
-              <Loader2 className="h-3 w-3 animate-spin" /> Chargement…
-            </div>
-          ) : children && children.length > 0 ? (
-            children.map((c) => (
-              <GroupTreeNode
-                key={c.id}
-                node={c}
-                direction={direction}
-                ancestors={childAncestors}
-                depth={depth + 1}
-                onSelect={onSelect}
-              />
-            ))
-          ) : (
-            <p className="text-xs text-[#01031B]/30 py-1" style={{ paddingLeft: indent + 18 }}>
-              {direction === "children" ? "Aucun groupe imbriqué" : "Membre d'aucun groupe"}
-            </p>
-          )}
+          {related.map((c) => (
+            <GroupTreeNode
+              key={c.id}
+              node={c}
+              direction={direction}
+              childrenOf={childrenOf}
+              parentsOf={parentsOf}
+              nodeMap={nodeMap}
+              ownerlessSet={ownerlessSet}
+              ancestors={childAncestors}
+              depth={depth + 1}
+              onSelect={onSelect}
+            />
+          ))}
         </div>
       )}
     </div>

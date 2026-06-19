@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,39 +13,50 @@ import type { M365Group, GroupType } from "@/services/graph/groups";
 import { GroupTreeNode, type GroupNode } from "@/components/groups/group-tree-node";
 import { GroupMembersSheet } from "@/components/groups/group-members-sheet";
 
-type GroupWithType = M365Group & { type: GroupType };
 type Direction = "children" | "parents";
+
+interface Structure {
+  nodes: GroupNode[];
+  childrenOf: Record<string, string[]>;
+  parentsOf: Record<string, string[]>;
+}
 
 export default function GroupTreePage() {
   const [search, setSearch] = useState("");
   const [direction, setDirection] = useState<Direction>("children");
-  const [selected, setSelected] = useState<GroupWithType | null>(null);
+  const [rootsOnly, setRootsOnly] = useState(false);
+  const [selected, setSelected] = useState<(M365Group & { type: GroupType }) | null>(null);
 
-  const { data: groups, isLoading, error } = useQuery<GroupWithType[]>({
-    queryKey: ["groups"],
-    queryFn: () => apiFetch<GroupWithType[]>("/api/groups"),
+  const { data: structure, isLoading, error } = useQuery<Structure>({
+    queryKey: ["group-structure"],
+    queryFn: () => apiFetch<Structure>("/api/groups/structure"),
+    staleTime: 5 * 60 * 1000,
   });
 
-  const filtered = (groups ?? [])
+  const { data: ownerless } = useQuery<{ id: string }[]>({
+    queryKey: ["ownerless-groups"],
+    queryFn: () => apiFetch<{ id: string }[]>("/api/anomalies/ownerless"),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const nodeMap = useMemo(
+    () => new Map((structure?.nodes ?? []).map((n) => [n.id, n])),
+    [structure]
+  );
+  const ownerlessSet = useMemo(() => new Set((ownerless ?? []).map((o) => o.id)), [ownerless]);
+  const childrenOf = structure?.childrenOf ?? {};
+  const parentsOf = structure?.parentsOf ?? {};
+
+  const roots = (structure?.nodes ?? [])
     .filter(
-      (g) =>
-        g.displayName.toLowerCase().includes(search.toLowerCase()) ||
-        (g.mail ?? "").toLowerCase().includes(search.toLowerCase())
+      (n) =>
+        n.displayName.toLowerCase().includes(search.toLowerCase()) ||
+        (n.mail ?? "").toLowerCase().includes(search.toLowerCase())
     )
+    .filter((n) => !rootsOnly || (parentsOf[n.id]?.length ?? 0) === 0)
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-  function toNode(g: GroupWithType): GroupNode {
-    return {
-      id: g.id,
-      displayName: g.displayName,
-      type: g.type,
-      isTeam: (g.resourceProvisioningOptions ?? []).includes("Team"),
-      mail: g.mail,
-    };
-  }
-
   function handleSelect(n: GroupNode) {
-    // Objet minimal pour réutiliser le panneau de groupe existant (il recharge par id).
     setSelected({
       id: n.id,
       displayName: n.displayName,
@@ -76,10 +87,10 @@ export default function GroupTreePage() {
         <div>
           <h2 className="text-2xl font-bold">Arborescence des groupes</h2>
           <p className="text-sm text-[#01031B]/50 mt-0.5">
-            Imbrication des groupes (groupe membre d&apos;un groupe). Déroulez un groupe pour explorer ses dépendances.
+            Imbrication des groupes. Déroulez un groupe pour explorer ses dépendances ; un badge signale les groupes sans propriétaire.
           </p>
         </div>
-        <Badge variant="secondary">{filtered.length} groupe{filtered.length > 1 ? "s" : ""}</Badge>
+        <Badge variant="secondary">{roots.length} groupe{roots.length > 1 ? "s" : ""}</Badge>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -109,11 +120,15 @@ export default function GroupTreePage() {
             Membre de
           </Button>
         </div>
-        <p className="text-xs text-[#01031B]/40">
-          {direction === "children"
-            ? "Affiche les groupes imbriqués dans chaque groupe."
-            : "Affiche les groupes dont chaque groupe est membre (analyse d'impact)."}
-        </p>
+        <label className="flex items-center gap-2 text-xs text-[#01031B]/70 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={rootsOnly}
+            onChange={(e) => setRootsOnly(e.target.checked)}
+            className="h-4 w-4 accent-[#D8346E]"
+          />
+          Groupes racines uniquement
+        </label>
       </div>
 
       <Card className="p-2">
@@ -121,16 +136,20 @@ export default function GroupTreePage() {
           <div className="space-y-2 p-2">
             {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-7 w-full" />)}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : roots.length === 0 ? (
           <p className="text-sm text-[#01031B]/40 p-4">Aucun groupe.</p>
         ) : (
           // key={direction} : réinitialise les expansions au changement de sens
           <div key={direction}>
-            {filtered.map((g) => (
+            {roots.map((n) => (
               <GroupTreeNode
-                key={g.id}
-                node={toNode(g)}
+                key={n.id}
+                node={n}
                 direction={direction}
+                childrenOf={childrenOf}
+                parentsOf={parentsOf}
+                nodeMap={nodeMap}
+                ownerlessSet={ownerlessSet}
                 ancestors={new Set()}
                 depth={0}
                 onSelect={handleSelect}

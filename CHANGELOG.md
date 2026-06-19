@@ -2,6 +2,20 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.15.0] — 2026-06-19
+
+### Nouvelles fonctionnalités v1.15.0
+
+- **Alerte « comptes désactivés propriétaires d'un groupe »** : le tableau de bord signale les comptes désactivés encore propriétaires d'un groupe (un propriétaire désactivé ne peut plus le gérer). Les groupes possédés sont affichés en pastilles cliquables dans « Gérer » → ouvre le panneau Propriétaires du groupe. Endpoint `/api/anomalies/orphans` enrichi (`ownedObjects`).
+- **Alerte « groupes sans propriétaire »** : section dédiée listant les groupes M365 / Sécurité sans propriétaire (clic → ajout d'un propriétaire). Endpoint `/api/anomalies/ownerless` (DL exclues : `managedBy` non exposé par Graph).
+- **Arborescence v2** : graphe d'imbrication précalculé en une passe via Graph `$batch` (`/api/groups/structure`). Expansion instantanée, chevron affiché uniquement si le nœud a des enfants, compteur de groupes liés, badge ⚠️ sans propriétaire sur les nœuds, et case « Groupes racines uniquement » immédiate.
+
+### Notes v1.15.0
+
+- L'arborescence s'appuie sur `memberOf` Graph (imbrication Sécurité/M365/Teams). L'imbrication DL-dans-DL (Exchange) n'y figure pas.
+
+---
+
 ## [1.14.0] — 2026-06-19
 
 ### Nouvelles fonctionnalités v1.14.0
