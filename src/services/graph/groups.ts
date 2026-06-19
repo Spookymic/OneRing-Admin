@@ -19,6 +19,10 @@ export interface M365Group {
   allowExternalSenders?: boolean | null;
   /** Contient "Team" si le groupe M365 est aussi une équipe Teams */
   resourceProvisioningOptions?: string[];
+  /** Date de création du groupe */
+  createdDateTime?: string | null;
+  /** Vrai si le groupe est synchronisé depuis l'AD on-premise */
+  onPremisesSyncEnabled?: boolean | null;
 }
 
 function detectGroupType(group: M365Group): GroupType {
@@ -39,7 +43,7 @@ export function isExchangeManagedGroup(group: Pick<M365Group, "mailEnabled" | "g
 
 // SELECT réduit pour la liste (certains champs ne sont pas supportés en OData $filter sur tous les groupes)
 const LIST_SELECT =
-  "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled,membershipRule,resourceProvisioningOptions";
+  "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled,membershipRule,resourceProvisioningOptions,createdDateTime,onPremisesSyncEnabled";
 
 // SELECT complet pour le détail d'un groupe
 const DETAIL_SELECT =

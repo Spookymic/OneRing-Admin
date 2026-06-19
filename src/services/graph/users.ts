@@ -15,6 +15,8 @@ export interface M365User {
   businessPhones: string[];
   createdDateTime: string | null;
   employeeType: string | null;
+  onPremisesSyncEnabled: boolean | null;
+  onPremisesLastSyncDateTime: string | null;
 }
 
 export interface M365UserGroup {
@@ -30,7 +32,7 @@ export interface M365UserGroup {
 const SELECT =
   "id,displayName,userPrincipalName,mail,jobTitle,department,accountEnabled," +
   "assignedLicenses,userType,officeLocation,mobilePhone,businessPhones," +
-  "createdDateTime,employeeType";
+  "createdDateTime,employeeType,onPremisesSyncEnabled,onPremisesLastSyncDateTime";
 
 export async function listUsers(accessToken: string): Promise<M365User[]> {
   const params = new URLSearchParams({

@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo, useEffect } from "react";
 import type { M365Group, GroupType } from "@/services/graph/groups";
 import { AddMemberDialog } from "@/components/groups/add-member-dialog";
+import { ObjectInfo } from "@/components/common/object-info";
 import { useAdminSettings } from "@/lib/admin-settings";
 import { apiFetch } from "@/lib/api";
 
@@ -135,6 +136,15 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
             )}
             {group?.description && !group?.mail && (
               <SheetDescription className="text-xs">{group.description}</SheetDescription>
+            )}
+            {group && (
+              <ObjectInfo
+                id={group.id}
+                type="group"
+                createdDateTime={group.createdDateTime}
+                onPremisesSyncEnabled={group.onPremisesSyncEnabled}
+                open={open}
+              />
             )}
           </SheetHeader>
 

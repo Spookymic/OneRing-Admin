@@ -26,6 +26,7 @@ import { getSkuFriendlyName } from "@/lib/license-names";
 import { apiFetch } from "@/lib/api";
 import { useAdminSettings } from "@/lib/admin-settings";
 import { OffboardingDialog } from "@/components/users/offboarding-dialog";
+import { ObjectInfo } from "@/components/common/object-info";
 
 interface Props {
   user: M365User;
@@ -313,6 +314,13 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
         <SheetHeader className="p-6 pb-4 border-b">
           <SheetTitle className="text-lg">{user.displayName}</SheetTitle>
           <SheetDescription className="text-xs">{user.userPrincipalName}</SheetDescription>
+          <ObjectInfo
+            id={user.id}
+            type="user"
+            createdDateTime={user.createdDateTime}
+            onPremisesSyncEnabled={user.onPremisesSyncEnabled}
+            open={open}
+          />
           <div className="flex flex-wrap gap-1 pt-1">
             {user.department && <Badge variant="secondary" className="text-xs">{user.department}</Badge>}
             {user.jobTitle && <Badge variant="outline" className="text-xs">{user.jobTitle}</Badge>}

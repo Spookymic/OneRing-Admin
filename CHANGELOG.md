@@ -2,6 +2,14 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.16.1] — 2026-06-19
+
+### Nouvelles fonctionnalités v1.16.1
+
+- **Infos objet** : les panneaux utilisateur et groupe affichent la date de création (`createdDateTime`), un badge **Synchronisé AD** / **Cloud** (`onPremisesSyncEnabled`), et le **créateur** en best-effort via les journaux d'audit Entra (objets récents). Endpoint `/api/directory/creator`, composant `ObjectInfo`.
+
+---
+
 ## [1.16.0] — 2026-06-19
 
 ### Nouvelles fonctionnalités v1.16.0
