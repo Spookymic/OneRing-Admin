@@ -2,6 +2,14 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.15.1] — 2026-06-19
+
+### Corrections v1.15.1
+
+- **Groupes sans propriétaire — type affiché** : chaque pastille indique désormais le type du groupe (M365 / Sécurité…). Les groupes M365 sans propriétaire étaient bien détectés mais indistinguables des groupes de sécurité faute d'étiquette.
+
+---
+
 ## [1.15.0] — 2026-06-19
 
 ### Nouvelles fonctionnalités v1.15.0

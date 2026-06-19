@@ -38,6 +38,14 @@ const actionLabels: Record<string, string> = {
   TEAMS_STATUS_UPDATE: "Statut Teams",
 };
 
+/** Libellé court de type de groupe pour les pastilles d'anomalie */
+const GROUP_TYPE_SHORT: Record<string, string> = {
+  unified: "M365",
+  security: "Sécurité",
+  distribution: "Distribution",
+  sharedMailbox: "BAL partagée",
+};
+
 /** Description de la règle de classification pour chaque type de compte */
 const ACCOUNT_TYPE_HINT: Record<string, string> = {
   user: "Member actif avec au moins une licence",
@@ -488,8 +496,11 @@ export default function DashboardPage() {
               {activeOwnerless.map((g) => (
                 <span
                   key={g.id}
-                  className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white/60 pl-2.5 pr-1 py-0.5 text-xs"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-white/60 pl-2.5 pr-1 py-0.5 text-xs"
                 >
+                  <span className="text-[10px] font-semibold uppercase text-amber-700/70 shrink-0">
+                    {GROUP_TYPE_SHORT[g.type] ?? g.type}
+                  </span>
                   <button
                     type="button"
                     className="max-w-[220px] truncate hover:text-[#D8346E] transition-colors"
