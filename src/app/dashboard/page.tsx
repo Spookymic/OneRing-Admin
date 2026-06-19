@@ -129,6 +129,7 @@ export default function DashboardPage() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [manageAnomaly, setManageAnomaly] = useState<string | null>(null);
   const [anomalySheetUser, setAnomalySheetUser] = useState<M365User | null>(null);
+  const [anomalySheetTab, setAnomalySheetTab] = useState<"groups" | "licenses">("licenses");
 
   useEffect(() => {
     try {
@@ -196,6 +197,14 @@ export default function DashboardPage() {
     queryFn: () => apiFetch<any[]>("/api/audit"),
     refetchInterval: 60000,
   });
+
+  // Comptes désactivés / partagés encore membres de groupes (memberOf récupéré côté serveur)
+  const { data: orphanGroups } = useQuery<{ id: string; groupCount: number; groups: string[] }[]>({
+    queryKey: ["orphan-groups"],
+    queryFn: () => apiFetch<{ id: string; groupCount: number; groups: string[] }[]>("/api/anomalies/orphans"),
+    staleTime: 5 * 60 * 1000,
+  });
+  const orphanGroupMap = new Map((orphanGroups ?? []).map((o) => [o.id, o]));
 
   const userStats = users
     ? {
@@ -283,6 +292,27 @@ export default function DashboardPage() {
           users: users.filter((u) => {
             const t = detectAccountType(u);
             return (t === "shared" || t === "room" || t === "equipment") && u.assignedLicenses.length > 0;
+          }),
+          severity: "low" as const,
+        },
+        {
+          id: "disabled-with-groups",
+          label: "Comptes désactivés encore membres de groupes",
+          hint: "À retirer des groupes lors de l'offboarding (accès résiduels).",
+          users: users.filter((u) => !u.accountEnabled && orphanGroupMap.has(u.id)),
+          severity: "high" as const,
+        },
+        {
+          id: "shared-with-groups",
+          label: "Boîtes partagées / salles encore membres de groupes",
+          hint: "Vérifier l'appartenance aux groupes de ces ressources.",
+          users: users.filter((u) => {
+            const t = detectAccountType(u);
+            return (
+              u.accountEnabled &&
+              (t === "shared" || t === "room" || t === "equipment") &&
+              orphanGroupMap.has(u.id)
+            );
           }),
           severity: "low" as const,
         },
@@ -456,9 +486,10 @@ export default function DashboardPage() {
                             className="min-w-0 text-left hover:text-[#D8346E] transition-colors flex-1"
                             onClick={() => {
                               setManageAnomaly(null);
+                              setAnomalySheetTab(anomaly.id.includes("with-groups") ? "groups" : "licenses");
                               setAnomalySheetUser(u);
                             }}
-                            title="Ouvrir la gestion des licences"
+                            title="Ouvrir la fiche utilisateur"
                           >
                             <p className="text-sm font-medium truncate">{u.displayName}</p>
                             <p className="text-xs text-[#01031B]/40 truncate">{u.userPrincipalName}</p>
@@ -746,7 +777,7 @@ export default function DashboardPage() {
           user={anomalySheetUser}
           open={!!anomalySheetUser}
           onClose={() => setAnomalySheetUser(null)}
-          initialTab="licenses"
+          initialTab={anomalySheetTab}
         />
       )}
 

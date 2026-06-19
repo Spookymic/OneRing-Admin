@@ -17,6 +17,8 @@ export interface M365Group {
   requireSenderAuthenticationEnabled?: boolean | null;
   /** M365 groups : empêcher les membres externes d'envoyer */
   allowExternalSenders?: boolean | null;
+  /** Contient "Team" si le groupe M365 est aussi une équipe Teams */
+  resourceProvisioningOptions?: string[];
 }
 
 function detectGroupType(group: M365Group): GroupType {
@@ -37,7 +39,7 @@ export function isExchangeManagedGroup(group: Pick<M365Group, "mailEnabled" | "g
 
 // SELECT réduit pour la liste (certains champs ne sont pas supportés en OData $filter sur tous les groupes)
 const LIST_SELECT =
-  "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled,membershipRule";
+  "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled,membershipRule,resourceProvisioningOptions";
 
 // SELECT complet pour le détail d'un groupe
 const DETAIL_SELECT =
@@ -71,6 +73,34 @@ export async function getGroup(
  * (`allowExternalSenders`, `requireSenderAuthenticationEnabled`) qui déclenchent une
  * erreur « mailbox hosted on-premise » sur les listes de distribution.
  */
+// Champs nécessaires pour qualifier un groupe dans l'arborescence (type + flag Teams)
+const RELATION_SELECT =
+  "id,displayName,mail,groupTypes,mailEnabled,securityEnabled,resourceProvisioningOptions";
+
+/** Groupes membres de ce groupe (imbrication descendante), via Graph. */
+export async function listSubgroups(
+  accessToken: string,
+  groupId: string
+): Promise<(M365Group & { type: GroupType })[]> {
+  const data = await graphFetch<{ value: M365Group[] }>(
+    accessToken,
+    `/groups/${groupId}/members/microsoft.graph.group?$select=${RELATION_SELECT}`
+  );
+  return data.value.map((g) => ({ ...g, type: detectGroupType(g) }));
+}
+
+/** Groupes dont ce groupe est membre (vue inversée « membre de »), via Graph. */
+export async function listParentGroups(
+  accessToken: string,
+  groupId: string
+): Promise<(M365Group & { type: GroupType })[]> {
+  const data = await graphFetch<{ value: M365Group[] }>(
+    accessToken,
+    `/groups/${groupId}/memberOf/microsoft.graph.group?$select=${RELATION_SELECT}`
+  );
+  return data.value.map((g) => ({ ...g, type: detectGroupType(g) }));
+}
+
 export async function getGroupBasic(
   accessToken: string,
   groupId: string

@@ -113,6 +113,35 @@ Start-PodeServer -Threads 1 {
         }
     }
 
+    # --- Membres d'une DL : lecture typée (pour l'arborescence / imbrication) ---
+    # GET /dl/members?group=<smtp>  →  { members: [{ id, displayName, mail, recipientTypeDetails, isGroup }] }
+    Add-PodeRoute -Method Get -Path '/dl/members' -ScriptBlock {
+        try {
+            $group = $WebEvent.Query['group']
+            if ([string]::IsNullOrWhiteSpace($group)) {
+                Write-PodeJsonResponse -Value @{ ok = $false; error = 'parametre group requis' }
+                return
+            }
+            Connect-ExoIfNeeded
+            $members = @()
+            Get-DistributionGroupMember -Identity $group -ResultSize Unlimited | ForEach-Object {
+                $rtd = "$($_.RecipientTypeDetails)"
+                $members += @{
+                    id                  = $_.ExternalDirectoryObjectId
+                    displayName         = $_.DisplayName
+                    mail                = $_.PrimarySmtpAddress
+                    recipientTypeDetails = $rtd
+                    isGroup             = ($rtd -match 'Group')
+                }
+            }
+            Write-PodeJsonResponse -Value @{ ok = $true; members = @($members) }
+        }
+        catch {
+            [Console]::Error.WriteLine("DL_MEMBERS_GET_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
     # --- Propriétaires d'une DL (champ ManagedBy) : lecture ---
     # GET /dl/owners?group=<smtp>
     Add-PodeRoute -Method Get -Path '/dl/owners' -ScriptBlock {

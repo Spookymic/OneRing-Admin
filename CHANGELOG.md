@@ -2,6 +2,15 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.14.0] — 2026-06-19
+
+### Nouvelles fonctionnalités v1.14.0
+
+- **Écran Arborescence des groupes** : nouvel onglet visualisant l'imbrication des groupes (groupe membre d'un groupe). Bascule « Contient » / « Membre de » (vue inversée pour l'analyse d'impact), expansion paresseuse au clic, badges de type + Teams, garde anti-cycle. Imbrication Sécurité/M365 via Graph, Distribution via le pont Exchange (`GET /dl/members`).
+- **Alertes groupes orphelins** : le tableau de bord signale les comptes **désactivés** et les **boîtes partagées/salles** encore membres de groupes. Les groupes par défaut (« Tous les utilisateurs », « All Users »…) sont exclus du décompte. Endpoint `/api/anomalies/orphans` (récupération `memberOf` par lots).
+
+---
+
 ## [1.13.1] — 2026-06-18
 
 ### Corrections v1.13.1

@@ -18,6 +18,22 @@ export async function setDistributionGroupMember(params: {
   });
 }
 
+export interface ExoMember {
+  id: string | null;
+  displayName: string;
+  mail: string;
+  recipientTypeDetails: string;
+  isGroup: boolean;
+}
+
+/** Liste typée des membres d'une DL (utilisée pour l'imbrication de l'arborescence). */
+export async function listDistributionGroupMembers(groupSmtp: string): Promise<ExoMember[]> {
+  const data = await bridgeFetch<{ members?: ExoMember[] }>(
+    `/dl/members?group=${encodeURIComponent(groupSmtp)}`
+  );
+  return data.members ?? [];
+}
+
 export interface ExoOwner {
   id: string;
   displayName: string;
