@@ -66,7 +66,7 @@ export function MailboxDelegationsSheet({ mailbox, open, onClose }: Props) {
   return (
     <>
       <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-        <SheetContent className="w-full sm:w-[640px] sm:max-w-[640px] overflow-y-auto">
+        <SheetContent className="w-full data-[side=right]:sm:max-w-2xl overflow-y-auto">
           <SheetHeader className="mb-4">
             <SheetTitle className="text-lg leading-tight">{mailbox?.displayName}</SheetTitle>
             {mailbox?.mail && <SheetDescription className="text-xs">{mailbox.mail}</SheetDescription>}

@@ -321,7 +321,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto p-0">
+      <SheetContent side="right" className="w-full data-[side=right]:sm:max-w-2xl overflow-y-auto p-0">
         <SheetHeader className="p-6 pb-4 border-b">
           <SheetTitle className="text-lg">{user.displayName}</SheetTitle>
           <SheetDescription className="text-xs">{user.userPrincipalName}</SheetDescription>

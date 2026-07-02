@@ -182,7 +182,7 @@ export default function LicensesPage() {
 
       {/* Side sheet — beneficiaries */}
       <Sheet open={!!selectedSku} onOpenChange={(open) => { if (!open) setSelectedSku(null); }}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto p-0">
+        <SheetContent side="right" className="w-full data-[side=right]:sm:max-w-2xl overflow-y-auto p-0">
           {selectedSku && (
             <>
               <SheetHeader className="p-6 pb-4 border-b">

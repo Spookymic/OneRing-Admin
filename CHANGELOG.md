@@ -2,6 +2,15 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.22.1] — 2026-07-02
+
+### Corrections v1.22.1
+
+- **Panneaux latéraux réellement élargis** : la classe de base du composant `Sheet` (`data-[side=right]:sm:max-w-sm`, sélecteur d'attribut plus spécifique) écrasait la largeur personnalisée — les panneaux restaient à 384 px. Correction avec le même préfixe `data-[side=right]:sm:max-w-2xl` (672 px) sur les 4 panneaux (fiche utilisateur, licences, groupes, boîtes partagées).
+- **Badge MFA fonctionnel** : ajout du scope `UserAuthenticationMethod.Read.All` aux permissions demandées à la connexion SSO. Le consentement Azure seul ne suffisait pas — le jeton délégué ne portait pas la permission tant qu'elle n'était pas demandée. **Nécessite une reconnexion** pour rafraîchir le jeton.
+
+---
+
 ## [1.22.0] — 2026-07-02
 
 ### Nouvelles fonctionnalités v1.22.0

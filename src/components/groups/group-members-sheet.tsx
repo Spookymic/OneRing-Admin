@@ -125,7 +125,7 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
   return (
     <>
       <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-        <SheetContent className="w-full sm:w-[640px] sm:max-w-[640px] overflow-y-auto">
+        <SheetContent className="w-full data-[side=right]:sm:max-w-2xl overflow-y-auto">
           <SheetHeader className="mb-4">
             <div className="flex items-center gap-2 flex-wrap">
               {typeInfo && <Badge variant={typeInfo.variant}>{typeInfo.label}</Badge>}
