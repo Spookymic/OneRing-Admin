@@ -204,7 +204,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
           <LogOut className="h-4 w-4 mr-3" />
           Déconnexion
         </Button>
-        <p className="text-center text-white/25 text-xs pt-1">v1.21.0</p>
+        <p className="text-center text-white/25 text-xs pt-1">v1.21.1</p>
       </div>
     </aside>
   );

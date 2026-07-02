@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/ui/loader";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { CreateSharedMailboxDialog } from "@/components/mailboxes/create-shared-mailbox-dialog";
@@ -84,13 +84,13 @@ export default function MailboxesPage() {
           </TableHeader>
           <TableBody>
             {isLoading
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 2 }).map((_, j) => (
-                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                    ))}
+              ? (
+                  <TableRow>
+                    <TableCell colSpan={2}>
+                      <div className="py-10"><Loader label="Chargement des boîtes partagées…" /></div>
+                    </TableCell>
                   </TableRow>
-                ))
+                )
               : sorted.map((m) => (
                   <TableRow
                     key={m.id}

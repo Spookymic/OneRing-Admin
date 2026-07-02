@@ -566,7 +566,7 @@ export default function AdminPage() {
           Version
         </h3>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-sm font-mono">v1.21.0</Badge>
+          <Badge variant="outline" className="text-sm font-mono">v1.21.1</Badge>
           <p className="text-xs text-foreground/50">OneRing Admin — M365 Administrator</p>
         </div>
       </Card>

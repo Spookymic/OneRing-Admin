@@ -2,6 +2,15 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.21.1] — 2026-06-21
+
+### Améliorations v1.21.1
+
+- **Invités inactifs** : page dédiée `/dashboard/inactive-guests` (avec lien « Voir tout » depuis le tableau de bord) et affichage de l'ancienneté du compte (« créé il y a X »).
+- **Chenillard** : le loader animé s'affiche désormais dans les zones de chargement lentes (boîtes partagées, secrets & certificats, utilisateurs et invités inactifs), pas seulement l'arborescence.
+
+---
+
 ## [1.21.0] — 2026-06-21
 
 ### Nouvelles fonctionnalités v1.21.0

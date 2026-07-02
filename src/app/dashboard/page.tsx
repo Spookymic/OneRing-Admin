@@ -273,7 +273,7 @@ export default function DashboardPage() {
   }
 
   // Invités inactifs
-  const { data: inactiveGuestsData } = useQuery<{ supported: boolean; days: number; guests: { id: string; displayName: string; userPrincipalName: string; lastSignIn: string | null }[] }>({
+  const { data: inactiveGuestsData } = useQuery<{ supported: boolean; days: number; guests: { id: string; displayName: string; userPrincipalName: string; lastSignIn: string | null; createdDateTime: string | null }[] }>({
     queryKey: ["inactive-guests"],
     queryFn: () => apiFetch("/api/anomalies/inactive-guests"),
     staleTime: 10 * 60 * 1000,
@@ -794,12 +794,16 @@ export default function DashboardPage() {
                   </span>
                   <span className="shrink-0 opacity-70">
                     {g.lastSignIn ? `dernier accès ${format(new Date(g.lastSignIn), "dd/MM/yyyy")}` : "jamais connecté"}
+                    {g.createdDateTime ? ` · créé il y a ${formatDistanceToNow(new Date(g.createdDateTime), { locale: fr })}` : ""}
                   </span>
                 </button>
               ))}
-              {inactiveGuests.length > 10 && (
-                <p className="text-xs opacity-70">+{inactiveGuests.length - 10} autres</p>
-              )}
+              <Link
+                href="/dashboard/inactive-guests"
+                className="inline-block text-xs font-medium underline underline-offset-2 mt-1 hover:opacity-80"
+              >
+                Voir tous les invités inactifs →
+              </Link>
             </div>
           </div>
         </div>

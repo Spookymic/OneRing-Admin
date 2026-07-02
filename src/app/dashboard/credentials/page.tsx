@@ -5,10 +5,10 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Loader } from "@/components/ui/loader";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { apiFetch } from "@/lib/api";
@@ -95,13 +95,13 @@ export default function CredentialsPage() {
               </TableHeader>
               <TableBody>
                 {isLoading
-                  ? Array.from({ length: 6 }).map((_, i) => (
-                      <TableRow key={i}>
-                        {Array.from({ length: 5 }).map((_, j) => (
-                          <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                        ))}
+                  ? (
+                      <TableRow>
+                        <TableCell colSpan={5}>
+                          <div className="py-10"><Loader label="Chargement des secrets & certificats…" /></div>
+                        </TableCell>
                       </TableRow>
-                    ))
+                    )
                   : creds.map((c, i) => (
                       <TableRow key={`${c.appObjectId}-${i}`}>
                         <TableCell className="font-medium">{c.appName}</TableCell>
