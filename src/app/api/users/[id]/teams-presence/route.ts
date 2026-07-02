@@ -38,7 +38,7 @@ export async function POST(
     const msg: string = err.message ?? "";
     if (msg.includes("403") || msg.includes("Forbidden") || msg.includes("Presence")) {
       return NextResponse.json(
-        { error: "permission_denied", message: "La permission Presence.ReadWrite.All est requise dans l'enregistrement Azure AD." },
+        { error: "permission_denied", message: "Définir le statut Teams d'un autre utilisateur n'est pas supporté par Microsoft Graph avec une permission déléguée (aucune permission « Presence » applicable à un tiers)." },
         { status: 403 }
       );
     }

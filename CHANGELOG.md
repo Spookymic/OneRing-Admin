@@ -2,6 +2,15 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.22.3] — 2026-07-02
+
+### Correctif critique v1.22.3
+
+- **Connexion SSO cassée (boucle `invalid_client` / AADSTS650053)** : le scope `Presence.ReadWrite.All` ajouté en 1.22.2 **n'existe pas** sur Microsoft Graph → Azure rejetait toute la demande de jeton, rendant la connexion impossible. Scope retiré. Microsoft Graph ne propose aucune permission déléguée pour définir la présence/statut Teams d'un *autre* utilisateur (`Presence.ReadWrite` ne couvre que le compte connecté) : la fonctionnalité « statut Teams » pour un tiers reste donc inopérante, et le message d'erreur ainsi que le README ont été corrigés en conséquence.
+- Scopes conservés (valides) : `AuditLog.Read.All`, `Application.Read.All`.
+
+---
+
 ## [1.22.2] — 2026-07-02
 
 ### Fonctionnalités réactivées v1.22.2

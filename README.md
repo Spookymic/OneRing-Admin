@@ -77,12 +77,13 @@ Dans le portail Azure → App registrations → New registration :
    - `MailboxSettings.ReadWrite` — réponses automatiques (absence)
    - `UserAuthenticationMethod.Read.All` — statut MFA / méthodes d'authentification par utilisateur
 
-   Optionnelles (à ajouter **et** à déclarer dans le scope pour activer la fonctionnalité — voir note ci-dessous ; sans elles, la fonctionnalité se désactive proprement) :
+   Optionnelles (déjà déclarées dans le scope demandé au login ; il reste à accorder le consentement admin Azure pour activer la fonctionnalité — sans elles, la fonctionnalité se désactive proprement) :
    - `AuditLog.Read.All` — journal de connexion détaillé (onglet Connexions) + « créé par » (auteur d'un objet)
-   - `Presence.ReadWrite.All` — message de statut Teams
    - `Application.Read.All` — alertes d'expiration des secrets/certificats d'applications
 
-   > **Note** : les permissions déléguées ne sont actives que si elles figurent **à la fois** dans le consentement Azure **et** dans la chaîne `scope` demandée au login (`src/lib/auth.ts`). Les 7 permissions requises y sont déjà ; pour activer les optionnelles, ajoutez-les à ce `scope` puis reconnectez-vous (le jeton est régénéré au login).
+   > **Note** : les permissions déléguées ne sont actives que si elles figurent **à la fois** dans le consentement Azure **et** dans la chaîne `scope` demandée au login (`src/lib/auth.ts`). Toutes celles ci-dessus y sont déjà déclarées ; il suffit d'accorder le consentement admin dans Azure puis de se reconnecter (le jeton est régénéré au login).
+   >
+   > **Message de statut Teams** : Microsoft Graph ne fournit **pas** de permission déléguée permettant de définir la présence/le statut d'un *autre* utilisateur (`Presence.ReadWrite.All` n'existe pas ; `Presence.ReadWrite` ne couvre que le compte connecté). Cette fonctionnalité reste donc inopérante pour un tiers et n'est pas incluse dans les scopes demandés.
 
 3. Accorder le consentement administrateur
 4. Créer un **Client secret** et copier les valeurs dans `.env`

@@ -5,14 +5,17 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
-RUN npm ci
+# Cache mount BuildKit : ~/.npm est conserve entre builds → seul le delta est retelecharge
+# quand le lockfile change (au lieu de tout re-telecharger).
+RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline --no-audit --no-fund
 
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
-RUN npm run build
+# Cache mount du cache de compilation Next.js → recompilations incrementales plus rapides.
+RUN --mount=type=cache,target=/app/.next/cache npm run build
 
 FROM base AS runner
 WORKDIR /app
