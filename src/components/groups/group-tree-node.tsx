@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, ChevronDown, RotateCcw, AlertTriangle, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronDown, RotateCcw, AlertTriangle, Loader2, User, Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/api";
 import type { GroupType } from "@/services/graph/groups";
@@ -13,6 +13,13 @@ export interface GroupNode {
   type: GroupType;
   isTeam: boolean;
   mail: string | null;
+}
+
+interface Member {
+  id: string;
+  displayName: string;
+  userPrincipalName?: string;
+  mail?: string | null;
 }
 
 const typeLabels: Record<GroupType, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -29,13 +36,14 @@ interface Props {
   parentsOf: Record<string, string[]>;
   nodeMap: Map<string, GroupNode>;
   ownerlessSet: Set<string>;
+  showUsers: boolean;
   ancestors: Set<string>;
   depth: number;
   onSelect: (node: GroupNode) => void;
 }
 
 export function GroupTreeNode({
-  node, direction, childrenOf, parentsOf, nodeMap, ownerlessSet, ancestors, depth, onSelect,
+  node, direction, childrenOf, parentsOf, nodeMap, ownerlessSet, showUsers, ancestors, depth, onSelect,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const isCycle = ancestors.has(node.id);
@@ -49,6 +57,23 @@ export function GroupTreeNode({
     staleTime: 5 * 60 * 1000,
   });
 
+  // Utilisateurs membres (option) : uniquement en sens "Contient".
+  const withUsers = showUsers && direction === "children";
+  const { data: members, isLoading: membersLoading } = useQuery<Member[]>({
+    queryKey: ["group-members", node.id],
+    queryFn: () => apiFetch<Member[]>(`/api/groups/${node.id}/members`),
+    enabled: expanded && withUsers && !isCycle,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: owners } = useQuery<Member[]>({
+    queryKey: ["group-owners", node.id],
+    queryFn: () => apiFetch<Member[]>(`/api/groups/${node.id}/owners`),
+    enabled: expanded && withUsers && !isCycle,
+    staleTime: 5 * 60 * 1000,
+  });
+  const ownerIds = new Set((owners ?? []).map((o) => o.id));
+  const users = [...(members ?? [])].sort((a, b) => a.displayName.localeCompare(b.displayName));
+
   const mapNodes = ((direction === "children" ? childrenOf[node.id] : parentsOf[node.id]) ?? [])
     .map((id) => nodeMap.get(id))
     .filter((n): n is GroupNode => !!n);
@@ -61,13 +86,17 @@ export function GroupTreeNode({
     return [...merged.values()].sort((a, b) => a.displayName.localeCompare(b.displayName));
   })();
 
-  // Pour une DL on ne connaît pas les enfants sans interroger le pont → toujours dépliable.
-  const canExpand = !isCycle && (isDLChildren || related.length > 0);
+  // DL (enfants inconnus sans requête) ou option membres → toujours dépliable.
+  const canExpand = !isCycle && (isDLChildren || withUsers || related.length > 0);
   const ti = typeLabels[node.type];
   const indent = depth * 18 + 4;
 
   const childAncestors = new Set(ancestors);
   childAncestors.add(node.id);
+
+  const groupLoading = isDLChildren && lazyLoading && related.length === 0;
+  const userLoading = withUsers && membersLoading;
+  const nothing = !groupLoading && !userLoading && related.length === 0 && users.length === 0;
 
   return (
     <div>
@@ -116,28 +145,55 @@ export function GroupTreeNode({
 
       {expanded && canExpand && (
         <div>
-          {isDLChildren && lazyLoading && related.length === 0 ? (
+          {/* Sous-groupes */}
+          {related.map((c) => (
+            <GroupTreeNode
+              key={c.id}
+              node={c}
+              direction={direction}
+              childrenOf={childrenOf}
+              parentsOf={parentsOf}
+              nodeMap={nodeMap}
+              ownerlessSet={ownerlessSet}
+              showUsers={showUsers}
+              ancestors={childAncestors}
+              depth={depth + 1}
+              onSelect={onSelect}
+            />
+          ))}
+
+          {/* Chargements */}
+          {(groupLoading || userLoading) && (
             <div className="flex items-center gap-2 text-xs text-[#01031B]/40 py-1" style={{ paddingLeft: indent + 18 }}>
               <Loader2 className="h-3 w-3 animate-spin" /> Chargement…
             </div>
-          ) : related.length > 0 ? (
-            related.map((c) => (
-              <GroupTreeNode
-                key={c.id}
-                node={c}
-                direction={direction}
-                childrenOf={childrenOf}
-                parentsOf={parentsOf}
-                nodeMap={nodeMap}
-                ownerlessSet={ownerlessSet}
-                ancestors={childAncestors}
-                depth={depth + 1}
-                onSelect={onSelect}
-              />
-            ))
-          ) : (
+          )}
+
+          {/* Utilisateurs membres */}
+          {withUsers && users.map((u) => (
+            <div
+              key={`u-${u.id}`}
+              className="flex items-center gap-2 py-1 pr-2"
+              style={{ paddingLeft: indent + 18 + 20 }}
+            >
+              <User className="h-3.5 w-3.5 text-[#01031B]/30 shrink-0" />
+              <span className="text-sm truncate">{u.displayName}</span>
+              {ownerIds.has(u.id) && (
+                <Badge variant="secondary" className="text-[10px] shrink-0 gap-0.5">
+                  <Crown className="h-2.5 w-2.5" /> Propriétaire
+                </Badge>
+              )}
+              <span className="text-xs text-[#01031B]/40 truncate hidden md:inline">
+                {u.userPrincipalName ?? u.mail ?? ""}
+              </span>
+            </div>
+          ))}
+
+          {nothing && (
             <p className="text-xs text-[#01031B]/30 py-1" style={{ paddingLeft: indent + 18 }}>
-              {direction === "children" ? "Aucun groupe imbriqué" : "Membre d'aucun groupe"}
+              {direction === "children"
+                ? withUsers ? "Aucun sous-groupe ni membre" : "Aucun groupe imbriqué"
+                : "Membre d'aucun groupe"}
             </p>
           )}
         </div>

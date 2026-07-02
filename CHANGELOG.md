@@ -2,6 +2,14 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.17.0] — 2026-06-19
+
+### Nouvelles fonctionnalités v1.17.0
+
+- **Arborescence — membres utilisateurs** : nouvelle case « Afficher les membres utilisateurs » (décochée par défaut). Une fois cochée, l'expansion d'un groupe affiche aussi ses utilisateurs membres, avec un badge **Propriétaire** pour les owners. Chargement paresseux (membres + propriétaires) à l'expansion, actif en sens « Contient ».
+
+---
+
 ## [1.16.1] — 2026-06-19
 
 ### Nouvelles fonctionnalités v1.16.1

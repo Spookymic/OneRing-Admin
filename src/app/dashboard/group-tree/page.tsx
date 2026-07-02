@@ -25,6 +25,7 @@ export default function GroupTreePage() {
   const [search, setSearch] = useState("");
   const [direction, setDirection] = useState<Direction>("children");
   const [rootsOnly, setRootsOnly] = useState(false);
+  const [showUsers, setShowUsers] = useState(false);
   const [selected, setSelected] = useState<(M365Group & { type: GroupType }) | null>(null);
 
   const { data: structure, isLoading, error } = useQuery<Structure>({
@@ -129,6 +130,15 @@ export default function GroupTreePage() {
           />
           Groupes racines uniquement
         </label>
+        <label className="flex items-center gap-2 text-xs text-[#01031B]/70 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showUsers}
+            onChange={(e) => setShowUsers(e.target.checked)}
+            className="h-4 w-4 accent-[#D8346E]"
+          />
+          Afficher les membres utilisateurs
+        </label>
       </div>
 
       <Card className="p-2">
@@ -150,6 +160,7 @@ export default function GroupTreePage() {
                 parentsOf={parentsOf}
                 nodeMap={nodeMap}
                 ownerlessSet={ownerlessSet}
+                showUsers={showUsers}
                 ancestors={new Set()}
                 depth={0}
                 onSelect={handleSelect}
