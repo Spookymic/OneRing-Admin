@@ -654,7 +654,7 @@ export default function AdminPage() {
         </h3>
         {credData?.supported === false ? (
           <p className="text-xs text-foreground/40">
-            Indisponible — droit de lecture des applications manquant.
+            Indisponible — la permission Microsoft Graph « Application.Read.All » n&apos;est pas accordée (puis reconnexion requise).
           </p>
         ) : !credData ? (
           <p className="text-xs text-foreground/40">Vérification…</p>
@@ -686,7 +686,7 @@ export default function AdminPage() {
           Version
         </h3>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-sm font-mono">v1.22.1</Badge>
+          <Badge variant="outline" className="text-sm font-mono">v1.22.2</Badge>
           <p className="text-xs text-foreground/50">OneRing Admin — M365 Administrator</p>
         </div>
       </Card>

@@ -3,6 +3,7 @@ import { graphFetch } from "@/lib/graph";
 export interface CreatorInfo {
   by: string | null; // UPN ou nom de l'app à l'origine de la création
   at: string | null; // date de l'événement de création
+  supported: boolean; // false = permission AuditLog.Read.All manquante (à distinguer d'un objet trop ancien)
 }
 
 /**
@@ -26,15 +27,20 @@ export async function getObjectCreator(
       `/auditLogs/directoryAudits?${params}`
     );
     const event = data.value?.[0];
-    if (!event) return { by: null, at: null };
+    // Appel réussi mais aucun événement → objet trop ancien (journaux ~30 j), pas un défaut de permission
+    if (!event) return { by: null, at: null, supported: true };
     const by =
       event.initiatedBy?.user?.userPrincipalName ??
       event.initiatedBy?.user?.displayName ??
       event.initiatedBy?.app?.displayName ??
       null;
-    return { by, at: event.activityDateTime ?? null };
-  } catch {
-    // Pas de droit d'audit ou objet trop ancien → information indisponible
-    return { by: null, at: null };
+    return { by, at: event.activityDateTime ?? null, supported: true };
+  } catch (error: any) {
+    // 403 = permission AuditLog.Read.All manquante → on le signale explicitement à l'UI
+    if (String(error?.message ?? "").startsWith("[403]")) {
+      return { by: null, at: null, supported: false };
+    }
+    // Autre erreur (réseau…) → best-effort, on reste discret
+    return { by: null, at: null, supported: true };
   }
 }

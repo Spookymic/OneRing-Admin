@@ -17,9 +17,9 @@ interface Props {
 
 export function ObjectInfo({ id, type, createdDateTime, onPremisesSyncEnabled, open = true }: Props) {
   // Créateur : best-effort via journaux d'audit Entra (objets récents uniquement)
-  const { data: creator } = useQuery<{ by: string | null; at: string | null }>({
+  const { data: creator } = useQuery<{ by: string | null; at: string | null; supported: boolean }>({
     queryKey: ["creator", type, id],
-    queryFn: () => apiFetch<{ by: string | null; at: string | null }>(`/api/directory/creator?id=${id}&type=${type}`),
+    queryFn: () => apiFetch<{ by: string | null; at: string | null; supported: boolean }>(`/api/directory/creator?id=${id}&type=${type}`),
     enabled: open && !!id,
     staleTime: 10 * 60 * 1000,
   });
@@ -32,6 +32,14 @@ export function ObjectInfo({ id, type, createdDateTime, onPremisesSyncEnabled, o
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-foreground/50">
       {created && <span>Créé le {created}</span>}
       {creator?.by && <span>par {creator.by}</span>}
+      {creator?.supported === false && (
+        <span
+          className="text-foreground/35 italic"
+          title="Auteur indisponible : la permission Microsoft Graph « AuditLog.Read.All » n'est pas accordée à l'application."
+        >
+          · auteur indisponible (droit AuditLog.Read.All)
+        </span>
+      )}
       {onPremisesSyncEnabled === true && (
         <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 dark:text-amber-300">
           Synchronisé AD

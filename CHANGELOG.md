@@ -2,6 +2,25 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.22.2] — 2026-07-02
+
+### Fonctionnalités réactivées v1.22.2
+
+- **Scopes Graph complétés** : ajout de `AuditLog.Read.All`, `Presence.ReadWrite.All` et `Application.Read.All` aux permissions demandées à la connexion. Sans elles (non demandées auparavant), les écrans Connexions, « créé par », statut Teams et expiration des secrets/certificats restaient inertes. **Nécessite le consentement admin Azure + une reconnexion.**
+
+### Dégradation explicite v1.22.2
+
+- **« Créé par »** ne se dégrade plus silencieusement : distinction entre permission `AuditLog.Read.All` manquante (indice explicite dans la fiche) et objet trop ancien (journaux d'audit ~30 j, vide normal).
+- **Connexions** : l'encart « permission manquante » ne s'affiche que sur un vrai 403 ; les autres erreurs affichent un message d'erreur réel.
+- **Expiration secrets/certificats** : message nommant explicitement la permission `Application.Read.All`.
+
+### Documentation v1.22.2
+
+- **Rapport d'audit de sécurité** : nouveau `docs/Audit-Securite.md` (audit en lecture seule, 2 Élevées / 9 Moyennes / 9 Faibles, plan de remédiation priorisé).
+- **README** : section Permissions API complétée et corrigée (requises vs optionnelles + note sur le lien consentement/scope), variables d'environnement `EXO_*` ajoutées, tableau des services Docker mis à jour (caddy, exo-bridge).
+
+---
+
 ## [1.22.1] — 2026-07-02
 
 ### Corrections v1.22.1

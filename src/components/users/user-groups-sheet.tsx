@@ -643,8 +643,14 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                   </Button>
                 )}
               </div>
-              {signInsError && (
-                <PermissionWarning message="La permission AuditLog.Read.All est requise dans l'enregistrement Azure AD pour accéder aux journaux de connexion." />
+              {signInsError && (signInsError as Error).message === "permission_denied" && (
+                <PermissionWarning message="La permission AuditLog.Read.All est requise dans l'enregistrement Azure AD (puis reconnexion) pour accéder aux journaux de connexion." />
+              )}
+              {signInsError && (signInsError as Error).message !== "permission_denied" && (
+                <div className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-300">
+                  <p className="font-medium mb-1">Erreur lors de la récupération</p>
+                  <p className="text-xs font-mono break-all">{(signInsError as Error).message}</p>
+                </div>
               )}
               {!signInsError && (
                 <p className="text-xs text-foreground/40 mb-3 -mt-2">
