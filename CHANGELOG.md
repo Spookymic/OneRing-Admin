@@ -2,6 +2,14 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.21.2] — 2026-06-21
+
+### Améliorations v1.21.2
+
+- **Onglet Connexions (fiche utilisateur)** : chenillard pendant le chargement (au lieu du skeleton) + note explicative sur la source (journal détaillé `/auditLogs/signIns` ~30 j interactif, distinct du résumé `signInActivity` utilisé par les listes) et message « vide » plus clair.
+
+---
+
 ## [1.21.1] — 2026-06-21
 
 ### Améliorations v1.21.1

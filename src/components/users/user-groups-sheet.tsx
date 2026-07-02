@@ -27,6 +27,7 @@ import { apiFetch } from "@/lib/api";
 import { useAdminSettings } from "@/lib/admin-settings";
 import { OffboardingDialog } from "@/components/users/offboarding-dialog";
 import { ObjectInfo } from "@/components/common/object-info";
+import { Loader } from "@/components/ui/loader";
 
 interface Props {
   user: M365User;
@@ -616,11 +617,20 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
               {signInsError && (
                 <PermissionWarning message="La permission AuditLog.Read.All est requise dans l'enregistrement Azure AD pour accéder aux journaux de connexion." />
               )}
+              {!signInsError && (
+                <p className="text-xs text-foreground/40 mb-3 -mt-2">
+                  Journal détaillé Entra (~30 derniers jours, connexions interactives). Le « dernier accès »
+                  des listes se base sur le résumé <span className="font-mono">signInActivity</span> (inclut le
+                  non-interactif) et peut donc différer.
+                </p>
+              )}
               {signInsLoading && (
-                <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
+                <div className="py-10"><Loader label="Chargement des connexions…" /></div>
               )}
               {!signInsLoading && !signInsError && signInLogs?.length === 0 && (
-                <p className="text-sm text-foreground/40 text-center py-6">Aucune connexion enregistrée</p>
+                <p className="text-sm text-foreground/40 text-center py-6">
+                  Aucune connexion dans le journal détaillé (30 derniers jours).
+                </p>
               )}
               {!signInsLoading && !signInsError && signInLogs && signInLogs.length > 0 && (
                 <div className="space-y-1.5">
