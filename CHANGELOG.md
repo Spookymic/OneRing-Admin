@@ -2,6 +2,21 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.20.0] — 2026-06-21
+
+### Nouvelles fonctionnalités v1.20.0
+
+- **Rate-limiting de la connexion locale** : 5 échecs consécutifs → verrouillage du compte 15 min (`failedAttempts` / `lockedUntil`), réinitialisé à la connexion réussie. Anti-brute-force.
+- **Invités inactifs** : section tableau de bord des comptes invités sans connexion depuis > 90 j. Endpoint `/api/anomalies/inactive-guests` (best-effort Entra Premium).
+- **Licences en conflit** : détection des licences assignées à la fois en direct et via un groupe. Endpoint `/api/anomalies/license-conflicts`.
+- **Export PDF** : bouton d'impression du tableau de bord (masque la navigation via CSS `@media print`).
+
+### Corrections v1.20.0
+
+- **Arborescence** : le chenillard de chargement reste affiché pendant tout le chargement des données (plus de zone figée).
+
+---
+
 ## [1.19.0] — 2026-06-20
 
 ### Nouvelles fonctionnalités v1.19.0

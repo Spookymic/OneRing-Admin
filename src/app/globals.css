@@ -155,6 +155,18 @@
   }
 }
 
+/* ─── Impression (export PDF) ───────────────────────────────────── */
+@media print {
+  aside,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+}
+
 /* ─── Accessibility Filters ─────────────────────────────────────── */
 body.a11y-monochrome {
   filter: grayscale(1);

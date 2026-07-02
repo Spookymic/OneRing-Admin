@@ -47,8 +47,27 @@ export const authOptions: NextAuthOptions = {
         if (!creds?.username || !creds?.password) return null;
         const admin = await prisma.localAdmin.findUnique({ where: { username: creds.username } });
         if (!admin) return null;
+        // Verrouillage anti-brute-force
+        if (admin.lockedUntil && admin.lockedUntil > new Date()) return null;
         const ok = await bcrypt.compare(creds.password, admin.passwordHash);
-        if (!ok) return null;
+        if (!ok) {
+          const failed = admin.failedAttempts + 1;
+          await prisma.localAdmin.update({
+            where: { id: admin.id },
+            data: {
+              failedAttempts: failed,
+              // 5 échecs → verrouillage 15 min
+              lockedUntil: failed >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null,
+            },
+          });
+          return null;
+        }
+        if (admin.failedAttempts > 0 || admin.lockedUntil) {
+          await prisma.localAdmin.update({
+            where: { id: admin.id },
+            data: { failedAttempts: 0, lockedUntil: null },
+          });
+        }
         return { id: admin.id, name: admin.username, email: admin.username };
       },
     }),

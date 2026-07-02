@@ -5,13 +5,13 @@ import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import type { M365Group, GroupType } from "@/services/graph/groups";
 import { GroupTreeNode, type GroupNode } from "@/components/groups/group-tree-node";
 import { GroupMembersSheet } from "@/components/groups/group-members-sheet";
+import { Loader } from "@/components/ui/loader";
 
 type Direction = "children" | "parents";
 
@@ -143,8 +143,8 @@ export default function GroupTreePage() {
 
       <Card className="p-2">
         {isLoading ? (
-          <div className="space-y-2 p-2">
-            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-7 w-full" />)}
+          <div className="py-16">
+            <Loader label="Chargement de l'arborescence…" />
           </div>
         ) : roots.length === 0 ? (
           <p className="text-sm text-[#01031B]/40 p-4">Aucun groupe.</p>

@@ -272,6 +272,26 @@ export default function DashboardPage() {
     }
   }
 
+  // Invités inactifs
+  const { data: inactiveGuestsData } = useQuery<{ supported: boolean; days: number; guests: { id: string; displayName: string; userPrincipalName: string; lastSignIn: string | null }[] }>({
+    queryKey: ["inactive-guests"],
+    queryFn: () => apiFetch("/api/anomalies/inactive-guests"),
+    staleTime: 10 * 60 * 1000,
+  });
+  const inactiveGuests = inactiveGuestsData?.guests ?? [];
+
+  // Licences en conflit (direct + via groupe)
+  const { data: licenseConflictsData } = useQuery<{ id: string; displayName: string; userPrincipalName: string; skuIds: string[] }[]>({
+    queryKey: ["license-conflicts"],
+    queryFn: () => apiFetch("/api/anomalies/license-conflicts"),
+    staleTime: 10 * 60 * 1000,
+  });
+  const licenseConflicts = licenseConflictsData ?? [];
+  const skuName = (skuId: string) => {
+    const sku = skus?.find((s) => s.skuId === skuId);
+    return sku ? getSkuFriendlyName(sku.skuPartNumber) : skuId;
+  };
+
   function openGroupSheet(g: { id: string; displayName: string; type: GroupType }) {
     setGroupSheet({
       id: g.id,
@@ -453,7 +473,11 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-bold">Tableau de bord</h2>
           <p className="text-sm text-[#01031B]/50 mt-0.5">Vue d&apos;ensemble du tenant Microsoft 365</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 no-print">
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Download className="h-4 w-4 mr-2" />
+            PDF
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -742,6 +766,76 @@ export default function DashboardPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Invités inactifs */}
+      {!usersLoading && inactiveGuests.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+            <Users className="h-4 w-4 text-amber-500" />
+            Invités inactifs ({inactiveGuests.length})
+          </h3>
+          <div className="rounded-lg border px-4 py-3 bg-amber-50 border-amber-200 text-amber-700">
+            <p className="text-xs mb-2 opacity-80">
+              Comptes invités sans connexion depuis &gt; {inactiveGuestsData?.days ?? 90} j — candidats au nettoyage.
+            </p>
+            <div className="space-y-0.5">
+              {inactiveGuests.slice(0, 10).map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => openUserLicenses(g.id)}
+                  className="flex items-center justify-between w-full text-left rounded px-2 py-1 hover:bg-white/50 text-xs gap-2"
+                >
+                  <span className="truncate">
+                    <span className="font-medium">{g.displayName}</span>{" "}
+                    <span className="opacity-60">{g.userPrincipalName}</span>
+                  </span>
+                  <span className="shrink-0 opacity-70">
+                    {g.lastSignIn ? `dernier accès ${format(new Date(g.lastSignIn), "dd/MM/yyyy")}` : "jamais connecté"}
+                  </span>
+                </button>
+              ))}
+              {inactiveGuests.length > 10 && (
+                <p className="text-xs opacity-70">+{inactiveGuests.length - 10} autres</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Licences en conflit */}
+      {!usersLoading && licenseConflicts.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            Licences en conflit ({licenseConflicts.length})
+          </h3>
+          <div className="rounded-lg border px-4 py-3 bg-amber-50 border-amber-200 text-amber-700">
+            <p className="text-xs mb-2 opacity-80">
+              Licence assignée à la fois en direct et via un groupe (doublon — une affectation peut être retirée).
+            </p>
+            <div className="space-y-0.5">
+              {licenseConflicts.slice(0, 10).map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => openUserLicenses(c.id)}
+                  className="flex items-center justify-between w-full text-left rounded px-2 py-1 hover:bg-white/50 text-xs gap-2"
+                >
+                  <span className="truncate">
+                    <span className="font-medium">{c.displayName}</span>{" "}
+                    <span className="opacity-60">{c.userPrincipalName}</span>
+                  </span>
+                  <span className="shrink-0 opacity-70 truncate max-w-[45%]">
+                    {c.skuIds.map(skuName).join(", ")}
+                  </span>
+                </button>
+              ))}
+              {licenseConflicts.length > 10 && (
+                <p className="text-xs opacity-70">+{licenseConflicts.length - 10} autres</p>
+              )}
+            </div>
           </div>
         </div>
       )}
