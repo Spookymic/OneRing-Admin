@@ -11,7 +11,7 @@ export function Loader({ label, className }: { label?: string; className?: strin
         {[0, 1, 2, 3, 4].map((i) => (
           <span
             key={i}
-            className="h-2.5 w-2.5 rounded-full bg-[#D8346E]"
+            className="h-2.5 w-2.5 rounded-full bg-primary"
             style={{ animation: "onering-chase 1s ease-in-out infinite", animationDelay: `${i * 0.12}s` }}
           />
         ))}

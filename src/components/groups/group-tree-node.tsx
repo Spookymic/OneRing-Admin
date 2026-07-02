@@ -112,7 +112,7 @@ export function GroupTreeNode({
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}
-            className="w-5 flex justify-center text-[#01031B]/40 hover:text-[#D8346E]"
+            className="w-5 flex justify-center text-[#01031B]/40 hover:text-primary"
             aria-label={expanded ? "Réduire" : "Développer"}
           >
             {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -124,7 +124,7 @@ export function GroupTreeNode({
         <button
           type="button"
           onClick={() => onSelect(node)}
-          className="flex items-center gap-2 min-w-0 text-left flex-1 hover:text-[#D8346E] transition-colors"
+          className="flex items-center gap-2 min-w-0 text-left flex-1 hover:text-primary transition-colors"
         >
           <span className="text-sm font-medium truncate">{node.displayName}</span>
           {ti && <Badge variant={ti.variant} className="text-[10px] shrink-0">{ti.label}</Badge>}

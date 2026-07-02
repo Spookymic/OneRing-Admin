@@ -276,7 +276,7 @@ export default function AuditPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-7 px-2 text-[#01031B]/50 hover:text-[#D8346E]"
+                          className="h-7 px-2 text-[#01031B]/50 hover:text-primary"
                           onClick={() => handleRollback(log)}
                           disabled={rollback.isPending}
                           title="Annuler cette action (rollback)"

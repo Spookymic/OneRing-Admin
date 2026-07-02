@@ -22,7 +22,7 @@ export function SortableHead({ label, col, activeCol, dir, onToggle, className }
       className={`cursor-pointer select-none whitespace-nowrap ${className ?? ""}`}
       onClick={() => onToggle(col)}
     >
-      <span className={`inline-flex items-center gap-1 hover:text-[#D8346E] transition-colors ${isActive ? "text-[#D8346E]" : ""}`}>
+      <span className={`inline-flex items-center gap-1 hover:text-primary transition-colors ${isActive ? "text-primary" : ""}`}>
         {label}
         <Icon className="h-3.5 w-3.5 shrink-0" />
       </span>

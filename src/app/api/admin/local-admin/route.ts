@@ -6,14 +6,17 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/services/audit";
 
-// Renvoie l'état du compte admin local (existe ? quel identifiant)
+// Liste des comptes admin locaux
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
-  const admin = await prisma.localAdmin.findFirst({ select: { username: true } });
-  return NextResponse.json({ exists: !!admin, username: admin?.username ?? null });
+  const admins = await prisma.localAdmin.findMany({
+    select: { id: true, username: true, createdAt: true },
+    orderBy: { username: "asc" },
+  });
+  return NextResponse.json({ admins });
 }
 
 const schema = z.object({
@@ -21,7 +24,7 @@ const schema = z.object({
   password: z.string().min(8).max(128),
 });
 
-// Crée / remplace le compte admin local — réservé aux administrateurs SSO (jeton Graph présent)
+// Crée un compte (ou réinitialise son mot de passe si l'identifiant existe) — admins SSO uniquement
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.accessToken || !session.user?.email) {
@@ -33,11 +36,11 @@ export async function POST(req: NextRequest) {
   }
   try {
     const passwordHash = await bcrypt.hash(parsed.data.password, 10);
-    // Un seul compte de secours : on remplace l'existant
-    await prisma.$transaction([
-      prisma.localAdmin.deleteMany({}),
-      prisma.localAdmin.create({ data: { username: parsed.data.username, passwordHash } }),
-    ]);
+    await prisma.localAdmin.upsert({
+      where: { username: parsed.data.username },
+      update: { passwordHash },
+      create: { username: parsed.data.username, passwordHash },
+    });
     await logAudit({
       userId: session.user.email,
       userUpn: session.user.email,
@@ -50,7 +53,46 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ success: true, username: parsed.data.username });
   } catch (error: any) {
-    console.error("[/api/admin/local-admin]", error);
+    console.error("[/api/admin/local-admin POST]", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// Supprime un compte (?id=...) ou tous (?all=true) — admins SSO uniquement
+export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.accessToken || !session.user?.email) {
+    return NextResponse.json({ error: "Réservé aux administrateurs SSO" }, { status: 403 });
+  }
+  const id = req.nextUrl.searchParams.get("id");
+  const all = req.nextUrl.searchParams.get("all") === "true";
+  if (!id && !all) {
+    return NextResponse.json({ error: "Paramètre id ou all requis" }, { status: 400 });
+  }
+  try {
+    let deletedLabel: string;
+    if (all) {
+      const res = await prisma.localAdmin.deleteMany({});
+      deletedLabel = `tous (${res.count})`;
+    } else {
+      const admin = await prisma.localAdmin.findUnique({ where: { id: id! } });
+      if (!admin) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
+      await prisma.localAdmin.delete({ where: { id: id! } });
+      deletedLabel = admin.username;
+    }
+    await logAudit({
+      userId: session.user.email,
+      userUpn: session.user.email,
+      action: "LOCAL_ADMIN_DELETE",
+      targetId: id ?? "all",
+      targetName: deletedLabel,
+      targetType: "LocalAdmin",
+      payloadBefore: { deleted: deletedLabel },
+      payloadAfter: {},
+    });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("[/api/admin/local-admin DELETE]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

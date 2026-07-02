@@ -327,7 +327,7 @@ export default function UsersPage() {
       </div>
 
       {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center gap-3 mb-3 rounded-md border border-[#D8346E]/30 bg-[#D8346E]/5 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-3 mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
           <span className="text-sm font-medium">{selectedIds.size} sélectionné(s)</span>
           <Button size="sm" variant="outline" onClick={bulkRemoveLicenses} disabled={bulkBusy}>
             Retirer les licences
@@ -351,7 +351,7 @@ export default function UsersPage() {
                   type="checkbox"
                   checked={allSelected}
                   onChange={toggleSelectAll}
-                  className="h-4 w-4 accent-[#D8346E] align-middle"
+                  className="h-4 w-4 accent-primary align-middle"
                   aria-label="Tout sélectionner"
                 />
               </th>
@@ -386,7 +386,7 @@ export default function UsersPage() {
                   return (
                     <TableRow
                       key={user.id}
-                      className="cursor-pointer hover:bg-[#D8346E]/5"
+                      className="cursor-pointer hover:bg-primary/5"
                       onClick={() => setSelectedUser(user)}
                     >
                       <TableCell className="w-8" onClick={(e) => e.stopPropagation()}>
@@ -394,7 +394,7 @@ export default function UsersPage() {
                           type="checkbox"
                           checked={selectedIds.has(user.id)}
                           onChange={() => toggleSelect(user.id)}
-                          className="h-4 w-4 accent-[#D8346E] align-middle"
+                          className="h-4 w-4 accent-primary align-middle"
                           aria-label={`Sélectionner ${user.displayName}`}
                         />
                       </TableCell>
@@ -478,7 +478,7 @@ export default function UsersPage() {
                 type="checkbox"
                 checked={bulkConvert}
                 onChange={(e) => setBulkConvert(e.target.checked)}
-                className="h-4 w-4 mt-0.5 accent-[#D8346E]"
+                className="h-4 w-4 mt-0.5 accent-primary"
               />
               <span>
                 Convertir les boîtes en <span className="font-medium">boîtes partagées</span>

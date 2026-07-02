@@ -91,7 +91,7 @@ export function MailboxDelegationsSheet({ mailbox, open, onClose }: Props) {
               return (
                 <div key={type} className="mb-6">
                   <div className="mb-1 flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-[#D8346E]" />
+                    <Icon className="h-4 w-4 text-primary" />
                     <span className="text-sm font-semibold">
                       {label}
                       {delegates.length > 0 && (

@@ -2,6 +2,19 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.19.0] — 2026-06-20
+
+### Nouvelles fonctionnalités v1.19.0
+
+- **Comptes administrateurs locaux multiples** : création de plusieurs comptes (ou réinitialisation du mot de passe d'un identifiant existant), liste avec date de création, suppression unitaire et « supprimer tous ». Endpoints `POST` (upsert) / `DELETE` (`?id=` ou `?all=true`), audit `LOCAL_ADMIN_DELETE`.
+- **Thème — couleur d'accent** : sélecteur de couleur d'accent dans la sidebar (Rose, Bleu, Violet, Vert, Ambre, Ardoise), persistant, appliqué globalement. La couleur d'accent codée en dur (`#D8346E`) a été migrée vers le token CSS `primary` dans toute l'interface, la rendant thématisable.
+
+### Notes v1.19.0
+
+- **Fondation mode sombre** : le système de tokens CSS et le bloc `.dark` existent déjà dans `globals.css`. La bascule clair/sombre viendra dans un pass dédié (migration contextuelle des fonds/textes encore codés en dur : `#01031B`, `#F5F5FA`, `bg-white`).
+
+---
+
 ## [1.18.0] — 2026-06-20
 
 ### Nouvelles fonctionnalités v1.18.0

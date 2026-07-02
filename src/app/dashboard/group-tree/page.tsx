@@ -126,7 +126,7 @@ export default function GroupTreePage() {
             type="checkbox"
             checked={rootsOnly}
             onChange={(e) => setRootsOnly(e.target.checked)}
-            className="h-4 w-4 accent-[#D8346E]"
+            className="h-4 w-4 accent-primary"
           />
           Groupes racines uniquement
         </label>
@@ -135,7 +135,7 @@ export default function GroupTreePage() {
             type="checkbox"
             checked={showUsers}
             onChange={(e) => setShowUsers(e.target.checked)}
-            className="h-4 w-4 accent-[#D8346E]"
+            className="h-4 w-4 accent-primary"
           />
           Afficher les membres utilisateurs
         </label>

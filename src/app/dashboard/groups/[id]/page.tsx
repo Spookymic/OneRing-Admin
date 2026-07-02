@@ -163,7 +163,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-1 text-sm text-[#01031B]/60">
-              <Crown className="h-4 w-4 text-[#D8346E]" />
+              <Crown className="h-4 w-4 text-primary" />
               <span>{ownerCount} owner{ownerCount !== 1 ? "s" : ""}</span>
             </div>
             <div className="flex items-center gap-1 text-sm text-[#01031B]/60">
@@ -233,7 +233,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {person.isOwner && (
-                          <Crown className="h-3.5 w-3.5 text-[#D8346E] shrink-0" />
+                          <Crown className="h-3.5 w-3.5 text-primary shrink-0" />
                         )}
                         {person.displayName}
                       </div>

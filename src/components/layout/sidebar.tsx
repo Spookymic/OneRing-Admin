@@ -11,7 +11,8 @@ import {
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { useAccessibility, A11Y_LABELS, A11Y_MODES } from "@/lib/accessibility";
-import { useState } from "react";
+import { ACCENT_PRESETS, getSavedAccent, saveAccent } from "@/lib/accent";
+import { useState, useEffect } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, exact: true },
@@ -34,6 +35,8 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
   const { data: session } = useSession();
   const { mode, setA11yMode } = useAccessibility();
   const [a11yOpen, setA11yOpen] = useState(false);
+  const [accent, setAccent] = useState("rose");
+  useEffect(() => { setAccent(getSavedAccent()); }, []);
 
   // L'admin local (accès de secours) ne voit que l'Administration
   const visibleNav = session?.role === "local"
@@ -80,7 +83,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
                 isActive
-                  ? "bg-[#D8346E] text-white"
+                  ? "bg-primary text-white"
                   : "text-white/70 hover:bg-white/8 hover:text-white"
               )}
             >
@@ -100,14 +103,14 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
               mode !== "normal"
-                ? "text-[#D8346E] bg-[#D8346E]/10 hover:bg-[#D8346E]/20"
+                ? "text-primary bg-primary/10 hover:bg-primary/20"
                 : "text-white/70 hover:bg-white/8 hover:text-white"
             )}
           >
             <Eye className="h-4 w-4 shrink-0" />
             <span className="flex-1 text-left">Accessibilité</span>
             {mode !== "normal" && (
-              <span className="text-xs bg-[#D8346E] text-white px-1.5 py-0.5 rounded-full leading-none">
+              <span className="text-xs bg-primary text-white px-1.5 py-0.5 rounded-full leading-none">
                 actif
               </span>
             )}
@@ -126,7 +129,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors text-left",
                     m === mode
-                      ? "text-[#D8346E] bg-[#D8346E]/10"
+                      ? "text-primary bg-primary/10"
                       : "text-white/70 hover:bg-white/8 hover:text-white"
                   )}
                 >
@@ -142,6 +145,27 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
           )}
         </div>
 
+        {/* Couleur d'accent */}
+        <div className="px-3 py-2">
+          <p className="text-xs text-white/40 mb-1.5">Couleur d&apos;accent</p>
+          <div className="flex gap-1.5">
+            {ACCENT_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                title={p.label}
+                onClick={() => { saveAccent(p.id); setAccent(p.id); }}
+                className={cn(
+                  "h-5 w-5 rounded-full border-2 transition-transform hover:scale-110",
+                  accent === p.id ? "border-white" : "border-transparent"
+                )}
+                style={{ backgroundColor: p.color }}
+                aria-label={`Accent ${p.label}`}
+              />
+            ))}
+          </div>
+        </div>
+
         <Button
           variant="ghost"
           className="w-full justify-start text-white/70 hover:text-white hover:bg-white/8"
@@ -150,7 +174,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
           <LogOut className="h-4 w-4 mr-3" />
           Déconnexion
         </Button>
-        <p className="text-center text-white/25 text-xs pt-1">v1.18.0</p>
+        <p className="text-center text-white/25 text-xs pt-1">v1.19.0</p>
       </div>
     </aside>
   );

@@ -410,7 +410,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                 key={t}
                 onClick={() => setTab(t)}
                 className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors whitespace-nowrap ${
-                  tab === t ? "bg-[#D8346E] text-white" : "text-[#01031B]/60 hover:bg-[#01031B]/5"
+                  tab === t ? "bg-primary text-white" : "text-[#01031B]/60 hover:bg-[#01031B]/5"
                 }`}
               >
                 {icon}{label}
@@ -490,7 +490,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                               <div
                                 key={g.id}
                                 className={`px-3 py-2 cursor-pointer text-sm transition-colors ${
-                                  selectedGroup?.id === g.id ? "bg-[#D8346E]/10 text-[#D8346E]" : "hover:bg-[#01031B]/5"
+                                  selectedGroup?.id === g.id ? "bg-primary/10 text-primary" : "hover:bg-[#01031B]/5"
                                 }`}
                                 onClick={() => setSelectedGroup(g)}
                               >
@@ -542,7 +542,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                     return (
                       <div
                         key={sku.skuId}
-                        className={`flex items-center justify-between rounded-lg border px-3 py-2.5 ${assigned ? "border-[#D8346E]/30 bg-[#D8346E]/5" : "border-border"}`}
+                        className={`flex items-center justify-between rounded-lg border px-3 py-2.5 ${assigned ? "border-primary/30 bg-primary/5" : "border-border"}`}
                       >
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{name}</p>
@@ -688,7 +688,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                   ) : (
                     <div className="space-y-1">
                       {userRoles?.map((r) => (
-                        <div key={r.id} className="flex items-center justify-between rounded-md border px-3 py-2 bg-[#D8346E]/5 border-[#D8346E]/20">
+                        <div key={r.id} className="flex items-center justify-between rounded-md border px-3 py-2 bg-primary/5 border-primary/20">
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{r.displayName}</p>
                             {r.description && <p className="text-xs text-[#01031B]/40 truncate">{r.description}</p>}
@@ -784,7 +784,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                         <div>
                           <label className="text-xs font-medium text-[#01031B]/60 mb-1 block">Message interne (collègues)</label>
                           <textarea
-                            className="w-full border rounded-md p-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-[#D8346E]"
+                            className="w-full border rounded-md p-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                             rows={3}
                             value={oooInternal}
                             onChange={(e) => setOooInternal(e.target.value)}
@@ -794,7 +794,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                         <div>
                           <label className="text-xs font-medium text-[#01031B]/60 mb-1 block">Message externe (autres domaines)</label>
                           <textarea
-                            className="w-full border rounded-md p-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-[#D8346E]"
+                            className="w-full border rounded-md p-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                             rows={3}
                             value={oooExternal}
                             onChange={(e) => setOooExternal(e.target.value)}

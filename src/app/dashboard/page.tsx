@@ -72,8 +72,8 @@ function StatCard({
 }) {
   return (
     <Card className="p-5 flex items-start gap-4">
-      <div className="p-2 rounded-lg bg-[#D8346E]/10">
-        <Icon className="h-5 w-5 text-[#D8346E]" />
+      <div className="p-2 rounded-lg bg-primary/10">
+        <Icon className="h-5 w-5 text-primary" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-[#01031B]/60">{title}</p>
@@ -443,7 +443,7 @@ export default function DashboardPage() {
   const severityStyle = {
     high: "bg-red-50 border-red-200 text-red-700",
     medium: "bg-amber-50 border-amber-200 text-amber-700",
-    low: "bg-[#D8346E]/5 border-[#D8346E]/20 text-[#D8346E]",
+    low: "bg-primary/5 border-primary/20 text-primary",
   };
 
   return (
@@ -513,7 +513,7 @@ export default function DashboardPage() {
             {totalDismissed > 0 && (
               <button
                 onClick={restoreAll}
-                className="ml-auto text-xs font-normal text-[#01031B]/40 hover:text-[#D8346E] underline underline-offset-2"
+                className="ml-auto text-xs font-normal text-[#01031B]/40 hover:text-primary underline underline-offset-2"
               >
                 {totalDismissed} ignoré{totalDismissed > 1 ? "s" : ""} — Réafficher tout
               </button>
@@ -590,7 +590,7 @@ export default function DashboardPage() {
                   </span>
                   <button
                     type="button"
-                    className="max-w-[220px] truncate hover:text-[#D8346E] transition-colors"
+                    className="max-w-[220px] truncate hover:text-primary transition-colors"
                     onClick={() =>
                       setGroupSheet({
                         id: g.id,
@@ -630,7 +630,7 @@ export default function DashboardPage() {
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             Groupes vides ({activeEmpty.length})
           </h3>
-          <div className="rounded-lg border px-4 py-3 bg-[#D8346E]/5 border-[#D8346E]/20 text-[#D8346E]">
+          <div className="rounded-lg border px-4 py-3 bg-primary/5 border-primary/20 text-primary">
             <p className="text-xs mb-2 opacity-80">
               Groupes M365 / Sécurité sans aucun membre — candidats à la suppression ou au peuplement.
             </p>
@@ -638,9 +638,9 @@ export default function DashboardPage() {
               {activeEmpty.map((g) => (
                 <span
                   key={g.id}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#D8346E]/30 bg-white/60 pl-2.5 pr-1 py-0.5 text-xs"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-white/60 pl-2.5 pr-1 py-0.5 text-xs"
                 >
-                  <span className="text-[10px] font-semibold uppercase text-[#D8346E]/70 shrink-0">
+                  <span className="text-[10px] font-semibold uppercase text-primary/70 shrink-0">
                     {GROUP_TYPE_SHORT[g.type] ?? g.type}
                   </span>
                   <button
@@ -653,7 +653,7 @@ export default function DashboardPage() {
                   </button>
                   <button
                     type="button"
-                    className="text-[#D8346E]/60 hover:text-[#01031B] p-0.5"
+                    className="text-primary/60 hover:text-[#01031B] p-0.5"
                     title="Marquer comme normal"
                     onClick={() => dismissUser("group-empty", g.id)}
                   >
@@ -785,7 +785,7 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-between">
                               <button
                                 type="button"
-                                className="min-w-0 text-left hover:text-[#D8346E] transition-colors flex-1"
+                                className="min-w-0 text-left hover:text-primary transition-colors flex-1"
                                 onClick={() => {
                                   setManageAnomaly(null);
                                   setAnomalySheetTab(anomaly.id.includes("group") ? "groups" : "licenses");
@@ -799,7 +799,7 @@ export default function DashboardPage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="text-xs h-7 ml-2 shrink-0 text-[#01031B]/50 hover:text-[#D8346E]"
+                                className="text-xs h-7 ml-2 shrink-0 text-[#01031B]/50 hover:text-primary"
                                 onClick={() => dismissUser(anomaly.id, u.id)}
                               >
                                 <EyeOff className="h-3 w-3 mr-1" />
@@ -827,7 +827,7 @@ export default function DashboardPage() {
                                         membershipRule: null,
                                       });
                                     }}
-                                    className="text-xs rounded-full border px-2 py-0.5 hover:border-[#D8346E] hover:text-[#D8346E] transition-colors"
+                                    className="text-xs rounded-full border px-2 py-0.5 hover:border-primary hover:text-primary transition-colors"
                                     title="Ouvrir le groupe (propriétaires)"
                                   >
                                     {g.displayName}
@@ -882,7 +882,7 @@ export default function DashboardPage() {
         {/* Répartition types de comptes */}
         <Card className="p-5">
           <h3 className="font-semibold text-sm mb-1 flex items-center gap-2">
-            <Users className="h-4 w-4 text-[#D8346E]" />
+            <Users className="h-4 w-4 text-primary" />
             Types de comptes
           </h3>
           <p className="text-xs text-[#01031B]/40 mb-4">
@@ -905,16 +905,16 @@ export default function DashboardPage() {
                     <div key={type}>
                       <Link href={`/dashboard/users?type=${type}`}>
                         <div
-                          className="flex items-center justify-between text-sm mb-1 cursor-pointer hover:text-[#D8346E] transition-colors group"
+                          className="flex items-center justify-between text-sm mb-1 cursor-pointer hover:text-primary transition-colors group"
                           title={ACCOUNT_TYPE_HINT[type] ?? ""}
                         >
-                          <span className="text-[#01031B]/70 group-hover:text-[#D8346E]">{cfg?.label ?? type}</span>
-                          <span className="text-[#01031B]/50 tabular-nums group-hover:text-[#D8346E]">{count}</span>
+                          <span className="text-[#01031B]/70 group-hover:text-primary">{cfg?.label ?? type}</span>
+                          <span className="text-[#01031B]/50 tabular-nums group-hover:text-primary">{count}</span>
                         </div>
                       </Link>
                       <div className="h-1.5 bg-[#01031B]/8 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-[#D8346E] rounded-full"
+                          className="h-full bg-primary rounded-full"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -928,7 +928,7 @@ export default function DashboardPage() {
         {/* Répartition groupes */}
         <Card className="p-5">
           <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
-            <Crown className="h-4 w-4 text-[#D8346E]" />
+            <Crown className="h-4 w-4 text-primary" />
             Types de groupes
           </h3>
           {groupsLoading ? (
@@ -940,9 +940,9 @@ export default function DashboardPage() {
           ) : groupStats ? (
             <div className="space-y-2.5">
               {[
-                { label: "Microsoft 365", count: groupStats.unified, color: "bg-[#D8346E]", type: "unified" },
+                { label: "Microsoft 365", count: groupStats.unified, color: "bg-primary", type: "unified" },
                 { label: "Sécurité", count: groupStats.security, color: "bg-[#01031B]", type: "security" },
-                { label: "Distribution", count: groupStats.distribution, color: "bg-[#8C1F47]", type: "distribution" },
+                { label: "Distribution", count: groupStats.distribution, color: "bg-primary", type: "distribution" },
               ].map(({ label, count, color, type }) => {
                 const pct = Math.round(
                   (count / Math.max(groupStats.total, 1)) * 100
@@ -951,8 +951,8 @@ export default function DashboardPage() {
                   <div key={label}>
                     <Link href={`/dashboard/groups?type=${type}`}>
                       <div className="flex items-center justify-between text-sm mb-1 cursor-pointer group">
-                        <span className="text-[#01031B]/70 group-hover:text-[#D8346E] transition-colors">{label}</span>
-                        <span className="text-[#01031B]/50 tabular-nums group-hover:text-[#D8346E] transition-colors">{count}</span>
+                        <span className="text-[#01031B]/70 group-hover:text-primary transition-colors">{label}</span>
+                        <span className="text-[#01031B]/50 tabular-nums group-hover:text-primary transition-colors">{count}</span>
                       </div>
                     </Link>
                     <div className="h-1.5 bg-[#01031B]/8 rounded-full overflow-hidden">
@@ -971,7 +971,7 @@ export default function DashboardPage() {
         {/* Statut des comptes */}
         <Card className="p-5">
           <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-[#D8346E]" />
+            <CheckCircle className="h-4 w-4 text-primary" />
             Santé des comptes
           </h3>
           {usersLoading ? (
@@ -1049,7 +1049,7 @@ export default function DashboardPage() {
       {(skus && skus.length > 0) || skusLoading ? (
         <div>
           <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-            <Shield className="h-4 w-4 text-[#D8346E]" />
+            <Shield className="h-4 w-4 text-primary" />
             Abonnements Microsoft 365
             <span className="text-[#01031B]/40 font-normal">(cliquer pour voir les utilisateurs)</span>
           </h3>
@@ -1071,7 +1071,7 @@ export default function DashboardPage() {
 
                   return (
                     <Link key={sku.skuId} href={`/dashboard/licenses?sku=${sku.skuId}`}>
-                      <Card className="p-4 space-y-2 hover:border-[#D8346E] hover:shadow-sm transition-all cursor-pointer">
+                      <Card className="p-4 space-y-2 hover:border-primary hover:shadow-sm transition-all cursor-pointer">
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-medium leading-tight">
                             {getSkuFriendlyName(sku.skuPartNumber)}
@@ -1090,7 +1090,7 @@ export default function DashboardPage() {
                           <div className="h-1.5 bg-[#01031B]/8 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${
-                                isFull ? "bg-destructive" : pct > 80 ? "bg-[#8C1F47]" : "bg-[#D8346E]"
+                                isFull ? "bg-destructive" : pct > 80 ? "bg-primary" : "bg-primary"
                               }`}
                               style={{ width: `${Math.min(pct, 100)}%` }}
                             />
@@ -1126,7 +1126,7 @@ export default function DashboardPage() {
       {/* Audit récent */}
       <div>
         <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-          <History className="h-4 w-4 text-[#D8346E]" />
+          <History className="h-4 w-4 text-primary" />
           Modifications récentes
         </h3>
         <Card>

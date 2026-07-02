@@ -177,7 +177,7 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
 
           {/* Section Owners */}
           <div className="mb-1 flex items-center gap-2">
-            <Crown className="h-4 w-4 text-[#D8346E]" />
+            <Crown className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold">
               Propriétaires
               {sortedOwners.length > 0 && (

@@ -133,8 +133,8 @@ export default function LicensesPage() {
               return (
                 <Card
                   key={sku.skuId}
-                  className={`p-5 space-y-3 cursor-pointer hover:border-[#D8346E] hover:shadow-sm transition-all ${
-                    isSelected ? "border-[#D8346E] shadow-sm bg-[#D8346E]/5" : ""
+                  className={`p-5 space-y-3 cursor-pointer hover:border-primary hover:shadow-sm transition-all ${
+                    isSelected ? "border-primary shadow-sm bg-primary/5" : ""
                   }`}
                   onClick={() => {
                     setSelectedSku(isSelected ? null : sku);
@@ -156,7 +156,7 @@ export default function LicensesPage() {
                     <div className="h-1.5 bg-[#01031B]/8 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${
-                          isFull ? "bg-destructive" : pct > 80 ? "bg-[#8C1F47]" : "bg-[#D8346E]"
+                          isFull ? "bg-destructive" : pct > 80 ? "bg-primary" : "bg-primary"
                         }`}
                         style={{ width: `${Math.min(pct, 100)}%` }}
                       />

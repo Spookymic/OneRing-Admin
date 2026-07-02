@@ -46,7 +46,7 @@ function AuthErrorContent() {
         </CardHeader>
         <CardContent>
           <Link href="/auth/signin" className="block w-full">
-            <Button className="w-full bg-[#D8346E] hover:bg-[#c02860]">Réessayer</Button>
+            <Button className="w-full bg-primary hover:bg-[#c02860]">Réessayer</Button>
           </Link>
         </CardContent>
       </Card>

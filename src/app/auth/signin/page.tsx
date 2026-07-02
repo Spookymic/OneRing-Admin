@@ -69,7 +69,7 @@ export default function SignInPage() {
           </div>
 
           <Button
-            className="w-full bg-[#D8346E] hover:bg-[#c22860] text-white border-0"
+            className="w-full bg-primary hover:bg-primary/90 text-white border-0"
             onClick={() => signIn("azure-ad", { callbackUrl: "/dashboard" })}
           >
             <svg className="h-4 w-4 mr-2 shrink-0" viewBox="0 0 21 21" fill="none">
@@ -124,7 +124,7 @@ export default function SignInPage() {
           </div>
         </div>
 
-        <p className="text-xs text-white/20">OneRing Admin v1.18.0</p>
+        <p className="text-xs text-white/20">OneRing Admin v1.19.0</p>
       </div>
     </div>
   );

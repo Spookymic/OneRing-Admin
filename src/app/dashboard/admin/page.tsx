@@ -37,8 +37,8 @@ function Toggle({
         role="switch"
         aria-checked={value}
         onClick={() => onChange(!value)}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#D8346E] focus:ring-offset-2 ${
-          value ? "bg-[#D8346E]" : "bg-[#01031B]/20"
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+          value ? "bg-primary" : "bg-[#01031B]/20"
         }`}
       >
         <span
@@ -138,11 +138,12 @@ export default function AdminPage() {
 
   const { data: sessionData } = useSession();
   const isSSO = sessionData?.role === "graph";
-  const { data: localAdmin, refetch: refetchLocalAdmin } = useQuery<{ exists: boolean; username: string | null }>({
+  const { data: localAdmins, refetch: refetchLocalAdmin } = useQuery<{ admins: { id: string; username: string; createdAt: string }[] }>({
     queryKey: ["local-admin"],
     queryFn: () => apiFetch("/api/admin/local-admin"),
     staleTime: 5 * 60 * 1000,
   });
+  const admins = localAdmins?.admins ?? [];
   const [laUser, setLaUser] = useState("");
   const [laPass, setLaPass] = useState("");
   const [laMsg, setLaMsg] = useState("");
@@ -164,6 +165,24 @@ export default function AdminPage() {
       setLaMsg(e.message);
     } finally {
       setLaBusy(false);
+    }
+  }
+  async function deleteLocalAdmin(id: string, username: string) {
+    if (!window.confirm(`Supprimer le compte local « ${username} » ?`)) return;
+    try {
+      await apiFetch(`/api/admin/local-admin?id=${id}`, { method: "DELETE" });
+      refetchLocalAdmin();
+    } catch (e: any) {
+      setLaMsg(e.message);
+    }
+  }
+  async function deleteAllLocalAdmins() {
+    if (!window.confirm("Supprimer TOUS les comptes admin locaux ?")) return;
+    try {
+      await apiFetch(`/api/admin/local-admin?all=true`, { method: "DELETE" });
+      refetchLocalAdmin();
+    } catch (e: any) {
+      setLaMsg(e.message);
     }
   }
 
@@ -230,7 +249,7 @@ export default function AdminPage() {
       {/* Contrôle d'accès aux actions */}
       <Card className="p-5">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-2">
-          <Shield className="h-4 w-4 text-[#D8346E]" />
+          <Shield className="h-4 w-4 text-primary" />
           Contrôle des actions sensibles
         </h3>
         <p className="text-xs text-[#01031B]/50 mb-4">
@@ -292,7 +311,7 @@ export default function AdminPage() {
       {/* Détection des types de comptes */}
       <Card className="p-5">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-2">
-          <Users2 className="h-4 w-4 text-[#D8346E]" />
+          <Users2 className="h-4 w-4 text-primary" />
           Détection des types de comptes
         </h3>
         <p className="text-xs text-[#01031B]/50 mb-5">
@@ -321,7 +340,7 @@ export default function AdminPage() {
       {/* Sauvegarde des paramètres */}
       <Card className="p-5">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-2">
-          <Settings className="h-4 w-4 text-[#D8346E]" />
+          <Settings className="h-4 w-4 text-primary" />
           Sauvegarde des paramètres
         </h3>
         <p className="text-xs text-[#01031B]/50 mb-4">
@@ -359,7 +378,7 @@ export default function AdminPage() {
       {/* Rétention historique */}
       <Card className="p-5">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-2">
-          <History className="h-4 w-4 text-[#D8346E]" />
+          <History className="h-4 w-4 text-primary" />
           Historique des modifications
         </h3>
         <p className="text-xs text-[#01031B]/50 mb-4">
@@ -389,7 +408,7 @@ export default function AdminPage() {
       {/* Configuration SSO Azure AD (lecture seule) */}
       <Card className="p-5">
         <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-          <Shield className="h-4 w-4 text-[#D8346E]" />
+          <Shield className="h-4 w-4 text-primary" />
           Configuration SSO (Azure AD)
         </h3>
         <div className="space-y-2 text-sm">
@@ -415,15 +434,49 @@ export default function AdminPage() {
       {/* Compte administrateur local */}
       <Card className="p-5">
         <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-          <Users2 className="h-4 w-4 text-[#D8346E]" />
+          <Users2 className="h-4 w-4 text-primary" />
           Compte administrateur local
         </h3>
         <p className="text-xs text-[#01031B]/50 mb-3">
-          Accès de secours limité à l&apos;Administration (aucun accès Graph / Microsoft 365).{" "}
-          {localAdmin?.exists ? `Compte actuel : ${localAdmin.username}.` : "Aucun compte défini."}
+          Accès de secours limité à l&apos;Administration (aucun accès Graph / Microsoft 365).
         </p>
+
+        {admins.length > 0 && (
+          <div className="mb-4 space-y-1">
+            {admins.map((a) => (
+              <div key={a.id} className="flex items-center justify-between rounded-md border px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{a.username}</p>
+                  <p className="text-xs text-[#01031B]/40">
+                    créé le {format(new Date(a.createdAt), "dd MMM yyyy", { locale: fr })}
+                  </p>
+                </div>
+                {isSSO && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-red-500 hover:text-red-700 h-7 px-2"
+                    onClick={() => deleteLocalAdmin(a.id, a.username)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            {isSSO && admins.length > 1 && (
+              <button
+                onClick={deleteAllLocalAdmins}
+                className="text-xs text-[#01031B]/40 hover:text-red-600 underline underline-offset-2 pt-1"
+              >
+                Supprimer tous les comptes
+              </button>
+            )}
+          </div>
+        )}
+
         {isSSO ? (
           <div className="space-y-2 max-w-sm">
+            <p className="text-xs font-medium text-[#01031B]/60">Ajouter / réinitialiser un compte</p>
             <Input placeholder="Identifiant" value={laUser} onChange={(e) => setLaUser(e.target.value)} />
             <Input
               type="password"
@@ -433,12 +486,15 @@ export default function AdminPage() {
             />
             {laMsg && <p className="text-xs text-[#01031B]/60">{laMsg}</p>}
             <Button size="sm" onClick={saveLocalAdmin} disabled={laBusy || laUser.length < 3 || laPass.length < 8}>
-              {laBusy ? "Enregistrement…" : localAdmin?.exists ? "Remplacer le compte" : "Créer le compte"}
+              {laBusy ? "Enregistrement…" : "Enregistrer le compte"}
             </Button>
+            <p className="text-xs text-[#01031B]/40">
+              Un identifiant existant voit son mot de passe réinitialisé ; sinon un nouveau compte est créé.
+            </p>
           </div>
         ) : (
           <p className="text-xs text-[#01031B]/40">
-            Ce compte se configure via un administrateur connecté en SSO Microsoft.
+            Ces comptes se configurent via un administrateur connecté en SSO Microsoft.
           </p>
         )}
       </Card>
@@ -446,7 +502,7 @@ export default function AdminPage() {
       {/* Santé du pont Exchange */}
       <Card className="p-5">
         <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-          <Server className="h-4 w-4 text-[#D8346E]" />
+          <Server className="h-4 w-4 text-primary" />
           Pont Exchange
         </h3>
         {bridgeHealth ? (
@@ -473,7 +529,7 @@ export default function AdminPage() {
       {/* Certificats & secrets d'applications */}
       <Card className="p-5">
         <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-          <KeyRound className="h-4 w-4 text-[#D8346E]" />
+          <KeyRound className="h-4 w-4 text-primary" />
           Certificats & secrets d&apos;applications (expiration ≤ 30 j)
         </h3>
         {credData?.supported === false ? (
@@ -506,11 +562,11 @@ export default function AdminPage() {
       {/* Infos version */}
       <Card className="p-5">
         <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-          <KeyRound className="h-4 w-4 text-[#D8346E]" />
+          <KeyRound className="h-4 w-4 text-primary" />
           Version
         </h3>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-sm font-mono">v1.18.0</Badge>
+          <Badge variant="outline" className="text-sm font-mono">v1.19.0</Badge>
           <p className="text-xs text-[#01031B]/50">OneRing Admin — M365 Administrator</p>
         </div>
       </Card>

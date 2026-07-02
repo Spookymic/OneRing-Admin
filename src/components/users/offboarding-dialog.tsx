@@ -92,7 +92,7 @@ export function OffboardingDialog({ user, open, onClose }: Props) {
               type="checkbox"
               checked={convertToShared}
               onChange={(e) => setConvertToShared(e.target.checked)}
-              className="h-4 w-4 mt-0.5 accent-[#D8346E]"
+              className="h-4 w-4 mt-0.5 accent-primary"
             />
             <span>
               Convertir la boîte aux lettres en <span className="font-medium">boîte partagée</span>
