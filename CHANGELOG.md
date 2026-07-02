@@ -2,6 +2,27 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.18.0] — 2026-06-20
+
+### Nouvelles fonctionnalités v1.18.0
+
+- **Compte administrateur local** : accès de secours (provider credentials NextAuth, table Prisma `LocalAdmin`, hash bcrypt) **sans aucun accès Graph**, confiné à l'onglet Administration (sidebar réduite + redirection). Création/remplacement par un admin SSO depuis Administration. Connexion via « accès de secours » sur la page de login. Audit `LOCAL_ADMIN_SET`.
+- **Utilisateurs inactifs & licences gaspillées** : section « Optimisation des licences » (dashboard) + page dédiée `/dashboard/inactive-users` (comptes licenciés sans connexion > 90 j, ancienneté du compte). Estimation des licences récupérables (désactivés + inactifs). Basé sur `signInActivity` (best-effort, Entra Premium).
+- **Secrets & certificats** : page `/dashboard/credentials` (tous les identifiants d'app registrations) + alerte dashboard + carte Administration pour ce qui expire ≤ 30 j. Endpoint `/api/security/expiring-credentials`.
+- **Santé du pont Exchange** : carte d'état (joignable / connexion EXO) dans Administration. Endpoint `/api/exchange/health`.
+- **Alerte groupes vides** (M365 / Sécurité sans membre) sur le dashboard.
+- **Actions groupées** (liste utilisateurs) : sélection multiple → retrait des licences / offboarding en masse (option boîte partagée), barre de progression.
+- **Export CSV des anomalies** (dashboard).
+- **Config SSO Azure AD** (lecture) dans Administration. Endpoint `/api/config/sso`.
+- **Chenillard de chargement** (loader animé) + écran de navigation.
+- **Base de tests** : vitest + MSW (logique pure, couche Graph pagination/throttling/`$batch`, route API). `npm test`.
+
+### Corrections / robustesse v1.18.0
+
+- **Rétro** : pagination `@odata.nextLink` et retry throttling (429/503) déjà en place ; ajout de l'ancienneté du compte dans l'optimisation des licences.
+
+---
+
 ## [1.17.0] — 2026-06-19
 
 ### Nouvelles fonctionnalités v1.17.0

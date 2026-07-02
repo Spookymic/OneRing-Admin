@@ -5,7 +5,8 @@ import { getAuditLogs, logAudit } from "@/services/audit";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.accessToken) {
+  // Accessible aux admins SSO ET à l'admin local (gestion de l'application)
+  if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
   try {

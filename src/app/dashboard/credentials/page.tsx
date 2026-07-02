@@ -1,0 +1,140 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table, TableBody, TableCell, TableHeader, TableRow,
+} from "@/components/ui/table";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { apiFetch } from "@/lib/api";
+
+interface Cred {
+  appObjectId: string;
+  appId: string;
+  appName: string;
+  type: "secret" | "certificate";
+  name: string | null;
+  endDateTime: string;
+  daysLeft: number;
+}
+
+export default function CredentialsPage() {
+  const [search, setSearch] = useState("");
+
+  // days élevé → renvoie tous les secrets/certificats
+  const { data, isLoading, error } = useQuery<{ supported: boolean; credentials: Cred[] }>({
+    queryKey: ["all-credentials"],
+    queryFn: () => apiFetch<{ supported: boolean; credentials: Cred[] }>("/api/security/expiring-credentials?days=100000"),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const creds = (data?.credentials ?? []).filter(
+    (c) =>
+      c.appName.toLowerCase().includes(search.toLowerCase()) ||
+      (c.name ?? "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  const expiredCount = (data?.credentials ?? []).filter((c) => c.daysLeft < 0).length;
+  const soonCount = (data?.credentials ?? []).filter((c) => c.daysLeft >= 0 && c.daysLeft <= 30).length;
+
+  if (error) {
+    return (
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Secrets &amp; certificats</h2>
+        <div className="rounded-md border bg-red-50 border-red-200 p-4 text-red-700 text-sm">
+          Erreur : {(error as Error).message}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h2 className="text-2xl font-bold">Secrets &amp; certificats</h2>
+          <p className="text-sm text-[#01031B]/50 mt-0.5">
+            Identifiants des inscriptions d&apos;applications Azure AD et leur expiration.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {expiredCount > 0 && <Badge variant="destructive">{expiredCount} expiré(s)</Badge>}
+          {soonCount > 0 && <Badge variant="secondary">{soonCount} ≤ 30 j</Badge>}
+        </div>
+      </div>
+
+      {data?.supported === false ? (
+        <div className="rounded-md border bg-amber-50 border-amber-200 p-4 text-amber-700 text-sm">
+          Lecture des applications indisponible — le droit Directory/Application est requis sur le compte connecté.
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-3 mb-4">
+            <Input
+              placeholder="Rechercher une application ou un identifiant..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+          <div className="rounded-md border bg-white">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <th className="p-3 text-sm font-medium text-left">Application</th>
+                  <th className="p-3 text-sm font-medium text-left">Type</th>
+                  <th className="p-3 text-sm font-medium text-left">Identifiant</th>
+                  <th className="p-3 text-sm font-medium text-left">Expiration</th>
+                  <th className="p-3 text-sm font-medium text-left">Restant</th>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading
+                  ? Array.from({ length: 6 }).map((_, i) => (
+                      <TableRow key={i}>
+                        {Array.from({ length: 5 }).map((_, j) => (
+                          <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  : creds.map((c, i) => (
+                      <TableRow key={`${c.appObjectId}-${i}`}>
+                        <TableCell className="font-medium">{c.appName}</TableCell>
+                        <TableCell>
+                          <Badge variant={c.type === "certificate" ? "outline" : "secondary"} className="text-xs">
+                            {c.type === "certificate" ? "Certificat" : "Secret"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-500">{c.name ?? "—"}</TableCell>
+                        <TableCell className="text-sm">
+                          {format(new Date(c.endDateTime), "dd MMM yyyy", { locale: fr })}
+                        </TableCell>
+                        <TableCell
+                          className={`text-sm font-medium ${
+                            c.daysLeft < 0 ? "text-red-600" : c.daysLeft <= 30 ? "text-amber-600" : "text-gray-500"
+                          }`}
+                        >
+                          {c.daysLeft < 0 ? `expiré depuis ${-c.daysLeft} j` : `${c.daysLeft} j`}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                {!isLoading && creds.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-gray-400 py-8">
+                      Aucun secret / certificat.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

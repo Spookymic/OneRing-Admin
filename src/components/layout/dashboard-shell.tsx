@@ -1,13 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu } from "lucide-react";
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Sidebar } from "./sidebar";
 import { InactivityWatcher } from "@/components/inactivity-watcher";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { data: session } = useSession();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // L'admin local (accès de secours) est confiné à l'Administration
+  const localBlocked = session?.role === "local" && !pathname.startsWith("/dashboard/admin");
+  useEffect(() => {
+    if (localBlocked) router.replace("/dashboard/admin");
+  }, [localBlocked, router]);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -44,7 +55,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#F5F5FA]">
-          {children}
+          {localBlocked ? null : children}
         </main>
       </div>
 

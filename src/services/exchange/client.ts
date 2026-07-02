@@ -42,3 +42,14 @@ export async function bridgeFetch<T extends BridgeResponse = BridgeResponse>(
   }
   return data;
 }
+
+/** État du pont Exchange (sonde /health). Renvoie null si injoignable/non configuré. */
+export async function getBridgeHealth(): Promise<
+  { status: string; org: string; exoConnected: boolean } | null
+> {
+  try {
+    return await bridgeFetch<{ status: string; org: string; exoConnected: boolean }>("/health");
+  } catch {
+    return null;
+  }
+}

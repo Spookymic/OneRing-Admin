@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Users, Shield, History, LogOut, LayoutDashboard, Users2,
-  Settings, Eye, X, Check, Inbox, Network,
+  Settings, Eye, X, Check, Inbox, Network, KeyRound,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ const navItems = [
   { href: "/dashboard/group-tree", label: "Arborescence", icon: Network },
   { href: "/dashboard/mailboxes", label: "Boîtes partagées", icon: Inbox },
   { href: "/dashboard/licenses", label: "Licences", icon: Shield },
+  { href: "/dashboard/credentials", label: "Secrets & certificats", icon: KeyRound },
   { href: "/dashboard/audit", label: "Historique", icon: History },
   { href: "/dashboard/admin", label: "Administration", icon: Settings },
 ];
@@ -33,6 +34,11 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
   const { data: session } = useSession();
   const { mode, setA11yMode } = useAccessibility();
   const [a11yOpen, setA11yOpen] = useState(false);
+
+  // L'admin local (accès de secours) ne voit que l'Administration
+  const visibleNav = session?.role === "local"
+    ? navItems.filter((i) => i.href === "/dashboard/admin")
+    : navItems;
 
   return (
     <aside className="w-64 shrink-0 h-screen overflow-y-auto bg-[#01031B] text-white flex flex-col">
@@ -64,7 +70,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
-        {navItems.map(({ href, label, icon: Icon, exact }) => {
+        {visibleNav.map(({ href, label, icon: Icon, exact }) => {
           const isActive = exact ? pathname === href : pathname.startsWith(href);
           return (
             <Link
@@ -144,7 +150,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
           <LogOut className="h-4 w-4 mr-3" />
           Déconnexion
         </Button>
-        <p className="text-center text-white/25 text-xs pt-1">v1.17.0</p>
+        <p className="text-center text-white/25 text-xs pt-1">v1.18.0</p>
       </div>
     </aside>
   );

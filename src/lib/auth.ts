@@ -1,5 +1,8 @@
 import type { NextAuthOptions } from "next-auth";
 import AzureADProvider from "next-auth/providers/azure-ad";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Template IDs des rôles Azure AD acceptés pour accéder à l'application.
@@ -32,9 +35,28 @@ export const authOptions: NextAuthOptions = {
         },
       },
     }),
+    // Compte administrateur local — accès de secours, gestion de l'application uniquement (aucun accès Graph).
+    CredentialsProvider({
+      id: "local",
+      name: "Compte local",
+      credentials: {
+        username: { label: "Identifiant", type: "text" },
+        password: { label: "Mot de passe", type: "password" },
+      },
+      async authorize(creds) {
+        if (!creds?.username || !creds?.password) return null;
+        const admin = await prisma.localAdmin.findUnique({ where: { username: creds.username } });
+        if (!admin) return null;
+        const ok = await bcrypt.compare(creds.password, admin.passwordHash);
+        if (!ok) return null;
+        return { id: admin.id, name: admin.username, email: admin.username };
+      },
+    }),
   ],
   callbacks: {
     async signIn({ account }) {
+      // Compte local : validé par le provider credentials (authorize)
+      if (account?.provider === "local") return true;
       if (!account?.access_token) return false;
 
       try {
@@ -55,9 +77,15 @@ export const authOptions: NextAuthOptions = {
       }
     },
 
-    async jwt({ token, account, profile }) {
+    async jwt({ token, account, profile, user }) {
+      if (account?.provider === "local") {
+        token.role = "local";
+        token.accessToken = undefined;
+        if (user?.email) token.email = user.email;
+      }
       if (account?.access_token) {
         token.accessToken = account.access_token;
+        token.role = "graph";
       }
       if (profile?.email) {
         token.email = profile.email;
@@ -65,7 +93,8 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken as string;
+      session.accessToken = token.accessToken as string | undefined;
+      session.role = token.role as "graph" | "local" | undefined;
       if (session.user && token.email) {
         session.user.email = token.email as string;
       }

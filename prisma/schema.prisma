@@ -67,6 +67,16 @@ model User {
   @@map("users")
 }
 
+model LocalAdmin {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("local_admins")
+}
+
 model VerificationToken {
   identifier String
   token      String   @unique

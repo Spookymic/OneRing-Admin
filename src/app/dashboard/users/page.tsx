@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ import { useAdminSettings } from "@/lib/admin-settings";
 import { ResetPasswordDialog } from "@/components/users/reset-password-dialog";
 import { UserGroupsSheet } from "@/components/users/user-groups-sheet";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 type StatusFilter = "all" | "active" | "disabled";
 
@@ -60,6 +62,13 @@ export default function UsersPage() {
   const [deptFilter, setDeptFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<M365User | null>(null);
   const [resetUser, setResetUser] = useState<M365User | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState("");
+  const [bulkOffboardOpen, setBulkOffboardOpen] = useState(false);
+  const [bulkConvert, setBulkConvert] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnId>>(
     () => new Set(COLUMN_DEFS.filter((c) => c.defaultVisible).map((c) => c.id))
   );
@@ -158,6 +167,65 @@ export default function UsersPage() {
     filtered ?? [],
     getSortVal
   );
+
+  // ── Sélection multiple / actions groupées ──────────────────────────
+  const allSelected = sorted.length > 0 && sorted.every((u) => selectedIds.has(u.id));
+  function toggleSelectAll() {
+    setSelectedIds((prev) =>
+      sorted.length > 0 && sorted.every((u) => prev.has(u.id)) ? new Set() : new Set(sorted.map((u) => u.id))
+    );
+  }
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  }
+
+  async function bulkRemoveLicenses() {
+    const targets = (users ?? []).filter((u) => selectedIds.has(u.id) && u.assignedLicenses.length > 0);
+    if (targets.length === 0) { toast({ title: "Aucune licence à retirer sur la sélection" }); return; }
+    if (!window.confirm(`Retirer TOUTES les licences de ${targets.length} compte(s) ? Action journalisée.`)) return;
+    setBulkBusy(true);
+    let done = 0, errors = 0;
+    for (const u of targets) {
+      for (const lic of u.assignedLicenses) {
+        try {
+          await apiFetch(`/api/licenses/${u.id}`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ skuId: lic.skuId, action: "remove" }),
+          });
+        } catch { errors++; }
+      }
+      done++; setBulkProgress(`${done}/${targets.length}`);
+    }
+    setBulkBusy(false); setBulkProgress(""); setSelectedIds(new Set());
+    queryClient.invalidateQueries();
+    toast(errors
+      ? { title: "Retrait partiel", description: `${errors} erreur(s)`, variant: "destructive" }
+      : { title: "Licences retirées", description: `${targets.length} compte(s) traité(s)` });
+  }
+
+  async function bulkOffboard() {
+    const ids = [...selectedIds];
+    setBulkOffboardOpen(false); setBulkBusy(true);
+    let done = 0, errors = 0;
+    for (const id of ids) {
+      try {
+        await apiFetch(`/api/users/${id}/offboard`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ convertToShared: bulkConvert }),
+        });
+      } catch { errors++; }
+      done++; setBulkProgress(`${done}/${ids.length}`);
+    }
+    setBulkBusy(false); setBulkProgress(""); setSelectedIds(new Set()); setBulkConvert(false);
+    queryClient.invalidateQueries();
+    toast(errors
+      ? { title: "Offboarding partiel", description: `${errors} erreur(s) sur ${ids.length}`, variant: "destructive" }
+      : { title: "Offboarding terminé", description: `${ids.length} compte(s) offboardé(s)` });
+  }
 
   if (error) {
     return (
@@ -258,10 +326,35 @@ export default function UsersPage() {
         </DropdownMenu>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-3 rounded-md border border-[#D8346E]/30 bg-[#D8346E]/5 px-3 py-2">
+          <span className="text-sm font-medium">{selectedIds.size} sélectionné(s)</span>
+          <Button size="sm" variant="outline" onClick={bulkRemoveLicenses} disabled={bulkBusy}>
+            Retirer les licences
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => setBulkOffboardOpen(true)} disabled={bulkBusy}>
+            Offboarder
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} disabled={bulkBusy}>
+            Annuler la sélection
+          </Button>
+          {bulkBusy && <span className="text-xs text-[#01031B]/60">Traitement… {bulkProgress}</span>}
+        </div>
+      )}
+
       <div className="rounded-md border bg-white overflow-x-auto">
         <Table className="min-w-max">
           <TableHeader>
             <TableRow>
+              <th className="p-3 w-8">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleSelectAll}
+                  className="h-4 w-4 accent-[#D8346E] align-middle"
+                  aria-label="Tout sélectionner"
+                />
+              </th>
               {col("name")       && <SortableHead label="Nom"         col="name"       activeCol={sortCol} dir={sortDir} onToggle={toggleSort} />}
               {col("email")      && <SortableHead label="Email"       col="email"      activeCol={sortCol} dir={sortDir} onToggle={toggleSort} />}
               {col("jobTitle")   && <SortableHead label="Fonction"    col="jobTitle"   activeCol={sortCol} dir={sortDir} onToggle={toggleSort} />}
@@ -296,6 +389,15 @@ export default function UsersPage() {
                       className="cursor-pointer hover:bg-[#D8346E]/5"
                       onClick={() => setSelectedUser(user)}
                     >
+                      <TableCell className="w-8" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(user.id)}
+                          onChange={() => toggleSelect(user.id)}
+                          className="h-4 w-4 accent-[#D8346E] align-middle"
+                          aria-label={`Sélectionner ${user.displayName}`}
+                        />
+                      </TableCell>
                       {col("name") && (
                         <TableCell className="font-medium">{user.displayName}</TableCell>
                       )}
@@ -360,6 +462,36 @@ export default function UsersPage() {
           onClose={() => setResetUser(null)}
         />
       )}
+
+      <Dialog open={bulkOffboardOpen} onOpenChange={(v) => { if (!v) setBulkOffboardOpen(false); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Offboarder {selectedIds.size} compte(s)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 min-w-0">
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+              Pour chaque compte : désactivation, retrait de toutes les licences et de toutes les
+              appartenances aux groupes. Opération journalisée, non réversible en bloc.
+            </div>
+            <label className="flex items-start gap-2 text-sm cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={bulkConvert}
+                onChange={(e) => setBulkConvert(e.target.checked)}
+                className="h-4 w-4 mt-0.5 accent-[#D8346E]"
+              />
+              <span>
+                Convertir les boîtes en <span className="font-medium">boîtes partagées</span>
+                <span className="block text-xs text-[#01031B]/50">Nécessite un rôle Exchange Administrator.</span>
+              </span>
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkOffboardOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={bulkOffboard}>Offboarder</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

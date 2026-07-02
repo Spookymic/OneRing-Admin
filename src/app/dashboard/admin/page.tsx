@@ -5,8 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useCallback } from "react";
-import { Settings, Shield, Users2, KeyRound, Plus, Trash2, RotateCcw, Download, Upload, History } from "lucide-react";
+import { Settings, Shield, Users2, KeyRound, Plus, Trash2, RotateCcw, Download, Upload, History, Server } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { useAdminSettings, exportSettingsToFile, parseImportedSettings, type AdminSettings } from "@/lib/admin-settings";
 import { apiFetch } from "@/lib/api";
 import { ROOM_KEYWORDS as DEFAULT_ROOM_KEYWORDS, EQUIPMENT_KEYWORDS as DEFAULT_EQUIPMENT_KEYWORDS } from "@/lib/account-types";
@@ -112,6 +116,56 @@ export default function AdminPage() {
   const { settings, updateSettings, resetSettings, loaded } = useAdminSettings();
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
+
+  const { data: bridgeHealth } = useQuery<{ reachable: boolean; org?: string; exoConnected?: boolean }>({
+    queryKey: ["exchange-health"],
+    queryFn: () => apiFetch("/api/exchange/health"),
+    staleTime: 60 * 1000,
+  });
+
+  type Cred = { appName: string; type: "secret" | "certificate"; name: string | null; endDateTime: string; daysLeft: number };
+  const { data: credData } = useQuery<{ supported: boolean; credentials: Cred[] }>({
+    queryKey: ["expiring-credentials"],
+    queryFn: () => apiFetch("/api/security/expiring-credentials"),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: sso } = useQuery<{ tenantId: string | null; clientId: string | null; nextAuthUrl: string | null; redirectUri: string | null }>({
+    queryKey: ["sso-config"],
+    queryFn: () => apiFetch("/api/config/sso"),
+    staleTime: 60 * 60 * 1000,
+  });
+
+  const { data: sessionData } = useSession();
+  const isSSO = sessionData?.role === "graph";
+  const { data: localAdmin, refetch: refetchLocalAdmin } = useQuery<{ exists: boolean; username: string | null }>({
+    queryKey: ["local-admin"],
+    queryFn: () => apiFetch("/api/admin/local-admin"),
+    staleTime: 5 * 60 * 1000,
+  });
+  const [laUser, setLaUser] = useState("");
+  const [laPass, setLaPass] = useState("");
+  const [laMsg, setLaMsg] = useState("");
+  const [laBusy, setLaBusy] = useState(false);
+  async function saveLocalAdmin() {
+    setLaBusy(true);
+    setLaMsg("");
+    try {
+      await apiFetch("/api/admin/local-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: laUser, password: laPass }),
+      });
+      setLaMsg("Compte enregistré.");
+      setLaUser("");
+      setLaPass("");
+      refetchLocalAdmin();
+    } catch (e: any) {
+      setLaMsg(e.message);
+    } finally {
+      setLaBusy(false);
+    }
+  }
 
   // Wrapper: met à jour les settings ET journalise dans l'audit
   const update = useCallback((updates: Partial<AdminSettings>) => {
@@ -332,6 +386,123 @@ export default function AdminPage() {
         </div>
       </Card>
 
+      {/* Configuration SSO Azure AD (lecture seule) */}
+      <Card className="p-5">
+        <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+          <Shield className="h-4 w-4 text-[#D8346E]" />
+          Configuration SSO (Azure AD)
+        </h3>
+        <div className="space-y-2 text-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+            <span className="text-[#01031B]/50 w-40 shrink-0">Tenant ID</span>
+            <span className="font-mono text-xs break-all">{sso?.tenantId ?? "—"}</span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+            <span className="text-[#01031B]/50 w-40 shrink-0">Client ID</span>
+            <span className="font-mono text-xs break-all">{sso?.clientId ?? "—"}</span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+            <span className="text-[#01031B]/50 w-40 shrink-0">URI de redirection</span>
+            <span className="font-mono text-xs break-all">{sso?.redirectUri ?? "—"}</span>
+          </div>
+          <p className="text-xs text-[#01031B]/40 pt-1">
+            L&apos;URI de redirection doit être déclarée dans l&apos;app registration Azure AD. Le client secret
+            se configure via les variables d&apos;environnement (jamais affiché ici).
+          </p>
+        </div>
+      </Card>
+
+      {/* Compte administrateur local */}
+      <Card className="p-5">
+        <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+          <Users2 className="h-4 w-4 text-[#D8346E]" />
+          Compte administrateur local
+        </h3>
+        <p className="text-xs text-[#01031B]/50 mb-3">
+          Accès de secours limité à l&apos;Administration (aucun accès Graph / Microsoft 365).{" "}
+          {localAdmin?.exists ? `Compte actuel : ${localAdmin.username}.` : "Aucun compte défini."}
+        </p>
+        {isSSO ? (
+          <div className="space-y-2 max-w-sm">
+            <Input placeholder="Identifiant" value={laUser} onChange={(e) => setLaUser(e.target.value)} />
+            <Input
+              type="password"
+              placeholder="Mot de passe (≥ 8 caractères)"
+              value={laPass}
+              onChange={(e) => setLaPass(e.target.value)}
+            />
+            {laMsg && <p className="text-xs text-[#01031B]/60">{laMsg}</p>}
+            <Button size="sm" onClick={saveLocalAdmin} disabled={laBusy || laUser.length < 3 || laPass.length < 8}>
+              {laBusy ? "Enregistrement…" : localAdmin?.exists ? "Remplacer le compte" : "Créer le compte"}
+            </Button>
+          </div>
+        ) : (
+          <p className="text-xs text-[#01031B]/40">
+            Ce compte se configure via un administrateur connecté en SSO Microsoft.
+          </p>
+        )}
+      </Card>
+
+      {/* Santé du pont Exchange */}
+      <Card className="p-5">
+        <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+          <Server className="h-4 w-4 text-[#D8346E]" />
+          Pont Exchange
+        </h3>
+        {bridgeHealth ? (
+          bridgeHealth.reachable ? (
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-green-500" /> Joignable
+              </span>
+              {bridgeHealth.org && <span className="text-xs text-[#01031B]/50">{bridgeHealth.org}</span>}
+              <Badge variant={bridgeHealth.exoConnected ? "default" : "secondary"} className="text-xs">
+                {bridgeHealth.exoConnected ? "Connecté à Exchange" : "Non connecté (connexion à la 1ʳᵉ requête)"}
+              </Badge>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-sm text-red-600">
+              <span className="h-2 w-2 rounded-full bg-red-500" /> Injoignable — vérifier le conteneur exo-bridge
+            </div>
+          )
+        ) : (
+          <p className="text-xs text-[#01031B]/40">Vérification…</p>
+        )}
+      </Card>
+
+      {/* Certificats & secrets d'applications */}
+      <Card className="p-5">
+        <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-[#D8346E]" />
+          Certificats & secrets d&apos;applications (expiration ≤ 30 j)
+        </h3>
+        {credData?.supported === false ? (
+          <p className="text-xs text-[#01031B]/40">
+            Indisponible — droit de lecture des applications manquant.
+          </p>
+        ) : !credData ? (
+          <p className="text-xs text-[#01031B]/40">Vérification…</p>
+        ) : credData.credentials.length === 0 ? (
+          <p className="text-xs text-[#01031B]/50">Aucun certificat/secret n&apos;expire dans les 30 prochains jours.</p>
+        ) : (
+          <div className="space-y-1">
+            {credData.credentials.map((c, i) => (
+              <div key={i} className="flex items-center justify-between text-xs border-b last:border-0 py-1.5 gap-2">
+                <span className="truncate">
+                  <span className="font-medium">{c.appName}</span> — {c.type === "secret" ? "secret" : "certificat"}
+                  {c.name ? ` « ${c.name} »` : ""}
+                </span>
+                <span className={`shrink-0 font-medium ${c.daysLeft < 0 ? "text-red-600" : c.daysLeft <= 7 ? "text-amber-600" : "text-[#01031B]/60"}`}>
+                  {c.daysLeft < 0
+                    ? `expiré (${format(new Date(c.endDateTime), "dd/MM/yyyy", { locale: fr })})`
+                    : `${c.daysLeft} j (${format(new Date(c.endDateTime), "dd/MM/yyyy", { locale: fr })})`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
       {/* Infos version */}
       <Card className="p-5">
         <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
@@ -339,7 +510,7 @@ export default function AdminPage() {
           Version
         </h3>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-sm font-mono">v1.17.0</Badge>
+          <Badge variant="outline" className="text-sm font-mono">v1.18.0</Badge>
           <p className="text-xs text-[#01031B]/50">OneRing Admin — M365 Administrator</p>
         </div>
       </Card>

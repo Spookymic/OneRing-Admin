@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, Shield, History, TrendingUp, CheckCircle, XCircle, Crown, AlertTriangle, Download, EyeOff, ChevronRight, X } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -240,6 +240,38 @@ export default function DashboardPage() {
     (g) => !dismissed.has("group-empty") && !dismissed.has(`group-empty:${g.id}`)
   );
 
+  // Utilisateurs inactifs (licenciés, sans connexion récente) — best-effort (Entra Premium)
+  type InactiveUser = { id: string; displayName: string; userPrincipalName: string; licenseCount: number; lastSignIn: string | null };
+  const { data: inactiveData } = useQuery<{ supported: boolean; days: number; users: InactiveUser[] }>({
+    queryKey: ["inactive-users"],
+    queryFn: () => apiFetch<{ supported: boolean; days: number; users: InactiveUser[] }>("/api/anomalies/inactive-users"),
+    staleTime: 10 * 60 * 1000,
+  });
+  const inactiveUsers = inactiveData?.users ?? [];
+
+  // Certificats / secrets d'app registrations expirant bientôt
+  type Cred = { appObjectId: string; appId: string; appName: string; type: "secret" | "certificate"; name: string | null; endDateTime: string; daysLeft: number };
+  const { data: credData } = useQuery<{ supported: boolean; credentials: Cred[] }>({
+    queryKey: ["expiring-credentials"],
+    queryFn: () => apiFetch<{ supported: boolean; credentials: Cred[] }>("/api/security/expiring-credentials"),
+    staleTime: 10 * 60 * 1000,
+  });
+  const expiringCreds = credData?.credentials ?? [];
+
+  // Licences gaspillées : comptes désactivés + inactifs encore licenciés
+  const disabledLicensedUsers = (users ?? []).filter((u) => !u.accountEnabled && u.assignedLicenses.length > 0);
+  const wastedFromDisabled = disabledLicensedUsers.reduce((s, u) => s + u.assignedLicenses.length, 0);
+  const wastedFromInactive = inactiveUsers.reduce((s, u) => s + u.licenseCount, 0);
+  const wastedTotal = wastedFromDisabled + wastedFromInactive;
+
+  function openUserLicenses(userId: string) {
+    const full = users?.find((u) => u.id === userId);
+    if (full) {
+      setAnomalySheetTab("licenses");
+      setAnomalySheetUser(full);
+    }
+  }
+
   function openGroupSheet(g: { id: string; displayName: string; type: GroupType }) {
     setGroupSheet({
       id: g.id,
@@ -388,6 +420,26 @@ export default function DashboardPage() {
     allAnomalies.filter((a) => dismissed.has(a.id)).length +
     allAnomalies.flatMap((a) => a.users.filter((u) => dismissed.has(`${a.id}:${u.id}`))).length;
 
+  function exportAnomaliesCSV() {
+    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = ["Catégorie,Cible,Détail"];
+    for (const a of allAnomalies) {
+      for (const u of a.users) lines.push([esc(a.label), esc(u.displayName), esc(u.userPrincipalName)].join(","));
+    }
+    for (const g of ownerlessGroups ?? []) lines.push([esc("Groupe sans propriétaire"), esc(g.displayName), esc(g.type)].join(","));
+    for (const g of emptyGroups ?? []) lines.push([esc("Groupe vide"), esc(g.displayName), esc(g.type)].join(","));
+    for (const u of inactiveUsers) lines.push([esc("Utilisateur inactif"), esc(u.displayName), esc(u.lastSignIn ? `dernier accès ${format(new Date(u.lastSignIn), "dd/MM/yyyy")}` : "jamais connecté")].join(","));
+    for (const c of expiringCreds) lines.push([esc("Credential expirant"), esc(c.appName), esc(`${c.type}${c.name ? ` ${c.name}` : ""} — ${c.daysLeft < 0 ? "expiré" : `${c.daysLeft} j`}`)].join(","));
+    const csv = lines.join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `onering-anomalies-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const severityStyle = {
     high: "bg-red-50 border-red-200 text-red-700",
     medium: "bg-amber-50 border-amber-200 text-amber-700",
@@ -401,15 +453,26 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-bold">Tableau de bord</h2>
           <p className="text-sm text-[#01031B]/50 mt-0.5">Vue d&apos;ensemble du tenant Microsoft 365</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => exportStatsCSV(users, groups, skus)}
-          disabled={!users || !groups}
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Exporter CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportAnomaliesCSV}
+            disabled={!users}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Anomalies CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportStatsCSV(users, groups, skus)}
+            disabled={!users || !groups}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Exporter CSV
+          </Button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -599,6 +662,86 @@ export default function DashboardPage() {
                 </span>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Certificats / secrets d'applications à renouveler */}
+      {!usersLoading && expiringCreds.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+            Certificats / secrets d&apos;applications à renouveler ({expiringCreds.length})
+          </h3>
+          <div className="rounded-lg border px-4 py-3 bg-red-50 border-red-200 text-red-700 space-y-1">
+            {expiringCreds.slice(0, 8).map((c, i) => (
+              <div key={i} className="flex items-center justify-between text-xs gap-2">
+                <span className="truncate">
+                  <span className="font-medium">{c.appName}</span> — {c.type === "secret" ? "secret" : "certificat"}
+                  {c.name ? ` « ${c.name} »` : ""}
+                </span>
+                <span className="shrink-0 font-medium">
+                  {c.daysLeft < 0 ? `expiré depuis ${-c.daysLeft} j` : `dans ${c.daysLeft} j`}
+                </span>
+              </div>
+            ))}
+            <Link
+              href="/dashboard/credentials"
+              className="inline-block text-xs font-medium underline underline-offset-2 pt-1 hover:opacity-80"
+            >
+              Voir tous les secrets &amp; certificats →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Optimisation des licences */}
+      {!usersLoading && (wastedTotal > 0) && (
+        <div>
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-amber-500" />
+            Optimisation des licences
+          </h3>
+          <div className="rounded-lg border px-4 py-3 bg-amber-50 border-amber-200 text-amber-700">
+            <p className="text-sm font-medium">≈ {wastedTotal} licence(s) récupérable(s)</p>
+            <p className="text-xs opacity-80 mb-2">
+              {wastedFromDisabled} sur comptes désactivés · {wastedFromInactive} sur comptes inactifs
+              {inactiveData && !inactiveData.supported ? " (connexions indisponibles — Entra Premium requis)" : ""}
+            </p>
+            {inactiveUsers.length > 0 && (
+              <>
+                <p className="text-xs font-medium mb-1">
+                  Comptes inactifs (licenciés, &gt; {inactiveData?.days ?? 90} j sans connexion)
+                </p>
+                <div className="space-y-0.5">
+                  {inactiveUsers.slice(0, 10).map((iu) => {
+                    const created = users?.find((u) => u.id === iu.id)?.createdDateTime;
+                    return (
+                      <button
+                        key={iu.id}
+                        onClick={() => openUserLicenses(iu.id)}
+                        className="flex items-center justify-between w-full text-left rounded px-2 py-1 hover:bg-white/50 text-xs gap-2"
+                      >
+                        <span className="truncate">
+                          <span className="font-medium">{iu.displayName}</span>{" "}
+                          <span className="opacity-60">{iu.userPrincipalName}</span>
+                        </span>
+                        <span className="shrink-0 opacity-70">
+                          {iu.lastSignIn ? `dernier accès ${format(new Date(iu.lastSignIn), "dd/MM/yyyy")}` : "jamais connecté"}
+                          {created ? ` · créé il y a ${formatDistanceToNow(new Date(created), { locale: fr })}` : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <Link
+                    href="/dashboard/inactive-users"
+                    className="inline-block text-xs font-medium underline underline-offset-2 mt-1 hover:opacity-80"
+                  >
+                    Voir tous les utilisateurs inactifs →
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

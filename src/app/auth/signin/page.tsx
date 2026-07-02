@@ -1,10 +1,32 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Image from "next/image";
 
 export default function SignInPage() {
+  const router = useRouter();
+  const [showLocal, setShowLocal] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleLocalLogin() {
+    setLoading(true);
+    setError("");
+    const res = await signIn("local", { username, password, redirect: false });
+    setLoading(false);
+    if (res?.error) {
+      setError("Identifiant ou mot de passe incorrect.");
+    } else {
+      router.push("/dashboard/admin");
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#01031B]">
       {/* Gradient radial en bas de page (footer gradient brand) */}
@@ -62,9 +84,47 @@ export default function SignInPage() {
           <p className="text-xs text-center text-white/25">
             Accès réservé aux administrateurs M365
           </p>
+
+          <div className="pt-1 border-t border-white/10">
+            {!showLocal ? (
+              <button
+                type="button"
+                onClick={() => setShowLocal(true)}
+                className="w-full text-xs text-white/40 hover:text-white/70 pt-3 transition-colors"
+              >
+                Connexion locale (accès de secours)
+              </button>
+            ) : (
+              <div className="pt-3 space-y-2">
+                <Input
+                  placeholder="Identifiant"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="bg-white/10 border-white/15 text-white placeholder:text-white/30"
+                />
+                <Input
+                  type="password"
+                  placeholder="Mot de passe"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleLocalLogin(); }}
+                  className="bg-white/10 border-white/15 text-white placeholder:text-white/30"
+                />
+                {error && <p className="text-xs text-red-300">{error}</p>}
+                <Button
+                  variant="outline"
+                  className="w-full border-white/20 text-white hover:bg-white/10"
+                  onClick={handleLocalLogin}
+                  disabled={loading || !username || !password}
+                >
+                  {loading ? "Connexion…" : "Se connecter localement"}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
-        <p className="text-xs text-white/20">OneRing Admin v1.17.0</p>
+        <p className="text-xs text-white/20">OneRing Admin v1.18.0</p>
       </div>
     </div>
   );

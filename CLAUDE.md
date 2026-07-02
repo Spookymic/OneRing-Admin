@@ -15,7 +15,8 @@ Cible : administrateurs M365. Echeance MVP : 31/03/2026.
 
 ## Authentification
 
-- SSO Microsoft uniquement via NextAuth v4 + Azure AD provider
+- SSO Microsoft via NextAuth v4 + Azure AD provider (rôle session `graph`)
+- **Compte administrateur local** (provider credentials `local`, rôle session `local`) : accès de secours **sans jeton Graph**, confiné à l'onglet Administration. Table Prisma `LocalAdmin` (hash bcrypt), géré depuis Administration par un admin SSO. Les routes Graph le rejettent nativement (pas d'`accessToken`).
 - Les droits sont ceux du compte connecte — pas de role applicatif custom
 - Token Graph recupere via le callback `jwt` de NextAuth, passe aux services via `getServerSession`
 - Appeler `getGraphClient(session.accessToken)` depuis `src/lib/graph.ts` dans chaque API route
@@ -50,7 +51,7 @@ La detection du type se fait cote client dans `src/lib/account-types.ts` :
 - Validation Zod obligatoire cote serveur avant tout appel Graph API
 - Les appels Microsoft Graph passent uniquement par `src/services/graph/`
 - Audit obligatoire dans chaque mutation via `logAudit()` de `src/services/audit.ts`
-- Actions audit : `GROUP_MEMBER_ADD/REMOVE`, `GROUP_OWNER_ADD/REMOVE`, `GROUP_CREATE`, `DL_MEMBER_ADD/REMOVE`, `DL_OWNER_ADD/REMOVE`, `DL_CREATE`, `SHARED_MAILBOX_CREATE`, `MAILBOX_PERMISSION_ADD/REMOVE`, `LICENSE_ASSIGN/REMOVE`, `PASSWORD_RESET`
+- Actions audit : `GROUP_MEMBER_ADD/REMOVE`, `GROUP_OWNER_ADD/REMOVE`, `GROUP_CREATE`, `DL_MEMBER_ADD/REMOVE`, `DL_OWNER_ADD/REMOVE`, `DL_CREATE`, `SHARED_MAILBOX_CREATE`, `MAILBOX_PERMISSION_ADD/REMOVE`, `USER_OFFBOARD`, `LOCAL_ADMIN_SET`, `LICENSE_ASSIGN/REMOVE`, `PASSWORD_RESET`
 
 ## Structure des dossiers
 
