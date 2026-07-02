@@ -16,7 +16,7 @@ export function Loader({ label, className }: { label?: string; className?: strin
           />
         ))}
       </div>
-      {label && <p className="text-sm text-[#01031B]/50">{label}</p>}
+      {label && <p className="text-sm text-foreground/50">{label}</p>}
     </div>
   );
 }

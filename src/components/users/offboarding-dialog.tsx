@@ -96,7 +96,7 @@ export function OffboardingDialog({ user, open, onClose }: Props) {
             />
             <span>
               Convertir la boîte aux lettres en <span className="font-medium">boîte partagée</span>
-              <span className="block text-xs text-[#01031B]/50">
+              <span className="block text-xs text-foreground/50">
                 Conserve les e-mails accessibles en délégation, sans licence (nécessite un rôle Exchange).
               </span>
             </span>

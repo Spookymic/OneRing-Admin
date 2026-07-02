@@ -2,6 +2,18 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.21.0] — 2026-06-21
+
+### Nouvelles fonctionnalités v1.21.0
+
+- **Mode sombre** : bascule Clair / Sombre / Système (next-themes) dans la sidebar. Migration des couleurs de contenu codées en dur vers les tokens CSS (`bg-muted`, `bg-card`, `text-foreground`…). Les zones volontairement sombres (sidebar, en-têtes, page de connexion) sont préservées.
+
+### Notes v1.21.0
+
+- Premier pass : certaines boîtes d'alerte (`bg-*-50`) et gris Tailwind restent clairs en mode sombre — polish à venir.
+
+---
+
 ## [1.20.0] — 2026-06-21
 
 ### Nouvelles fonctionnalités v1.20.0

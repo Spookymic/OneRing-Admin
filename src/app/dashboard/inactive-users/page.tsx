@@ -67,7 +67,7 @@ export default function InactiveUsersPage() {
       <div className="flex items-center justify-between mb-2">
         <div>
           <h2 className="text-2xl font-bold">Utilisateurs inactifs</h2>
-          <p className="text-sm text-[#01031B]/50 mt-0.5">
+          <p className="text-sm text-foreground/50 mt-0.5">
             Comptes actifs et licenciés sans connexion depuis &gt; {data?.days ?? 90} jours.
           </p>
         </div>
@@ -88,7 +88,7 @@ export default function InactiveUsersPage() {
               className="max-w-sm"
             />
           </div>
-          <div className="rounded-md border bg-white">
+          <div className="rounded-md border bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -113,7 +113,7 @@ export default function InactiveUsersPage() {
                       return (
                         <TableRow
                           key={u.id}
-                          className="cursor-pointer hover:bg-[#01031B]/5"
+                          className="cursor-pointer hover:bg-foreground/5"
                           onClick={() => openUser(u.id)}
                         >
                           <TableCell className="font-medium">{u.displayName}</TableCell>

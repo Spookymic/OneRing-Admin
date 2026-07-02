@@ -76,13 +76,13 @@ function StatCard({
         <Icon className="h-5 w-5 text-primary" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-[#01031B]/60">{title}</p>
+        <p className="text-sm text-foreground/60">{title}</p>
         {loading ? (
           <Skeleton className="h-7 w-16 mt-1" />
         ) : (
           <p className="text-2xl font-bold mt-0.5">{value}</p>
         )}
-        {sub && !loading && <p className="text-xs text-[#01031B]/40 mt-0.5">{sub}</p>}
+        {sub && !loading && <p className="text-xs text-foreground/40 mt-0.5">{sub}</p>}
       </div>
     </Card>
   );
@@ -471,7 +471,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Tableau de bord</h2>
-          <p className="text-sm text-[#01031B]/50 mt-0.5">Vue d&apos;ensemble du tenant Microsoft 365</p>
+          <p className="text-sm text-foreground/50 mt-0.5">Vue d&apos;ensemble du tenant Microsoft 365</p>
         </div>
         <div className="flex items-center gap-2 no-print">
           <Button variant="outline" size="sm" onClick={() => window.print()}>
@@ -537,7 +537,7 @@ export default function DashboardPage() {
             {totalDismissed > 0 && (
               <button
                 onClick={restoreAll}
-                className="ml-auto text-xs font-normal text-[#01031B]/40 hover:text-primary underline underline-offset-2"
+                className="ml-auto text-xs font-normal text-foreground/40 hover:text-primary underline underline-offset-2"
               >
                 {totalDismissed} ignoré{totalDismissed > 1 ? "s" : ""} — Réafficher tout
               </button>
@@ -607,7 +607,7 @@ export default function DashboardPage() {
               {activeOwnerless.map((g) => (
                 <span
                   key={g.id}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-white/60 pl-2.5 pr-1 py-0.5 text-xs"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-card/60 pl-2.5 pr-1 py-0.5 text-xs"
                 >
                   <span className="text-[10px] font-semibold uppercase text-amber-700/70 shrink-0">
                     {GROUP_TYPE_SHORT[g.type] ?? g.type}
@@ -662,14 +662,14 @@ export default function DashboardPage() {
               {activeEmpty.map((g) => (
                 <span
                   key={g.id}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-white/60 pl-2.5 pr-1 py-0.5 text-xs"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card/60 pl-2.5 pr-1 py-0.5 text-xs"
                 >
                   <span className="text-[10px] font-semibold uppercase text-primary/70 shrink-0">
                     {GROUP_TYPE_SHORT[g.type] ?? g.type}
                   </span>
                   <button
                     type="button"
-                    className="max-w-[220px] truncate hover:text-[#01031B] transition-colors"
+                    className="max-w-[220px] truncate hover:text-foreground transition-colors"
                     onClick={() => openGroupSheet(g)}
                     title="Ouvrir le groupe"
                   >
@@ -677,7 +677,7 @@ export default function DashboardPage() {
                   </button>
                   <button
                     type="button"
-                    className="text-primary/60 hover:text-[#01031B] p-0.5"
+                    className="text-primary/60 hover:text-foreground p-0.5"
                     title="Marquer comme normal"
                     onClick={() => dismissUser("group-empty", g.id)}
                   >
@@ -744,7 +744,7 @@ export default function DashboardPage() {
                       <button
                         key={iu.id}
                         onClick={() => openUserLicenses(iu.id)}
-                        className="flex items-center justify-between w-full text-left rounded px-2 py-1 hover:bg-white/50 text-xs gap-2"
+                        className="flex items-center justify-between w-full text-left rounded px-2 py-1 hover:bg-card/50 text-xs gap-2"
                       >
                         <span className="truncate">
                           <span className="font-medium">{iu.displayName}</span>{" "}
@@ -786,7 +786,7 @@ export default function DashboardPage() {
                 <button
                   key={g.id}
                   onClick={() => openUserLicenses(g.id)}
-                  className="flex items-center justify-between w-full text-left rounded px-2 py-1 hover:bg-white/50 text-xs gap-2"
+                  className="flex items-center justify-between w-full text-left rounded px-2 py-1 hover:bg-card/50 text-xs gap-2"
                 >
                   <span className="truncate">
                     <span className="font-medium">{g.displayName}</span>{" "}
@@ -821,7 +821,7 @@ export default function DashboardPage() {
                 <button
                   key={c.id}
                   onClick={() => openUserLicenses(c.id)}
-                  className="flex items-center justify-between w-full text-left rounded px-2 py-1 hover:bg-white/50 text-xs gap-2"
+                  className="flex items-center justify-between w-full text-left rounded px-2 py-1 hover:bg-card/50 text-xs gap-2"
                 >
                   <span className="truncate">
                     <span className="font-medium">{c.displayName}</span>{" "}
@@ -849,15 +849,15 @@ export default function DashboardPage() {
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/30" onClick={() => setManageAnomaly(null)} />
-            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col mx-4">
+            <div className="relative bg-card rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col mx-4">
               <div className="flex items-start justify-between p-5 border-b">
                 <div>
                   <h3 className="font-semibold text-sm">{anomaly.label}</h3>
-                  <p className="text-xs text-[#01031B]/50 mt-0.5">{anomaly.hint}</p>
+                  <p className="text-xs text-foreground/50 mt-0.5">{anomaly.hint}</p>
                 </div>
                 <button
                   onClick={() => setManageAnomaly(null)}
-                  className="text-[#01031B]/40 hover:text-[#01031B] ml-4 shrink-0"
+                  className="text-foreground/40 hover:text-foreground ml-4 shrink-0"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -865,7 +865,7 @@ export default function DashboardPage() {
               <div className="overflow-y-auto flex-1 p-5 space-y-4">
                 {active.length > 0 && (
                   <div>
-                    <p className="text-xs font-medium text-[#01031B]/50 mb-2 uppercase tracking-wide">
+                    <p className="text-xs font-medium text-foreground/50 mb-2 uppercase tracking-wide">
                       À traiter ({active.length})
                     </p>
                     <div className="space-y-1">
@@ -888,12 +888,12 @@ export default function DashboardPage() {
                                 title="Ouvrir la fiche utilisateur"
                               >
                                 <p className="text-sm font-medium truncate">{u.displayName}</p>
-                                <p className="text-xs text-[#01031B]/40 truncate">{u.userPrincipalName}</p>
+                                <p className="text-xs text-foreground/40 truncate">{u.userPrincipalName}</p>
                               </button>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="text-xs h-7 ml-2 shrink-0 text-[#01031B]/50 hover:text-primary"
+                                className="text-xs h-7 ml-2 shrink-0 text-foreground/50 hover:text-primary"
                                 onClick={() => dismissUser(anomaly.id, u.id)}
                               >
                                 <EyeOff className="h-3 w-3 mr-1" />
@@ -902,7 +902,7 @@ export default function DashboardPage() {
                             </div>
                             {owned.length > 0 && (
                               <div className="mt-2 flex flex-wrap gap-1.5">
-                                <span className="text-xs text-[#01031B]/40">Propriétaire de :</span>
+                                <span className="text-xs text-foreground/40">Propriétaire de :</span>
                                 {owned.map((g) => (
                                   <button
                                     key={g.id}
@@ -937,7 +937,7 @@ export default function DashboardPage() {
                 )}
                 {normal.length > 0 && (
                   <div>
-                    <p className="text-xs font-medium text-[#01031B]/50 mb-2 uppercase tracking-wide">
+                    <p className="text-xs font-medium text-foreground/50 mb-2 uppercase tracking-wide">
                       Marqués comme normaux ({normal.length})
                     </p>
                     <div className="space-y-1">
@@ -945,7 +945,7 @@ export default function DashboardPage() {
                         <div key={u.id} className="flex items-center justify-between rounded-md border border-dashed px-3 py-2 opacity-60">
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{u.displayName}</p>
-                            <p className="text-xs text-[#01031B]/40 truncate">{u.userPrincipalName}</p>
+                            <p className="text-xs text-foreground/40 truncate">{u.userPrincipalName}</p>
                           </div>
                           <Button
                             size="sm"
@@ -979,7 +979,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-primary" />
             Types de comptes
           </h3>
-          <p className="text-xs text-[#01031B]/40 mb-4">
+          <p className="text-xs text-foreground/40 mb-4">
             Chaque compte reçoit un seul type primaire. Survolez un type pour voir le critère de classification.
           </p>
           {usersLoading ? (
@@ -1002,11 +1002,11 @@ export default function DashboardPage() {
                           className="flex items-center justify-between text-sm mb-1 cursor-pointer hover:text-primary transition-colors group"
                           title={ACCOUNT_TYPE_HINT[type] ?? ""}
                         >
-                          <span className="text-[#01031B]/70 group-hover:text-primary">{cfg?.label ?? type}</span>
-                          <span className="text-[#01031B]/50 tabular-nums group-hover:text-primary">{count}</span>
+                          <span className="text-foreground/70 group-hover:text-primary">{cfg?.label ?? type}</span>
+                          <span className="text-foreground/50 tabular-nums group-hover:text-primary">{count}</span>
                         </div>
                       </Link>
-                      <div className="h-1.5 bg-[#01031B]/8 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-foreground/8 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary rounded-full"
                           style={{ width: `${pct}%` }}
@@ -1045,11 +1045,11 @@ export default function DashboardPage() {
                   <div key={label}>
                     <Link href={`/dashboard/groups?type=${type}`}>
                       <div className="flex items-center justify-between text-sm mb-1 cursor-pointer group">
-                        <span className="text-[#01031B]/70 group-hover:text-primary transition-colors">{label}</span>
-                        <span className="text-[#01031B]/50 tabular-nums group-hover:text-primary transition-colors">{count}</span>
+                        <span className="text-foreground/70 group-hover:text-primary transition-colors">{label}</span>
+                        <span className="text-foreground/50 tabular-nums group-hover:text-primary transition-colors">{count}</span>
                       </div>
                     </Link>
-                    <div className="h-1.5 bg-[#01031B]/8 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-foreground/8 rounded-full overflow-hidden">
                       <div
                         className={`h-full ${color} rounded-full`}
                         style={{ width: `${pct}%` }}
@@ -1145,7 +1145,7 @@ export default function DashboardPage() {
           <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
             <Shield className="h-4 w-4 text-primary" />
             Abonnements Microsoft 365
-            <span className="text-[#01031B]/40 font-normal">(cliquer pour voir les utilisateurs)</span>
+            <span className="text-foreground/40 font-normal">(cliquer pour voir les utilisateurs)</span>
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {skusLoading
@@ -1177,11 +1177,11 @@ export default function DashboardPage() {
                           )}
                         </div>
                         <div className="space-y-1">
-                          <div className="flex justify-between text-xs text-[#01031B]/50">
+                          <div className="flex justify-between text-xs text-foreground/50">
                             <span>{assignedCount} assigné{assignedCount !== 1 ? "s" : ""}</span>
                             <span>{total} dispo.</span>
                           </div>
-                          <div className="h-1.5 bg-[#01031B]/8 rounded-full overflow-hidden">
+                          <div className="h-1.5 bg-foreground/8 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${
                                 isFull ? "bg-destructive" : pct > 80 ? "bg-primary" : "bg-primary"
@@ -1246,7 +1246,7 @@ export default function DashboardPage() {
                   ))
                 : auditLogs?.slice(0, 8).map((log) => (
                     <TableRow key={log.id}>
-                      <TableCell className="text-xs text-[#01031B]/50 whitespace-nowrap">
+                      <TableCell className="text-xs text-foreground/50 whitespace-nowrap">
                         {format(new Date(log.createdAt), "dd MMM HH:mm", { locale: fr })}
                       </TableCell>
                       <TableCell className="text-sm">{log.userUpn}</TableCell>
@@ -1262,7 +1262,7 @@ export default function DashboardPage() {
                 <TableRow>
                   <TableCell
                     colSpan={4}
-                    className="text-center text-[#01031B]/40 py-6 text-sm"
+                    className="text-center text-foreground/40 py-6 text-sm"
                   >
                     Aucune modification enregistrée
                   </TableCell>

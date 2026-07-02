@@ -101,7 +101,7 @@ export function GroupTreeNode({
   return (
     <div>
       <div
-        className="flex items-center gap-1.5 rounded-md hover:bg-[#01031B]/5 py-1.5 pr-2"
+        className="flex items-center gap-1.5 rounded-md hover:bg-foreground/5 py-1.5 pr-2"
         style={{ paddingLeft: indent }}
       >
         {isCycle ? (
@@ -112,7 +112,7 @@ export function GroupTreeNode({
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}
-            className="w-5 flex justify-center text-[#01031B]/40 hover:text-primary"
+            className="w-5 flex justify-center text-foreground/40 hover:text-primary"
             aria-label={expanded ? "Réduire" : "Développer"}
           >
             {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -135,10 +135,10 @@ export function GroupTreeNode({
             </Badge>
           )}
           {related.length > 0 && (
-            <span className="text-xs text-[#01031B]/40 shrink-0">({related.length})</span>
+            <span className="text-xs text-foreground/40 shrink-0">({related.length})</span>
           )}
           {node.mail && (
-            <span className="text-xs text-[#01031B]/40 truncate hidden md:inline">{node.mail}</span>
+            <span className="text-xs text-foreground/40 truncate hidden md:inline">{node.mail}</span>
           )}
         </button>
       </div>
@@ -164,7 +164,7 @@ export function GroupTreeNode({
 
           {/* Chargements */}
           {(groupLoading || userLoading) && (
-            <div className="flex items-center gap-2 text-xs text-[#01031B]/40 py-1" style={{ paddingLeft: indent + 18 }}>
+            <div className="flex items-center gap-2 text-xs text-foreground/40 py-1" style={{ paddingLeft: indent + 18 }}>
               <Loader2 className="h-3 w-3 animate-spin" /> Chargement…
             </div>
           )}
@@ -176,21 +176,21 @@ export function GroupTreeNode({
               className="flex items-center gap-2 py-1 pr-2"
               style={{ paddingLeft: indent + 18 + 20 }}
             >
-              <User className="h-3.5 w-3.5 text-[#01031B]/30 shrink-0" />
+              <User className="h-3.5 w-3.5 text-foreground/30 shrink-0" />
               <span className="text-sm truncate">{u.displayName}</span>
               {ownerIds.has(u.id) && (
                 <Badge variant="secondary" className="text-[10px] shrink-0 gap-0.5">
                   <Crown className="h-2.5 w-2.5" /> Propriétaire
                 </Badge>
               )}
-              <span className="text-xs text-[#01031B]/40 truncate hidden md:inline">
+              <span className="text-xs text-foreground/40 truncate hidden md:inline">
                 {u.userPrincipalName ?? u.mail ?? ""}
               </span>
             </div>
           ))}
 
           {nothing && (
-            <p className="text-xs text-[#01031B]/30 py-1" style={{ paddingLeft: indent + 18 }}>
+            <p className="text-xs text-foreground/30 py-1" style={{ paddingLeft: indent + 18 }}>
               {direction === "children"
                 ? withUsers ? "Aucun sous-groupe ni membre" : "Aucun groupe imbriqué"
                 : "Membre d'aucun groupe"}

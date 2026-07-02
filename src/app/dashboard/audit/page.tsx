@@ -224,7 +224,7 @@ export default function AuditPage() {
         <div>
           <h2 className="text-2xl font-bold">Historique des modifications</h2>
           {days > 0 && (
-            <p className="text-xs text-[#01031B]/40 mt-0.5">Affichage limité aux {days} derniers jours</p>
+            <p className="text-xs text-foreground/40 mt-0.5">Affichage limité aux {days} derniers jours</p>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -237,7 +237,7 @@ export default function AuditPage() {
           )}
         </div>
       </div>
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -276,7 +276,7 @@ export default function AuditPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-7 px-2 text-[#01031B]/50 hover:text-primary"
+                          className="h-7 px-2 text-foreground/50 hover:text-primary"
                           onClick={() => handleRollback(log)}
                           disabled={rollback.isPending}
                           title="Annuler cette action (rollback)"

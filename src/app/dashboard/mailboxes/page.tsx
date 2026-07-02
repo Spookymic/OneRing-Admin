@@ -74,7 +74,7 @@ export default function MailboxesPage() {
           className="max-w-sm"
         />
       </div>
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -94,7 +94,7 @@ export default function MailboxesPage() {
               : sorted.map((m) => (
                   <TableRow
                     key={m.id}
-                    className="cursor-pointer hover:bg-[#01031B]/5"
+                    className="cursor-pointer hover:bg-foreground/5"
                     onClick={() => setSelected(m)}
                   >
                     <TableCell className="font-medium">{m.displayName}</TableCell>

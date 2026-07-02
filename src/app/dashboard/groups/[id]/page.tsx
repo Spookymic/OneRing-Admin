@@ -158,15 +158,15 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="min-w-0">
             <h2 className="text-2xl font-bold">{group?.displayName}</h2>
-            {group?.description && <p className="text-[#01031B]/50 text-sm mt-0.5">{group.description}</p>}
-            {group?.mail && <p className="text-[#01031B]/40 text-xs mt-0.5">{group.mail}</p>}
+            {group?.description && <p className="text-foreground/50 text-sm mt-0.5">{group.description}</p>}
+            {group?.mail && <p className="text-foreground/40 text-xs mt-0.5">{group.mail}</p>}
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1 text-sm text-[#01031B]/60">
+            <div className="flex items-center gap-1 text-sm text-foreground/60">
               <Crown className="h-4 w-4 text-primary" />
               <span>{ownerCount} owner{ownerCount !== 1 ? "s" : ""}</span>
             </div>
-            <div className="flex items-center gap-1 text-sm text-[#01031B]/60">
+            <div className="flex items-center gap-1 text-sm text-foreground/60">
               <Users className="h-4 w-4" />
               <span>{memberOnlyCount} membre{memberOnlyCount !== 1 ? "s" : ""}</span>
             </div>
@@ -208,7 +208,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         )}
       </div>
 
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -238,7 +238,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                         {person.displayName}
                       </div>
                     </TableCell>
-                    <TableCell className="text-[#01031B]/50 text-sm">
+                    <TableCell className="text-foreground/50 text-sm">
                       {person.userPrincipalName || person.mail || "-"}
                     </TableCell>
                     <TableCell className="text-sm">{person.jobTitle ?? "-"}</TableCell>

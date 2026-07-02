@@ -104,7 +104,7 @@ export default function LicensesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Licences</h2>
-          <p className="text-sm text-[#01031B]/50 mt-0.5">
+          <p className="text-sm text-foreground/50 mt-0.5">
             Gestion des abonnements Microsoft 365
           </p>
         </div>
@@ -149,11 +149,11 @@ export default function LicensesPage() {
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs text-[#01031B]/50">
+                    <div className="flex justify-between text-xs text-foreground/50">
                       <span>{sku.consumedUnits} assigné{sku.consumedUnits !== 1 ? "s" : ""}</span>
                       <span>{total} dispo.</span>
                     </div>
-                    <div className="h-1.5 bg-[#01031B]/8 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-foreground/8 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${
                           isFull ? "bg-destructive" : pct > 80 ? "bg-primary" : "bg-primary"
@@ -222,7 +222,7 @@ export default function LicensesPage() {
                       ))}
                     </div>
                   ) : filteredLicensed.length === 0 ? (
-                    <p className="text-sm text-[#01031B]/40 text-center py-4">Aucun bénéficiaire</p>
+                    <p className="text-sm text-foreground/40 text-center py-4">Aucun bénéficiaire</p>
                   ) : (
                     <div className="space-y-1 max-h-72 overflow-y-auto">
                       {filteredLicensed.map((u) => (
@@ -232,7 +232,7 @@ export default function LicensesPage() {
                         >
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{u.displayName}</p>
-                            <p className="text-xs text-[#01031B]/40 truncate">{u.userPrincipalName}</p>
+                            <p className="text-xs text-foreground/40 truncate">{u.userPrincipalName}</p>
                           </div>
                           <Button
                             size="sm"
@@ -281,9 +281,9 @@ export default function LicensesPage() {
                       {addSearch && (
                         <div className="max-h-48 overflow-y-auto border rounded-md divide-y">
                           {usersLoading ? (
-                            <p className="text-sm text-center py-3 text-[#01031B]/40">Chargement...</p>
+                            <p className="text-sm text-center py-3 text-foreground/40">Chargement...</p>
                           ) : unlicensedUsers.length === 0 ? (
-                            <p className="text-sm text-center py-3 text-[#01031B]/40">Aucun résultat</p>
+                            <p className="text-sm text-center py-3 text-foreground/40">Aucun résultat</p>
                           ) : (
                             unlicensedUsers.map((u) => (
                               <div
@@ -292,7 +292,7 @@ export default function LicensesPage() {
                               >
                                 <div className="min-w-0">
                                   <p className="text-sm font-medium truncate">{u.displayName}</p>
-                                  <p className="text-xs text-[#01031B]/40 truncate">{u.userPrincipalName}</p>
+                                  <p className="text-xs text-foreground/40 truncate">{u.userPrincipalName}</p>
                                 </div>
                                 <Button
                                   size="sm"

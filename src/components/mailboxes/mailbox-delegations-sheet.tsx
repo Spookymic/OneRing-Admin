@@ -95,7 +95,7 @@ export function MailboxDelegationsSheet({ mailbox, open, onClose }: Props) {
                     <span className="text-sm font-semibold">
                       {label}
                       {delegates.length > 0 && (
-                        <span className="ml-1 text-[#01031B]/40 font-normal">({delegates.length})</span>
+                        <span className="ml-1 text-foreground/40 font-normal">({delegates.length})</span>
                       )}
                     </span>
                   </div>
@@ -103,10 +103,10 @@ export function MailboxDelegationsSheet({ mailbox, open, onClose }: Props) {
                   {delegates.length > 0 ? (
                     <div className="space-y-1">
                       {delegates.map((d) => (
-                        <div key={`${type}-${d.mail}`} className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-[#01031B]/5">
+                        <div key={`${type}-${d.mail}`} className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-foreground/5">
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{d.displayName}</p>
-                            <p className="text-xs text-[#01031B]/40 truncate">{d.mail}</p>
+                            <p className="text-xs text-foreground/40 truncate">{d.mail}</p>
                           </div>
                           <Button
                             size="sm"
@@ -121,7 +121,7 @@ export function MailboxDelegationsSheet({ mailbox, open, onClose }: Props) {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-[#01031B]/40">Aucune délégation</p>
+                    <p className="text-sm text-foreground/40">Aucune délégation</p>
                   )}
                 </div>
               );

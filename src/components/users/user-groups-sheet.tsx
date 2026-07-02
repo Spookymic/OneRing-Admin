@@ -339,7 +339,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
             {settings.showDisableUser && (
               confirmDisable ? (
                 <div className="flex items-center gap-1">
-                  <span className="text-xs text-[#01031B]/60">Confirmer ?</span>
+                  <span className="text-xs text-foreground/60">Confirmer ?</span>
                   <Button
                     size="sm"
                     variant={currentEnabled ? "destructive" : "default"}
@@ -410,7 +410,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                 key={t}
                 onClick={() => setTab(t)}
                 className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors whitespace-nowrap ${
-                  tab === t ? "bg-primary text-white" : "text-[#01031B]/60 hover:bg-[#01031B]/5"
+                  tab === t ? "bg-primary text-white" : "text-foreground/60 hover:bg-foreground/5"
                 }`}
               >
                 {icon}{label}
@@ -441,7 +441,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                     {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                   </div>
                 ) : userGroups?.length === 0 ? (
-                  <p className="text-sm text-[#01031B]/40 text-center py-4">Aucun groupe</p>
+                  <p className="text-sm text-foreground/40 text-center py-4">Aucun groupe</p>
                 ) : (
                   <div className="space-y-1">
                     {userGroups?.map((group) => {
@@ -484,18 +484,18 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                       {search && (
                         <div className="max-h-48 overflow-y-auto border rounded-md divide-y">
                           {availableGroups?.length === 0 ? (
-                            <p className="text-sm text-[#01031B]/40 text-center py-3">Aucun groupe disponible</p>
+                            <p className="text-sm text-foreground/40 text-center py-3">Aucun groupe disponible</p>
                           ) : (
                             availableGroups?.map((g) => (
                               <div
                                 key={g.id}
                                 className={`px-3 py-2 cursor-pointer text-sm transition-colors ${
-                                  selectedGroup?.id === g.id ? "bg-primary/10 text-primary" : "hover:bg-[#01031B]/5"
+                                  selectedGroup?.id === g.id ? "bg-primary/10 text-primary" : "hover:bg-foreground/5"
                                 }`}
                                 onClick={() => setSelectedGroup(g)}
                               >
                                 <div className="font-medium">{g.displayName}</div>
-                                {g.mail && <div className="text-[#01031B]/40 text-xs">{g.mail}</div>}
+                                {g.mail && <div className="text-foreground/40 text-xs">{g.mail}</div>}
                               </div>
                             ))
                           )}
@@ -546,7 +546,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                       >
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{name}</p>
-                          <p className="text-xs text-[#01031B]/40 mt-0.5">
+                          <p className="text-xs text-foreground/40 mt-0.5">
                             {sku.consumedUnits}/{total} utilisées
                             {isFull && <span className="text-red-500 ml-2">— Complet</span>}
                           </p>
@@ -565,7 +565,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-[#01031B]/40 text-center py-4">Aucun abonnement disponible</p>
+                <p className="text-sm text-foreground/40 text-center py-4">Aucun abonnement disponible</p>
               )}
             </div>
           )}
@@ -620,7 +620,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                 <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
               )}
               {!signInsLoading && !signInsError && signInLogs?.length === 0 && (
-                <p className="text-sm text-[#01031B]/40 text-center py-6">Aucune connexion enregistrée</p>
+                <p className="text-sm text-foreground/40 text-center py-6">Aucune connexion enregistrée</p>
               )}
               {!signInsLoading && !signInsError && signInLogs && signInLogs.length > 0 && (
                 <div className="space-y-1.5">
@@ -641,11 +641,11 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                               {log.appDisplayName || "Application inconnue"}
                             </span>
                           </div>
-                          <span className="text-[#01031B]/40 whitespace-nowrap shrink-0">
+                          <span className="text-foreground/40 whitespace-nowrap shrink-0">
                             {format(new Date(log.createdDateTime), "dd MMM HH:mm", { locale: fr })}
                           </span>
                         </div>
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[#01031B]/50">
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-foreground/50">
                           {log.ipAddress && <span>{log.ipAddress}</span>}
                           {location && <span>{location}</span>}
                           {log.clientAppUsed && <span>{log.clientAppUsed}</span>}
@@ -680,22 +680,22 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                 <div className="space-y-2 mb-4">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
               ) : !rolesError && (
                 <div className="mb-5">
-                  <p className="text-xs font-medium text-[#01031B]/50 uppercase tracking-wide mb-2">
+                  <p className="text-xs font-medium text-foreground/50 uppercase tracking-wide mb-2">
                     Rôles attribués ({userRoles?.length ?? 0})
                   </p>
                   {userRoles?.length === 0 ? (
-                    <p className="text-sm text-[#01031B]/40 py-2">Aucun rôle AD attribué</p>
+                    <p className="text-sm text-foreground/40 py-2">Aucun rôle AD attribué</p>
                   ) : (
                     <div className="space-y-1">
                       {userRoles?.map((r) => (
                         <div key={r.id} className="flex items-center justify-between rounded-md border px-3 py-2 bg-primary/5 border-primary/20">
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{r.displayName}</p>
-                            {r.description && <p className="text-xs text-[#01031B]/40 truncate">{r.description}</p>}
+                            {r.description && <p className="text-xs text-foreground/40 truncate">{r.description}</p>}
                           </div>
                           {confirmRoleRemove === r.id ? (
                             <div className="flex items-center gap-1 ml-2 shrink-0">
-                              <span className="text-xs text-[#01031B]/60">Retirer ?</span>
+                              <span className="text-xs text-foreground/60">Retirer ?</span>
                               <Button size="sm" variant="destructive" className="text-xs h-6 px-2"
                                 onClick={() => roleMutation.mutate({ roleId: r.id, roleName: r.displayName, action: "remove" })}
                                 disabled={roleMutation.isPending}>Oui</Button>
@@ -719,7 +719,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
               {!rolesError && (
                 <>
                   <Separator className="mb-4" />
-                  <p className="text-xs font-medium text-[#01031B]/50 uppercase tracking-wide mb-2">Attribuer un rôle</p>
+                  <p className="text-xs font-medium text-foreground/50 uppercase tracking-wide mb-2">Attribuer un rôle</p>
                   <Input placeholder="Rechercher un rôle..." value={roleSearch} onChange={(e) => setRoleSearch(e.target.value)} className="mb-2" />
                   {allRolesLoading ? (
                     <div className="space-y-1">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</div>
@@ -728,10 +728,10 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                       {allRoles
                         ?.filter((r) => !userRoleIds.has(r.id) && (roleSearch === "" || r.displayName.toLowerCase().includes(roleSearch.toLowerCase())))
                         .map((r) => (
-                          <div key={r.id} className="flex items-center justify-between px-3 py-2 hover:bg-[#01031B]/5">
+                          <div key={r.id} className="flex items-center justify-between px-3 py-2 hover:bg-foreground/5">
                             <div className="min-w-0">
                               <p className="text-sm font-medium truncate">{r.displayName}</p>
-                              {r.description && <p className="text-xs text-[#01031B]/40 truncate">{r.description}</p>}
+                              {r.description && <p className="text-xs text-foreground/40 truncate">{r.description}</p>}
                             </div>
                             <Button size="sm" variant="outline" className="ml-2 text-xs h-7 shrink-0"
                               onClick={() => roleMutation.mutate({ roleId: r.id, roleName: r.displayName, action: "assign" })}
@@ -782,7 +782,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                     {oooStatus === "alwaysEnabled" && (
                       <>
                         <div>
-                          <label className="text-xs font-medium text-[#01031B]/60 mb-1 block">Message interne (collègues)</label>
+                          <label className="text-xs font-medium text-foreground/60 mb-1 block">Message interne (collègues)</label>
                           <textarea
                             className="w-full border rounded-md p-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                             rows={3}
@@ -792,7 +792,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-[#01031B]/60 mb-1 block">Message externe (autres domaines)</label>
+                          <label className="text-xs font-medium text-foreground/60 mb-1 block">Message externe (autres domaines)</label>
                           <textarea
                             className="w-full border rounded-md p-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                             rows={3}
@@ -818,9 +818,9 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                   <BellOff className="h-4 w-4" />
                   Message de statut Teams
                 </h3>
-                <p className="text-xs text-[#01031B]/50 mb-3">
+                <p className="text-xs text-foreground/50 mb-3">
                   Visible dans Teams par les autres utilisateurs. Requiert{" "}
-                  <code className="font-mono bg-[#01031B]/5 px-1 rounded">Presence.ReadWrite.All</code>.
+                  <code className="font-mono bg-foreground/5 px-1 rounded">Presence.ReadWrite.All</code>.
                 </p>
                 {teamsError && teamsError.toLowerCase().includes("permission") && (
                   <PermissionWarning message="La permission Presence.ReadWrite.All est requise dans l'enregistrement Azure AD." />
@@ -833,7 +833,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                     maxLength={280}
                   />
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#01031B]/30">{teamsMessage.length}/280</span>
+                    <span className="text-xs text-foreground/30">{teamsMessage.length}/280</span>
                     <Button size="sm" onClick={() => saveTeams.mutate()} disabled={saveTeams.isPending || !teamsMessage.trim()}>
                       {saveTeams.isPending ? "Envoi..." : "Définir le message"}
                     </Button>

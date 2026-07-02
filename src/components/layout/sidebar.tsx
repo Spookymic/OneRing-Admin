@@ -6,9 +6,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Users, Shield, History, LogOut, LayoutDashboard, Users2,
-  Settings, Eye, X, Check, Inbox, Network, KeyRound,
+  Settings, Eye, X, Check, Inbox, Network, KeyRound, Sun, Moon, Monitor,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useAccessibility, A11Y_LABELS, A11Y_MODES } from "@/lib/accessibility";
 import { ACCENT_PRESETS, getSavedAccent, saveAccent } from "@/lib/accent";
@@ -36,7 +37,9 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
   const { mode, setA11yMode } = useAccessibility();
   const [a11yOpen, setA11yOpen] = useState(false);
   const [accent, setAccent] = useState("rose");
-  useEffect(() => { setAccent(getSavedAccent()); }, []);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setAccent(getSavedAccent()); setMounted(true); }, []);
 
   // L'admin local (accès de secours) ne voit que l'Administration
   const visibleNav = session?.role === "local"
@@ -145,6 +148,33 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
           )}
         </div>
 
+        {/* Thème clair / sombre */}
+        <div className="px-3 py-2">
+          <p className="text-xs text-white/40 mb-1.5">Thème</p>
+          <div className="flex gap-1">
+            {[
+              { id: "light", icon: Sun, label: "Clair" },
+              { id: "dark", icon: Moon, label: "Sombre" },
+              { id: "system", icon: Monitor, label: "Système" },
+            ].map(({ id, icon: Icon, label }) => (
+              <button
+                key={id}
+                type="button"
+                title={label}
+                onClick={() => setTheme(id)}
+                className={cn(
+                  "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs transition-colors",
+                  mounted && theme === id
+                    ? "bg-white/15 text-white"
+                    : "text-white/50 hover:bg-white/8 hover:text-white"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Couleur d'accent */}
         <div className="px-3 py-2">
           <p className="text-xs text-white/40 mb-1.5">Couleur d&apos;accent</p>
@@ -174,7 +204,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
           <LogOut className="h-4 w-4 mr-3" />
           Déconnexion
         </Button>
-        <p className="text-center text-white/25 text-xs pt-1">v1.20.0</p>
+        <p className="text-center text-white/25 text-xs pt-1">v1.21.0</p>
       </div>
     </aside>
   );

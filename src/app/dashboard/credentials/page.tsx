@@ -58,7 +58,7 @@ export default function CredentialsPage() {
       <div className="flex items-center justify-between mb-2">
         <div>
           <h2 className="text-2xl font-bold">Secrets &amp; certificats</h2>
-          <p className="text-sm text-[#01031B]/50 mt-0.5">
+          <p className="text-sm text-foreground/50 mt-0.5">
             Identifiants des inscriptions d&apos;applications Azure AD et leur expiration.
           </p>
         </div>
@@ -82,7 +82,7 @@ export default function CredentialsPage() {
               className="max-w-sm"
             />
           </div>
-          <div className="rounded-md border bg-white">
+          <div className="rounded-md border bg-card">
             <Table>
               <TableHeader>
                 <TableRow>

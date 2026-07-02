@@ -181,7 +181,7 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
             <span className="text-sm font-semibold">
               Propriétaires
               {sortedOwners.length > 0 && (
-                <span className="ml-1 text-[#01031B]/40 font-normal">({sortedOwners.length})</span>
+                <span className="ml-1 text-foreground/40 font-normal">({sortedOwners.length})</span>
               )}
             </span>
           </div>
@@ -194,10 +194,10 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
           ) : sortedOwners.length > 0 ? (
             <div className="space-y-1 mb-6">
               {sortedOwners.map((o) => (
-                <div key={o.id} className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-[#01031B]/5">
+                <div key={o.id} className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-foreground/5">
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{o.displayName}</p>
-                    <p className="text-xs text-[#01031B]/40 truncate">{o.userPrincipalName ?? o.mail ?? ""}</p>
+                    <p className="text-xs text-foreground/40 truncate">{o.userPrincipalName ?? o.mail ?? ""}</p>
                   </div>
                   {!settings.hideGroupDeletion && (
                     <Button
@@ -214,16 +214,16 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-[#01031B]/40 mb-6">Aucun propriétaire</p>
+            <p className="text-sm text-foreground/40 mb-6">Aucun propriétaire</p>
           )}
 
           {/* Section Membres */}
           <div className="mb-1 flex items-center gap-2">
-            <Users className="h-4 w-4 text-[#01031B]/60" />
+            <Users className="h-4 w-4 text-foreground/60" />
             <span className="text-sm font-semibold">
               Membres
               {sortedMembers.length > 0 && (
-                <span className="ml-1 text-[#01031B]/40 font-normal">({sortedMembers.length})</span>
+                <span className="ml-1 text-foreground/40 font-normal">({sortedMembers.length})</span>
               )}
             </span>
           </div>
@@ -236,11 +236,11 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
           ) : sortedMembers.length > 0 ? (
             <div className="space-y-1">
               {sortedMembers.map((m) => (
-                <div key={m.id} className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-[#01031B]/5">
+                <div key={m.id} className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-foreground/5">
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{m.displayName}</p>
-                    <p className="text-xs text-[#01031B]/40 truncate">{m.userPrincipalName ?? m.mail ?? ""}</p>
-                    {m.jobTitle && <p className="text-xs text-[#01031B]/40 truncate">{m.jobTitle}</p>}
+                    <p className="text-xs text-foreground/40 truncate">{m.userPrincipalName ?? m.mail ?? ""}</p>
+                    {m.jobTitle && <p className="text-xs text-foreground/40 truncate">{m.jobTitle}</p>}
                   </div>
                   {!settings.hideGroupDeletion && (
                     <Button
@@ -257,7 +257,7 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-[#01031B]/40">Aucun membre</p>
+            <p className="text-sm text-foreground/40">Aucun membre</p>
           )}
         </SheetContent>
       </Sheet>

@@ -116,7 +116,7 @@ export default function GroupsPage() {
           </SelectContent>
         </Select>
       </div>
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -137,7 +137,7 @@ export default function GroupsPage() {
               : sorted.map((group) => (
                   <TableRow
                     key={group.id}
-                    className="cursor-pointer hover:bg-[#01031B]/5"
+                    className="cursor-pointer hover:bg-foreground/5"
                     onClick={() => setSelectedGroup(group)}
                   >
                     <TableCell className="font-medium">{group.displayName}</TableCell>

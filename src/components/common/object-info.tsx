@@ -29,7 +29,7 @@ export function ObjectInfo({ id, type, createdDateTime, onPremisesSyncEnabled, o
     : null;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#01031B]/50">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-foreground/50">
       {created && <span>Créé le {created}</span>}
       {creator?.by && <span>par {creator.by}</span>}
       {onPremisesSyncEnabled === true && (
@@ -37,7 +37,7 @@ export function ObjectInfo({ id, type, createdDateTime, onPremisesSyncEnabled, o
           Synchronisé AD
         </Badge>
       )}
-      {onPremisesSyncEnabled === null && <span className="text-[#01031B]/35">Cloud</span>}
+      {onPremisesSyncEnabled === null && <span className="text-foreground/35">Cloud</span>}
     </div>
   );
 }

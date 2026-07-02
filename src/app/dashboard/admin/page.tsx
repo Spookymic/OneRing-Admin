@@ -30,7 +30,7 @@ function Toggle({
     <div className="flex items-center justify-between py-3">
       <div className="flex-1 min-w-0 pr-4">
         <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-[#01031B]/50 mt-0.5">{description}</p>
+        <p className="text-xs text-foreground/50 mt-0.5">{description}</p>
       </div>
       <button
         type="button"
@@ -38,11 +38,11 @@ function Toggle({
         aria-checked={value}
         onClick={() => onChange(!value)}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-          value ? "bg-primary" : "bg-[#01031B]/20"
+          value ? "bg-primary" : "bg-foreground/20"
         }`}
       >
         <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+          className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
             value ? "translate-x-6" : "translate-x-1"
           }`}
         />
@@ -77,7 +77,7 @@ function PatternEditor({
   return (
     <div>
       <p className="text-sm font-medium mb-1">{title}</p>
-      <p className="text-xs text-[#01031B]/50 mb-3">{description}</p>
+      <p className="text-xs text-foreground/50 mb-3">{description}</p>
       <div className="flex flex-wrap gap-1 mb-3">
         {defaults.map((kw) => (
           <Badge key={kw} variant="secondary" className="text-xs opacity-50">{kw}</Badge>
@@ -226,7 +226,7 @@ export default function AdminPage() {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">Administration</h2>
-        <p className="text-sm text-[#01031B]/50">Chargement des paramètres...</p>
+        <p className="text-sm text-foreground/50">Chargement des paramètres...</p>
       </div>
     );
   }
@@ -236,7 +236,7 @@ export default function AdminPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Administration</h2>
-          <p className="text-sm text-[#01031B]/50 mt-0.5">
+          <p className="text-sm text-foreground/50 mt-0.5">
             Paramètres locaux de l&apos;interface — stockés dans le navigateur
           </p>
         </div>
@@ -252,7 +252,7 @@ export default function AdminPage() {
           <Shield className="h-4 w-4 text-primary" />
           Contrôle des actions sensibles
         </h3>
-        <p className="text-xs text-[#01031B]/50 mb-4">
+        <p className="text-xs text-foreground/50 mb-4">
           Masquer certains boutons d&apos;action pour limiter les risques d&apos;erreur.
           Ces paramètres n&apos;affectent que votre navigateur.
         </p>
@@ -314,7 +314,7 @@ export default function AdminPage() {
           <Users2 className="h-4 w-4 text-primary" />
           Détection des types de comptes
         </h3>
-        <p className="text-xs text-[#01031B]/50 mb-5">
+        <p className="text-xs text-foreground/50 mb-5">
           Mots-clés utilisés pour identifier automatiquement les salles et équipements.
           Les mots-clés grisés sont les valeurs par défaut (non modifiables ici).
           Ajoutez des mots-clés spécifiques à votre organisation.
@@ -343,7 +343,7 @@ export default function AdminPage() {
           <Settings className="h-4 w-4 text-primary" />
           Sauvegarde des paramètres
         </h3>
-        <p className="text-xs text-[#01031B]/50 mb-4">
+        <p className="text-xs text-foreground/50 mb-4">
           Exportez ou importez tous les paramètres locaux de l&apos;interface (actions sensibles, mots-clés de détection).
           La configuration SSO (variables d&apos;environnement Azure AD) n&apos;est pas incluse dans cet export.
         </p>
@@ -381,7 +381,7 @@ export default function AdminPage() {
           <History className="h-4 w-4 text-primary" />
           Historique des modifications
         </h3>
-        <p className="text-xs text-[#01031B]/50 mb-4">
+        <p className="text-xs text-foreground/50 mb-4">
           Nombre de jours d&apos;historique affiché dans l&apos;onglet Historique. Ne supprime pas les données — filtre uniquement l&apos;affichage.
         </p>
         <div className="flex items-center gap-3">
@@ -413,18 +413,18 @@ export default function AdminPage() {
         </h3>
         <div className="space-y-2 text-sm">
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-            <span className="text-[#01031B]/50 w-40 shrink-0">Tenant ID</span>
+            <span className="text-foreground/50 w-40 shrink-0">Tenant ID</span>
             <span className="font-mono text-xs break-all">{sso?.tenantId ?? "—"}</span>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-            <span className="text-[#01031B]/50 w-40 shrink-0">Client ID</span>
+            <span className="text-foreground/50 w-40 shrink-0">Client ID</span>
             <span className="font-mono text-xs break-all">{sso?.clientId ?? "—"}</span>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-            <span className="text-[#01031B]/50 w-40 shrink-0">URI de redirection</span>
+            <span className="text-foreground/50 w-40 shrink-0">URI de redirection</span>
             <span className="font-mono text-xs break-all">{sso?.redirectUri ?? "—"}</span>
           </div>
-          <p className="text-xs text-[#01031B]/40 pt-1">
+          <p className="text-xs text-foreground/40 pt-1">
             L&apos;URI de redirection doit être déclarée dans l&apos;app registration Azure AD. Le client secret
             se configure via les variables d&apos;environnement (jamais affiché ici).
           </p>
@@ -437,7 +437,7 @@ export default function AdminPage() {
           <Users2 className="h-4 w-4 text-primary" />
           Compte administrateur local
         </h3>
-        <p className="text-xs text-[#01031B]/50 mb-3">
+        <p className="text-xs text-foreground/50 mb-3">
           Accès de secours limité à l&apos;Administration (aucun accès Graph / Microsoft 365).
         </p>
 
@@ -447,7 +447,7 @@ export default function AdminPage() {
               <div key={a.id} className="flex items-center justify-between rounded-md border px-3 py-2">
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{a.username}</p>
-                  <p className="text-xs text-[#01031B]/40">
+                  <p className="text-xs text-foreground/40">
                     créé le {format(new Date(a.createdAt), "dd MMM yyyy", { locale: fr })}
                   </p>
                 </div>
@@ -466,7 +466,7 @@ export default function AdminPage() {
             {isSSO && admins.length > 1 && (
               <button
                 onClick={deleteAllLocalAdmins}
-                className="text-xs text-[#01031B]/40 hover:text-red-600 underline underline-offset-2 pt-1"
+                className="text-xs text-foreground/40 hover:text-red-600 underline underline-offset-2 pt-1"
               >
                 Supprimer tous les comptes
               </button>
@@ -476,7 +476,7 @@ export default function AdminPage() {
 
         {isSSO ? (
           <div className="space-y-2 max-w-sm">
-            <p className="text-xs font-medium text-[#01031B]/60">Ajouter / réinitialiser un compte</p>
+            <p className="text-xs font-medium text-foreground/60">Ajouter / réinitialiser un compte</p>
             <Input placeholder="Identifiant" value={laUser} onChange={(e) => setLaUser(e.target.value)} />
             <Input
               type="password"
@@ -484,16 +484,16 @@ export default function AdminPage() {
               value={laPass}
               onChange={(e) => setLaPass(e.target.value)}
             />
-            {laMsg && <p className="text-xs text-[#01031B]/60">{laMsg}</p>}
+            {laMsg && <p className="text-xs text-foreground/60">{laMsg}</p>}
             <Button size="sm" onClick={saveLocalAdmin} disabled={laBusy || laUser.length < 3 || laPass.length < 8}>
               {laBusy ? "Enregistrement…" : "Enregistrer le compte"}
             </Button>
-            <p className="text-xs text-[#01031B]/40">
+            <p className="text-xs text-foreground/40">
               Un identifiant existant voit son mot de passe réinitialisé ; sinon un nouveau compte est créé.
             </p>
           </div>
         ) : (
-          <p className="text-xs text-[#01031B]/40">
+          <p className="text-xs text-foreground/40">
             Ces comptes se configurent via un administrateur connecté en SSO Microsoft.
           </p>
         )}
@@ -511,7 +511,7 @@ export default function AdminPage() {
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-green-500" /> Joignable
               </span>
-              {bridgeHealth.org && <span className="text-xs text-[#01031B]/50">{bridgeHealth.org}</span>}
+              {bridgeHealth.org && <span className="text-xs text-foreground/50">{bridgeHealth.org}</span>}
               <Badge variant={bridgeHealth.exoConnected ? "default" : "secondary"} className="text-xs">
                 {bridgeHealth.exoConnected ? "Connecté à Exchange" : "Non connecté (connexion à la 1ʳᵉ requête)"}
               </Badge>
@@ -522,7 +522,7 @@ export default function AdminPage() {
             </div>
           )
         ) : (
-          <p className="text-xs text-[#01031B]/40">Vérification…</p>
+          <p className="text-xs text-foreground/40">Vérification…</p>
         )}
       </Card>
 
@@ -533,13 +533,13 @@ export default function AdminPage() {
           Certificats & secrets d&apos;applications (expiration ≤ 30 j)
         </h3>
         {credData?.supported === false ? (
-          <p className="text-xs text-[#01031B]/40">
+          <p className="text-xs text-foreground/40">
             Indisponible — droit de lecture des applications manquant.
           </p>
         ) : !credData ? (
-          <p className="text-xs text-[#01031B]/40">Vérification…</p>
+          <p className="text-xs text-foreground/40">Vérification…</p>
         ) : credData.credentials.length === 0 ? (
-          <p className="text-xs text-[#01031B]/50">Aucun certificat/secret n&apos;expire dans les 30 prochains jours.</p>
+          <p className="text-xs text-foreground/50">Aucun certificat/secret n&apos;expire dans les 30 prochains jours.</p>
         ) : (
           <div className="space-y-1">
             {credData.credentials.map((c, i) => (
@@ -548,7 +548,7 @@ export default function AdminPage() {
                   <span className="font-medium">{c.appName}</span> — {c.type === "secret" ? "secret" : "certificat"}
                   {c.name ? ` « ${c.name} »` : ""}
                 </span>
-                <span className={`shrink-0 font-medium ${c.daysLeft < 0 ? "text-red-600" : c.daysLeft <= 7 ? "text-amber-600" : "text-[#01031B]/60"}`}>
+                <span className={`shrink-0 font-medium ${c.daysLeft < 0 ? "text-red-600" : c.daysLeft <= 7 ? "text-amber-600" : "text-foreground/60"}`}>
                   {c.daysLeft < 0
                     ? `expiré (${format(new Date(c.endDateTime), "dd/MM/yyyy", { locale: fr })})`
                     : `${c.daysLeft} j (${format(new Date(c.endDateTime), "dd/MM/yyyy", { locale: fr })})`}
@@ -566,8 +566,8 @@ export default function AdminPage() {
           Version
         </h3>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-sm font-mono">v1.20.0</Badge>
-          <p className="text-xs text-[#01031B]/50">OneRing Admin — M365 Administrator</p>
+          <Badge variant="outline" className="text-sm font-mono">v1.21.0</Badge>
+          <p className="text-xs text-foreground/50">OneRing Admin — M365 Administrator</p>
         </div>
       </Card>
     </div>

@@ -338,11 +338,11 @@ export default function UsersPage() {
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} disabled={bulkBusy}>
             Annuler la sélection
           </Button>
-          {bulkBusy && <span className="text-xs text-[#01031B]/60">Traitement… {bulkProgress}</span>}
+          {bulkBusy && <span className="text-xs text-foreground/60">Traitement… {bulkProgress}</span>}
         </div>
       )}
 
-      <div className="rounded-md border bg-white overflow-x-auto">
+      <div className="rounded-md border bg-card overflow-x-auto">
         <Table className="min-w-max">
           <TableHeader>
             <TableRow>
@@ -402,7 +402,7 @@ export default function UsersPage() {
                         <TableCell className="font-medium">{user.displayName}</TableCell>
                       )}
                       {col("email") && (
-                        <TableCell className="text-[#01031B]/50 text-sm">{user.userPrincipalName}</TableCell>
+                        <TableCell className="text-foreground/50 text-sm">{user.userPrincipalName}</TableCell>
                       )}
                       {col("jobTitle") && (
                         <TableCell className="text-sm">{user.jobTitle ?? "-"}</TableCell>
@@ -434,7 +434,7 @@ export default function UsersPage() {
                         <TableCell>{user.assignedLicenses.length}</TableCell>
                       )}
                       {col("created") && (
-                        <TableCell className="text-sm text-[#01031B]/50 whitespace-nowrap">
+                        <TableCell className="text-sm text-foreground/50 whitespace-nowrap">
                           {user.createdDateTime
                             ? format(new Date(user.createdDateTime), "dd MMM yyyy", { locale: fr })
                             : "-"}
@@ -482,7 +482,7 @@ export default function UsersPage() {
               />
               <span>
                 Convertir les boîtes en <span className="font-medium">boîtes partagées</span>
-                <span className="block text-xs text-[#01031B]/50">Nécessite un rôle Exchange Administrator.</span>
+                <span className="block text-xs text-foreground/50">Nécessite un rôle Exchange Administrator.</span>
               </span>
             </label>
           </div>

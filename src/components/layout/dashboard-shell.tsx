@@ -54,7 +54,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <span className="font-bold text-sm">OneRing Admin</span>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#F5F5FA]">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-muted">
           {localBlocked ? null : children}
         </main>
       </div>

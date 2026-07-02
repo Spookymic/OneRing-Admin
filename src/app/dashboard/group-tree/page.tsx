@@ -87,7 +87,7 @@ export default function GroupTreePage() {
       <div className="flex items-center justify-between mb-2">
         <div>
           <h2 className="text-2xl font-bold">Arborescence des groupes</h2>
-          <p className="text-sm text-[#01031B]/50 mt-0.5">
+          <p className="text-sm text-foreground/50 mt-0.5">
             Imbrication des groupes. Déroulez un groupe pour explorer ses dépendances ; un badge signale les groupes sans propriétaire.
           </p>
         </div>
@@ -121,7 +121,7 @@ export default function GroupTreePage() {
             Membre de
           </Button>
         </div>
-        <label className="flex items-center gap-2 text-xs text-[#01031B]/70 cursor-pointer select-none">
+        <label className="flex items-center gap-2 text-xs text-foreground/70 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={rootsOnly}
@@ -130,7 +130,7 @@ export default function GroupTreePage() {
           />
           Groupes racines uniquement
         </label>
-        <label className="flex items-center gap-2 text-xs text-[#01031B]/70 cursor-pointer select-none">
+        <label className="flex items-center gap-2 text-xs text-foreground/70 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={showUsers}
@@ -147,7 +147,7 @@ export default function GroupTreePage() {
             <Loader label="Chargement de l'arborescence…" />
           </div>
         ) : roots.length === 0 ? (
-          <p className="text-sm text-[#01031B]/40 p-4">Aucun groupe.</p>
+          <p className="text-sm text-foreground/40 p-4">Aucun groupe.</p>
         ) : (
           // key={direction} : réinitialise les expansions au changement de sens
           <div key={direction}>
