@@ -66,7 +66,7 @@ export function MailboxDelegationsSheet({ mailbox, open, onClose }: Props) {
   return (
     <>
       <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-        <SheetContent className="w-[480px] sm:max-w-[480px] overflow-y-auto">
+        <SheetContent className="w-full sm:w-[640px] sm:max-w-[640px] overflow-y-auto">
           <SheetHeader className="mb-4">
             <SheetTitle className="text-lg leading-tight">{mailbox?.displayName}</SheetTitle>
             {mailbox?.mail && <SheetDescription className="text-xs">{mailbox.mail}</SheetDescription>}
@@ -111,7 +111,7 @@ export function MailboxDelegationsSheet({ mailbox, open, onClose }: Props) {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-red-500 hover:text-red-700 h-7 px-2 shrink-0"
+                            className="text-red-500 hover:text-red-700 dark:text-red-300 h-7 px-2 shrink-0"
                             onClick={() => removeDelegation.mutate({ member: d.mail, type })}
                             disabled={removeDelegation.isPending}
                           >

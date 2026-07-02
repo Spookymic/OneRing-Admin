@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Loader } from "@/components/ui/loader";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
@@ -118,11 +119,9 @@ export default function LicensesPage() {
       {/* SKU cards grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {skusLoading
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i} className="p-5">
-                <Skeleton className="h-20 w-full" />
-              </Card>
-            ))
+          ? (
+              <div className="col-span-full py-10"><Loader label="Chargement des licences…" /></div>
+            )
           : skus?.map((sku) => {
               const name = getSkuFriendlyName(sku.skuPartNumber);
               const total = sku.prepaidUnits.enabled;
@@ -183,7 +182,7 @@ export default function LicensesPage() {
 
       {/* Side sheet — beneficiaries */}
       <Sheet open={!!selectedSku} onOpenChange={(open) => { if (!open) setSelectedSku(null); }}>
-        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto p-0">
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto p-0">
           {selectedSku && (
             <>
               <SheetHeader className="p-6 pb-4 border-b">
@@ -237,7 +236,7 @@ export default function LicensesPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-red-500 hover:text-red-700 shrink-0 h-7 w-7 p-0 ml-2"
+                            className="text-red-500 hover:text-red-700 dark:text-red-300 shrink-0 h-7 w-7 p-0 ml-2"
                             onClick={() =>
                               mutation.mutate({
                                 userId: u.id,

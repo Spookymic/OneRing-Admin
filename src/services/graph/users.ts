@@ -112,6 +112,69 @@ export async function listUserSignInLogs(
   return data.value;
 }
 
+export interface AuthMethod {
+  type: string;
+  label: string;
+  detail: string | null;
+  mfaCapable: boolean;
+}
+
+export interface AuthMethodsSummary {
+  supported: boolean;
+  methods: AuthMethod[];
+  mfaEnabled: boolean;
+}
+
+// Correspondance @odata.type -> libellé FR + capacité MFA
+const AUTH_METHOD_MAP: Record<string, { label: string; mfa: boolean }> = {
+  microsoftAuthenticatorAuthenticationMethod: { label: "Microsoft Authenticator", mfa: true },
+  phoneAuthenticationMethod: { label: "Téléphone (SMS/appel)", mfa: true },
+  fido2AuthenticationMethod: { label: "Clé de sécurité FIDO2", mfa: true },
+  softwareOathAuthenticationMethod: { label: "Application OATH (TOTP)", mfa: true },
+  windowsHelloForBusinessAuthenticationMethod: { label: "Windows Hello Entreprise", mfa: true },
+  temporaryAccessPassAuthenticationMethod: { label: "Pass d'accès temporaire", mfa: true },
+  emailAuthenticationMethod: { label: "E-mail (réinitialisation)", mfa: false },
+  passwordAuthenticationMethod: { label: "Mot de passe", mfa: false },
+};
+
+/**
+ * Récupère les méthodes d'authentification d'un utilisateur (statut MFA).
+ * Best-effort : requiert le scope UserAuthenticationMethod.Read.All. En cas de
+ * 403 (consentement admin absent), renvoie `supported: false` sans lever.
+ */
+export async function getUserAuthMethods(
+  accessToken: string,
+  userId: string
+): Promise<AuthMethodsSummary> {
+  try {
+    const data = await graphFetch<{ value: Array<Record<string, unknown>> }>(
+      accessToken,
+      `/users/${userId}/authentication/methods`
+    );
+    const methods: AuthMethod[] = (data.value ?? []).map((m) => {
+      const odataType = String(m["@odata.type"] ?? "").replace("#microsoft.graph.", "");
+      const info = AUTH_METHOD_MAP[odataType] ?? { label: odataType || "Inconnu", mfa: false };
+      const detail =
+        (m["displayName"] as string) ??
+        (m["phoneNumber"] as string) ??
+        (m["emailAddress"] as string) ??
+        null;
+      return { type: odataType, label: info.label, detail, mfaCapable: info.mfa };
+    });
+    return {
+      supported: true,
+      methods,
+      mfaEnabled: methods.some((m) => m.mfaCapable),
+    };
+  } catch (error: any) {
+    // 403 = scope/consentement manquant ; on dégrade proprement plutôt que d'échouer
+    if (String(error?.message ?? "").startsWith("[403]")) {
+      return { supported: false, methods: [], mfaEnabled: false };
+    }
+    throw error;
+  }
+}
+
 export async function resetUserPassword(
   accessToken: string,
   userId: string,

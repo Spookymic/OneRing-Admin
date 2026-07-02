@@ -46,7 +46,7 @@ export default function MailboxesPage() {
     return (
       <div>
         <h2 className="text-2xl font-bold mb-4">Boîtes partagées</h2>
-        <div className="rounded-md border bg-red-50 border-red-200 p-4 text-red-700 text-sm">
+        <div className="rounded-md border bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 p-4 text-red-700 dark:text-red-300 text-sm">
           Erreur : {(error as Error).message}
         </div>
       </div>
@@ -98,7 +98,7 @@ export default function MailboxesPage() {
                     onClick={() => setSelected(m)}
                   >
                     <TableCell className="font-medium">{m.displayName}</TableCell>
-                    <TableCell className="text-gray-500">{m.mail ?? "-"}</TableCell>
+                    <TableCell className="text-gray-500 dark:text-gray-400">{m.mail ?? "-"}</TableCell>
                   </TableRow>
                 ))}
           </TableBody>

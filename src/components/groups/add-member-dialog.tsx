@@ -93,7 +93,7 @@ export function AddMemberDialog({ groupId, open, onClose }: Props) {
                 onClick={() => setSelectedUser(user)}
               >
                 <div className="font-medium truncate">{user.displayName}</div>
-                <div className="text-gray-500 truncate">{user.userPrincipalName}</div>
+                <div className="text-gray-500 dark:text-gray-400 truncate">{user.userPrincipalName}</div>
               </div>
             ))}
           </div>

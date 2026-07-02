@@ -461,8 +461,8 @@ export default function DashboardPage() {
   }
 
   const severityStyle = {
-    high: "bg-red-50 border-red-200 text-red-700",
-    medium: "bg-amber-50 border-amber-200 text-amber-700",
+    high: "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 text-red-700 dark:text-red-300",
+    medium: "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300",
     low: "bg-primary/5 border-primary/20 text-primary",
   };
 
@@ -599,7 +599,7 @@ export default function DashboardPage() {
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             Groupes sans propriétaire ({activeOwnerless.length})
           </h3>
-          <div className="rounded-lg border px-4 py-3 bg-amber-50 border-amber-200 text-amber-700">
+          <div className="rounded-lg border px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300">
             <p className="text-xs mb-2 opacity-80">
               Sans propriétaire, personne ne peut gérer ces groupes (M365 / Sécurité). Cliquez sur un groupe pour lui ajouter un propriétaire.
             </p>
@@ -609,7 +609,7 @@ export default function DashboardPage() {
                   key={g.id}
                   className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-card/60 pl-2.5 pr-1 py-0.5 text-xs"
                 >
-                  <span className="text-[10px] font-semibold uppercase text-amber-700/70 shrink-0">
+                  <span className="text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300/70 shrink-0">
                     {GROUP_TYPE_SHORT[g.type] ?? g.type}
                   </span>
                   <button
@@ -697,7 +697,7 @@ export default function DashboardPage() {
             <AlertTriangle className="h-4 w-4 text-red-500" />
             Certificats / secrets d&apos;applications à renouveler ({expiringCreds.length})
           </h3>
-          <div className="rounded-lg border px-4 py-3 bg-red-50 border-red-200 text-red-700 space-y-1">
+          <div className="rounded-lg border px-4 py-3 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 space-y-1">
             {expiringCreds.slice(0, 8).map((c, i) => (
               <div key={i} className="flex items-center justify-between text-xs gap-2">
                 <span className="truncate">
@@ -726,7 +726,7 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-amber-500" />
             Optimisation des licences
           </h3>
-          <div className="rounded-lg border px-4 py-3 bg-amber-50 border-amber-200 text-amber-700">
+          <div className="rounded-lg border px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300">
             <p className="text-sm font-medium">≈ {wastedTotal} licence(s) récupérable(s)</p>
             <p className="text-xs opacity-80 mb-2">
               {wastedFromDisabled} sur comptes désactivés · {wastedFromInactive} sur comptes inactifs
@@ -777,7 +777,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-amber-500" />
             Invités inactifs ({inactiveGuests.length})
           </h3>
-          <div className="rounded-lg border px-4 py-3 bg-amber-50 border-amber-200 text-amber-700">
+          <div className="rounded-lg border px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300">
             <p className="text-xs mb-2 opacity-80">
               Comptes invités sans connexion depuis &gt; {inactiveGuestsData?.days ?? 90} j — candidats au nettoyage.
             </p>
@@ -816,7 +816,7 @@ export default function DashboardPage() {
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             Licences en conflit ({licenseConflicts.length})
           </h3>
-          <div className="rounded-lg border px-4 py-3 bg-amber-50 border-amber-200 text-amber-700">
+          <div className="rounded-lg border px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300">
             <p className="text-xs mb-2 opacity-80">
               Licence assignée à la fois en direct et via un groupe (doublon — une affectation peut être retirée).
             </p>
@@ -1081,11 +1081,11 @@ export default function DashboardPage() {
           ) : userStats ? (
             <div className="space-y-3">
               <Link href="/dashboard/users?status=active">
-                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors cursor-pointer">
-                  <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
+                <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-950/40 rounded-lg hover:bg-green-100 transition-colors cursor-pointer">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
                   <div className="min-w-0">
-                    <p className="font-bold text-green-700 text-lg leading-none">{userStats.active}</p>
-                    <p className="text-xs text-green-600 mt-0.5">Actifs</p>
+                    <p className="font-bold text-green-700 dark:text-green-300 text-lg leading-none">{userStats.active}</p>
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">Actifs</p>
                     {activeByType && Object.keys(activeByType).length > 0 && (
                       <p className="text-xs text-green-500 mt-1 leading-snug">
                         dont{" "}
@@ -1096,13 +1096,13 @@ export default function DashboardPage() {
                       </p>
                     )}
                   </div>
-                  <span className="ml-auto text-sm font-semibold text-green-600 shrink-0">
+                  <span className="ml-auto text-sm font-semibold text-green-600 dark:text-green-400 shrink-0">
                     {Math.round((userStats.active / Math.max(userStats.total, 1)) * 100)} %
                   </span>
                 </div>
               </Link>
               <Link href="/dashboard/users?status=disabled">
-                <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors cursor-pointer">
+                <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-950/40 rounded-lg hover:bg-red-100 transition-colors cursor-pointer">
                   <XCircle className="h-5 w-5 text-red-500 shrink-0" />
                   <div className="min-w-0">
                     <p className="font-bold text-red-600 text-lg leading-none">{userStats.disabled}</p>
@@ -1125,10 +1125,10 @@ export default function DashboardPage() {
               {userStats.guests > 0 && (
                 <Link href="/dashboard/users?type=guest">
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-                    <Users className="h-5 w-5 text-gray-500 shrink-0" />
+                    <Users className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0" />
                     <div className="min-w-0">
-                      <p className="font-bold text-gray-600 text-lg leading-none">{userStats.guests}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Invités</p>
+                      <p className="font-bold text-gray-600 dark:text-gray-400 text-lg leading-none">{userStats.guests}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Invités</p>
                       <p className="text-xs text-gray-400 mt-1 leading-snug">
                         {guestWithLicense > 0
                           ? `dont ${guestWithLicense} avec licence · ${userStats.guests - guestWithLicense} sans licence`

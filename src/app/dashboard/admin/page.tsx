@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useCallback } from "react";
-import { Settings, Shield, Users2, KeyRound, Plus, Trash2, RotateCcw, Download, Upload, History, Server } from "lucide-react";
+import { Settings, Shield, Users2, KeyRound, Plus, Trash2, RotateCcw, Download, Upload, History, Server, Smartphone } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
@@ -87,7 +87,7 @@ function PatternEditor({
             {kw}
             <button
               type="button"
-              className="ml-1 text-red-500 hover:text-red-700"
+              className="ml-1 text-red-500 hover:text-red-700 dark:text-red-300"
               onClick={() => onChange(values.filter((v) => v !== kw))}
             >
               <Trash2 className="h-2.5 w-2.5" />
@@ -138,7 +138,7 @@ export default function AdminPage() {
 
   const { data: sessionData } = useSession();
   const isSSO = sessionData?.role === "graph";
-  const { data: localAdmins, refetch: refetchLocalAdmin } = useQuery<{ admins: { id: string; username: string; createdAt: string }[] }>({
+  const { data: localAdmins, refetch: refetchLocalAdmin } = useQuery<{ admins: { id: string; username: string; createdAt: string; totpEnabled: boolean }[] }>({
     queryKey: ["local-admin"],
     queryFn: () => apiFetch("/api/admin/local-admin"),
     staleTime: 5 * 60 * 1000,
@@ -184,6 +184,43 @@ export default function AdminPage() {
     } catch (e: any) {
       setLaMsg(e.message);
     }
+  }
+
+  // 2FA (TOTP) self-service pour l'admin local connecté
+  const isLocal = sessionData?.role === "local";
+  const { data: totpStatus, refetch: refetchTotp } = useQuery<{ enabled: boolean }>({
+    queryKey: ["local-totp"],
+    queryFn: () => apiFetch("/api/admin/local-admin/totp"),
+    enabled: isLocal,
+  });
+  const [totpSetup, setTotpSetup] = useState<{ qrDataUrl: string; secret: string } | null>(null);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpMsg, setTotpMsg] = useState("");
+  const [totpBusy, setTotpBusy] = useState(false);
+
+  async function startTotpSetup() {
+    setTotpBusy(true); setTotpMsg("");
+    try {
+      const res = await apiFetch<{ qrDataUrl: string; secret: string }>("/api/admin/local-admin/totp", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "setup" }),
+      });
+      setTotpSetup(res);
+    } catch (e: any) { setTotpMsg(e.message); }
+    finally { setTotpBusy(false); }
+  }
+  async function confirmTotp(action: "enable" | "disable") {
+    setTotpBusy(true); setTotpMsg("");
+    try {
+      await apiFetch("/api/admin/local-admin/totp", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, code: totpCode }),
+      });
+      setTotpSetup(null); setTotpCode("");
+      setTotpMsg(action === "enable" ? "2FA activée." : "2FA désactivée.");
+      refetchTotp();
+    } catch (e: any) { setTotpMsg(e.message); }
+    finally { setTotpBusy(false); }
   }
 
   // Wrapper: met à jour les settings ET journalise dans l'audit
@@ -371,7 +408,7 @@ export default function AdminPage() {
           <p className="text-xs text-red-600 mt-3">{importError}</p>
         )}
         {importSuccess && (
-          <p className="text-xs text-green-600 mt-3">Paramètres importés avec succès.</p>
+          <p className="text-xs text-green-600 dark:text-green-400 mt-3">Paramètres importés avec succès.</p>
         )}
       </Card>
 
@@ -446,7 +483,10 @@ export default function AdminPage() {
             {admins.map((a) => (
               <div key={a.id} className="flex items-center justify-between rounded-md border px-3 py-2">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{a.username}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">{a.username}</p>
+                    {a.totpEnabled && <Badge variant="secondary" className="text-xs shrink-0">2FA</Badge>}
+                  </div>
                   <p className="text-xs text-foreground/40">
                     créé le {format(new Date(a.createdAt), "dd MMM yyyy", { locale: fr })}
                   </p>
@@ -455,7 +495,7 @@ export default function AdminPage() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-red-500 hover:text-red-700 h-7 px-2"
+                    className="text-red-500 hover:text-red-700 dark:text-red-300 h-7 px-2"
                     onClick={() => deleteLocalAdmin(a.id, a.username)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -498,6 +538,86 @@ export default function AdminPage() {
           </p>
         )}
       </Card>
+
+      {/* 2FA (TOTP) — self-service admin local connecté */}
+      {isLocal && (
+        <Card className="p-5">
+          <h3 className="font-semibold text-sm mb-1 flex items-center gap-2">
+            <Smartphone className="h-4 w-4 text-primary" />
+            Double authentification (2FA)
+          </h3>
+          <p className="text-xs text-foreground/50 mb-4">
+            Ajoutez un code à usage unique (TOTP) à votre connexion locale, via une application
+            comme Microsoft Authenticator, Google Authenticator ou Authy.
+          </p>
+
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-sm">Statut :</span>
+            <Badge variant={totpStatus?.enabled ? "default" : "secondary"} className="text-xs">
+              {totpStatus?.enabled ? "Activée" : "Désactivée"}
+            </Badge>
+          </div>
+
+          {/* Activation : étape QR + code de confirmation */}
+          {!totpStatus?.enabled && !totpSetup && (
+            <Button size="sm" onClick={startTotpSetup} disabled={totpBusy}>
+              {totpBusy ? "…" : "Activer la 2FA"}
+            </Button>
+          )}
+
+          {!totpStatus?.enabled && totpSetup && (
+            <div className="space-y-3 max-w-sm">
+              <p className="text-xs text-foreground/60">
+                1. Scannez ce QR code dans votre application d&apos;authentification.
+              </p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={totpSetup.qrDataUrl} alt="QR code 2FA" className="h-40 w-40 rounded-md border bg-white p-1" />
+              <p className="text-xs text-foreground/40 break-all">
+                Clé manuelle : <span className="font-mono">{totpSetup.secret}</span>
+              </p>
+              <p className="text-xs text-foreground/60">2. Saisissez le code affiché pour confirmer.</p>
+              <Input
+                inputMode="numeric"
+                placeholder="Code à 6 chiffres"
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value)}
+                className="max-w-[10rem]"
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => confirmTotp("enable")} disabled={totpBusy || totpCode.length < 6}>
+                  {totpBusy ? "…" : "Confirmer et activer"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => { setTotpSetup(null); setTotpCode(""); setTotpMsg(""); }}>
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Désactivation : requiert un code valide */}
+          {totpStatus?.enabled && (
+            <div className="space-y-2 max-w-sm">
+              <p className="text-xs text-foreground/60">
+                Pour désactiver, saisissez un code de votre application d&apos;authentification.
+              </p>
+              <Input
+                inputMode="numeric"
+                placeholder="Code à 6 chiffres"
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value)}
+                className="max-w-[10rem]"
+              />
+              <Button size="sm" variant="outline"
+                className="text-red-600 border-red-200 dark:border-red-900 hover:bg-red-50 dark:bg-red-950/40"
+                onClick={() => confirmTotp("disable")} disabled={totpBusy || totpCode.length < 6}>
+                {totpBusy ? "…" : "Désactiver la 2FA"}
+              </Button>
+            </div>
+          )}
+
+          {totpMsg && <p className="text-xs text-foreground/60 mt-3">{totpMsg}</p>}
+        </Card>
+      )}
 
       {/* Santé du pont Exchange */}
       <Card className="p-5">
@@ -566,7 +686,7 @@ export default function AdminPage() {
           Version
         </h3>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-sm font-mono">v1.21.2</Badge>
+          <Badge variant="outline" className="text-sm font-mono">v1.22.0</Badge>
           <p className="text-xs text-foreground/50">OneRing Admin — M365 Administrator</p>
         </div>
       </Card>

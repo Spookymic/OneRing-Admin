@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Loader } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useCallback } from "react";
@@ -76,7 +76,7 @@ export default function GroupsPage() {
     return (
       <div>
         <h2 className="text-2xl font-bold mb-4">Groupes</h2>
-        <div className="rounded-md border bg-red-50 border-red-200 p-4 text-red-700 text-sm">
+        <div className="rounded-md border bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 p-4 text-red-700 dark:text-red-300 text-sm">
           Erreur : {(error as Error).message}
         </div>
       </div>
@@ -127,13 +127,13 @@ export default function GroupsPage() {
           </TableHeader>
           <TableBody>
             {isLoading
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 3 }).map((_, j) => (
-                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                    ))}
+              ? (
+                  <TableRow>
+                    <TableCell colSpan={3}>
+                      <div className="py-10"><Loader label="Chargement des groupes…" /></div>
+                    </TableCell>
                   </TableRow>
-                ))
+                )
               : sorted.map((group) => (
                   <TableRow
                     key={group.id}
@@ -146,7 +146,7 @@ export default function GroupsPage() {
                         {groupTypeLabels[group.type].label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-gray-500">{group.mail ?? "-"}</TableCell>
+                    <TableCell className="text-gray-500 dark:text-gray-400">{group.mail ?? "-"}</TableCell>
                   </TableRow>
                 ))}
           </TableBody>

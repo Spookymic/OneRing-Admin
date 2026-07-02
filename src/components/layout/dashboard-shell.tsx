@@ -21,7 +21,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [localBlocked, router]);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
       {/* Mobile: backdrop overlay */}
       {sidebarOpen && (
         <div
@@ -32,7 +32,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       {/* Sidebar wrapper — fixed on mobile, static on desktop */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 lg:static lg:z-auto transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 lg:static lg:z-auto transition-transform duration-300 ease-in-out print:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -40,7 +40,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:block print:overflow-visible">
         {/* Mobile top bar */}
         <header className="lg:hidden flex items-center gap-3 px-4 py-3 bg-[#01031B] text-white shrink-0 border-b border-white/10">
           <button
@@ -54,7 +54,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <span className="font-bold text-sm">OneRing Admin</span>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-muted">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-muted print:overflow-visible print:h-auto print:p-0">
           {localBlocked ? null : children}
         </main>
       </div>

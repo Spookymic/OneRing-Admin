@@ -14,11 +14,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Trash2, UserPlus, Shield, Users, KeyRound, UserX, Wifi,
   CheckCircle, XCircle, AlertCircle, Crown, BellOff, PowerOff, Power, Download, UserMinus,
+  ShieldCheck, ShieldAlert,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import type { M365User, M365UserGroup, SignInLog, MailboxSettings } from "@/services/graph/users";
+import type { M365User, M365UserGroup, SignInLog, MailboxSettings, AuthMethodsSummary } from "@/services/graph/users";
 import type { M365Group, GroupType } from "@/services/graph/groups";
 import type { SubscribedSku } from "@/services/graph/licenses";
 import type { DirectoryRole } from "@/services/graph/roles";
@@ -47,8 +48,8 @@ function getGroupTypeLabel(group: M365UserGroup) {
 
 function PermissionWarning({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
-      <div className="flex items-center gap-2 font-medium text-amber-700 mb-1">
+    <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-4 text-sm">
+      <div className="flex items-center gap-2 font-medium text-amber-700 dark:text-amber-300 mb-1">
         <AlertCircle className="h-4 w-4 shrink-0" />
         Permission manquante
       </div>
@@ -87,6 +88,15 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
     queryKey: ["groups"],
     queryFn: () => apiFetch<(M365Group & { type: GroupType })[]>("/api/groups"),
     enabled: addOpen,
+  });
+
+  // ── Statut MFA (méthodes d'authentification) ──────────────────────
+  const { data: authMethods } = useQuery<AuthMethodsSummary>({
+    queryKey: ["user-auth-methods", user.id],
+    queryFn: () => apiFetch<AuthMethodsSummary>(`/api/users/${user.id}/auth-methods`),
+    enabled: open,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
   });
 
   const userGroupIds = new Set(userGroups?.map((g) => g.id) ?? []);
@@ -311,7 +321,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto p-0">
+      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto p-0">
         <SheetHeader className="p-6 pb-4 border-b">
           <SheetTitle className="text-lg">{user.displayName}</SheetTitle>
           <SheetDescription className="text-xs">{user.userPrincipalName}</SheetDescription>
@@ -327,6 +337,25 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
             {user.jobTitle && <Badge variant="outline" className="text-xs">{user.jobTitle}</Badge>}
             {user.officeLocation && <Badge variant="outline" className="text-xs">{user.officeLocation}</Badge>}
             {!currentEnabled && <Badge variant="destructive" className="text-xs">Désactivé</Badge>}
+            {authMethods?.supported && (
+              <span
+                title={
+                  authMethods.methods.length
+                    ? "Méthodes : " + authMethods.methods.map((m) => m.label + (m.detail ? ` (${m.detail})` : "")).join(", ")
+                    : "Aucune méthode d'authentification forte enregistrée"
+                }
+              >
+                <Badge
+                  variant={authMethods.mfaEnabled ? "default" : "destructive"}
+                  className="text-xs gap-1"
+                >
+                  {authMethods.mfaEnabled
+                    ? <ShieldCheck className="h-3 w-3" />
+                    : <ShieldAlert className="h-3 w-3" />}
+                  {authMethods.mfaEnabled ? "MFA actif" : "MFA absent"}
+                </Badge>
+              </span>
+            )}
           </div>
 
           {/* Boutons d'action */}
@@ -358,7 +387,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                 <Button
                   size="sm"
                   variant="outline"
-                  className={`text-xs h-7 ${currentEnabled ? "text-red-600 border-red-200 hover:bg-red-50" : "text-green-600 border-green-200 hover:bg-green-50"}`}
+                  className={`text-xs h-7 ${currentEnabled ? "text-red-600 border-red-200 dark:border-red-900 hover:bg-red-50 dark:bg-red-950/40" : "text-green-600 dark:text-green-400 border-green-200 dark:border-green-900 hover:bg-green-50 dark:bg-green-950/40"}`}
                   onClick={() => setConfirmDisable(true)}
                 >
                   {currentEnabled ? <PowerOff className="h-3 w-3 mr-1" /> : <Power className="h-3 w-3 mr-1" />}
@@ -370,7 +399,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs h-7 text-red-600 border-red-200 hover:bg-red-50"
+                className="text-xs h-7 text-red-600 border-red-200 dark:border-red-900 hover:bg-red-50 dark:bg-red-950/40"
                 onClick={() =>
                   window.open(
                     `https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/${user.id}`,
@@ -385,7 +414,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
             <Button
               size="sm"
               variant="outline"
-              className="text-xs h-7 text-red-600 border-red-200 hover:bg-red-50"
+              className="text-xs h-7 text-red-600 border-red-200 dark:border-red-900 hover:bg-red-50 dark:bg-red-950/40"
               onClick={() => setOffboardOpen(true)}
             >
               <UserMinus className="h-3 w-3 mr-1" />
@@ -455,7 +484,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                           </div>
                           <Button
                             size="sm" variant="ghost"
-                            className="text-red-500 hover:text-red-700 shrink-0 h-7 w-7 p-0"
+                            className="text-red-500 hover:text-red-700 dark:text-red-300 shrink-0 h-7 w-7 p-0"
                             onClick={() => removeFromGroup.mutate(group.id)}
                             disabled={removeFromGroup.isPending}
                           >
@@ -640,14 +669,14 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                     return (
                       <div
                         key={log.id}
-                        className={`rounded-lg border px-3 py-2.5 text-xs ${success ? "border-green-100 bg-green-50" : "border-red-100 bg-red-50"}`}
+                        className={`rounded-lg border px-3 py-2.5 text-xs ${success ? "border-green-100 dark:border-green-900/60 bg-green-50 dark:bg-green-950/40" : "border-red-100 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40"}`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-1.5 font-medium">
                             {success
-                              ? <CheckCircle className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                              ? <CheckCircle className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0" />
                               : <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />}
-                            <span className={success ? "text-green-800" : "text-red-700"}>
+                            <span className={success ? "text-green-800 dark:text-green-300" : "text-red-700 dark:text-red-300"}>
                               {log.appDisplayName || "Application inconnue"}
                             </span>
                           </div>
@@ -713,7 +742,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                             </div>
                           ) : (
                             <Button size="sm" variant="ghost"
-                              className="text-red-500 hover:text-red-700 shrink-0 h-7 w-7 p-0 ml-2"
+                              className="text-red-500 hover:text-red-700 dark:text-red-300 shrink-0 h-7 w-7 p-0 ml-2"
                               onClick={() => setConfirmRoleRemove(r.id)} disabled={roleMutation.isPending}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -769,7 +798,7 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                 {mailboxError && (mailboxError as Error).message === "permission_denied" ? (
                   <PermissionWarning message="La permission MailboxSettings.ReadWrite doit être ajoutée dans l'enregistrement Azure AD (Permissions API > Microsoft Graph > Délégué > MailboxSettings.ReadWrite) et le consentement administrateur accordé. Si la permission vient d'être ajoutée, déconnectez-vous puis reconnectez-vous pour actualiser le token." />
                 ) : mailboxError ? (
-                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <div className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-300">
                     <p className="font-medium mb-1">Erreur lors de la récupération</p>
                     <p className="text-xs font-mono break-all">{(mailboxError as Error).message}</p>
                   </div>

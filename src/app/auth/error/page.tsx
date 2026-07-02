@@ -37,7 +37,7 @@ function AuthErrorContent() {
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-3">
-            <div className="p-3 rounded-full bg-red-50">
+            <div className="p-3 rounded-full bg-red-50 dark:bg-red-950/40">
               <Icon className={`h-8 w-8 ${color}`} />
             </div>
           </div>

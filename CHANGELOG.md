@@ -2,6 +2,27 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.22.0] — 2026-07-02
+
+### Nouvelles fonctionnalités v1.22.0
+
+- **2FA (TOTP) pour les comptes admin locaux** : activation self-service depuis Administration (QR code + clé manuelle, compatible Microsoft/Google Authenticator, Authy). Le code à usage unique est exigé à la connexion locale quand la 2FA est active, la désactivation requiert un code valide. Statut « 2FA » visible sur les comptes côté SSO. Vérification côté serveur via `otplib` (fenêtre ±1), échecs comptés dans l'anti-brute-force.
+- **Statut MFA par utilisateur** : badge **MFA actif / MFA absent** dans la fiche utilisateur, avec le détail des méthodes en infobulle (Authenticator, téléphone, FIDO2, OATH, Windows Hello…). Best-effort : dégrade proprement si le scope `UserAuthenticationMethod.Read.All` n'est pas consenti (aucun blocage de connexion).
+
+### Améliorations v1.22.0
+
+- **Mode sombre — polish** : variantes `dark:` sur toutes les boîtes d'alerte (`bg-*-50`, bordures, textes rouge/ambre/vert) et les gris Tailwind. Le rendu clair reste inchangé.
+- **Chenillard généralisé** : le loader animé remplace les skeletons sur les listes Utilisateurs, Groupes et Licences.
+- **Panneaux latéraux élargis** : fiches utilisateur/licences (`max-w-2xl`) et groupes/boîtes partagées (640 px) pour plus de confort de lecture.
+- **Export PDF du tableau de bord** : l'impression prend désormais en compte toute la page (correction des conteneurs `h-screen`/`overflow-hidden` qui tronquaient à une page) et conserve les couleurs des cartes/badges.
+
+### Notes techniques v1.22.0
+
+- Schéma `LocalAdmin` : nouveaux champs `totpSecret` / `totpEnabled` (appliqués au démarrage via `prisma db push`).
+- Dépendances ajoutées : `otplib`, `qrcode` (+ `@types/qrcode`).
+
+---
+
 ## [1.21.2] — 2026-06-21
 
 ### Améliorations v1.21.2

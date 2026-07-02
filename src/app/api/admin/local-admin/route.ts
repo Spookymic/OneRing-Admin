@@ -13,7 +13,7 @@ export async function GET() {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
   const admins = await prisma.localAdmin.findMany({
-    select: { id: true, username: true, createdAt: true },
+    select: { id: true, username: true, createdAt: true, totpEnabled: true },
     orderBy: { username: "asc" },
   });
   return NextResponse.json({ admins });

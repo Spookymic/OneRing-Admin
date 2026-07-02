@@ -46,7 +46,7 @@ export default function CredentialsPage() {
     return (
       <div>
         <h2 className="text-2xl font-bold mb-4">Secrets &amp; certificats</h2>
-        <div className="rounded-md border bg-red-50 border-red-200 p-4 text-red-700 text-sm">
+        <div className="rounded-md border bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 p-4 text-red-700 dark:text-red-300 text-sm">
           Erreur : {(error as Error).message}
         </div>
       </div>
@@ -69,7 +69,7 @@ export default function CredentialsPage() {
       </div>
 
       {data?.supported === false ? (
-        <div className="rounded-md border bg-amber-50 border-amber-200 p-4 text-amber-700 text-sm">
+        <div className="rounded-md border bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 p-4 text-amber-700 dark:text-amber-300 text-sm">
           Lecture des applications indisponible — le droit Directory/Application est requis sur le compte connecté.
         </div>
       ) : (
@@ -110,13 +110,13 @@ export default function CredentialsPage() {
                             {c.type === "certificate" ? "Certificat" : "Secret"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-gray-500">{c.name ?? "—"}</TableCell>
+                        <TableCell className="text-sm text-gray-500 dark:text-gray-400">{c.name ?? "—"}</TableCell>
                         <TableCell className="text-sm">
                           {format(new Date(c.endDateTime), "dd MMM yyyy", { locale: fr })}
                         </TableCell>
                         <TableCell
                           className={`text-sm font-medium ${
-                            c.daysLeft < 0 ? "text-red-600" : c.daysLeft <= 30 ? "text-amber-600" : "text-gray-500"
+                            c.daysLeft < 0 ? "text-red-600" : c.daysLeft <= 30 ? "text-amber-600" : "text-gray-500 dark:text-gray-400"
                           }`}
                         >
                           {c.daysLeft < 0 ? `expiré depuis ${-c.daysLeft} j` : `${c.daysLeft} j`}

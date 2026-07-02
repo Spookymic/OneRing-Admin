@@ -12,13 +12,14 @@ export default function SignInPage() {
   const [showLocal, setShowLocal] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [totp, setTotp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleLocalLogin() {
     setLoading(true);
     setError("");
-    const res = await signIn("local", { username, password, redirect: false });
+    const res = await signIn("local", { username, password, totp, redirect: false });
     setLoading(false);
     if (res?.error) {
       setError("Identifiant ou mot de passe incorrect.");
@@ -110,6 +111,15 @@ export default function SignInPage() {
                   onKeyDown={(e) => { if (e.key === "Enter") handleLocalLogin(); }}
                   className="bg-white/10 border-white/15 text-white placeholder:text-white/30"
                 />
+                <Input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="Code 2FA (si activé)"
+                  value={totp}
+                  onChange={(e) => setTotp(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleLocalLogin(); }}
+                  className="bg-white/10 border-white/15 text-white placeholder:text-white/30"
+                />
                 {error && <p className="text-xs text-red-300">{error}</p>}
                 <Button
                   variant="outline"
@@ -124,7 +134,7 @@ export default function SignInPage() {
           </div>
         </div>
 
-        <p className="text-xs text-white/20">OneRing Admin v1.21.2</p>
+        <p className="text-xs text-white/20">OneRing Admin v1.22.0</p>
       </div>
     </div>
   );

@@ -211,7 +211,7 @@ export default function AuditPage() {
     return (
       <div>
         <h2 className="text-2xl font-bold mb-4">Historique des modifications</h2>
-        <div className="rounded-md border bg-red-50 border-red-200 p-4 text-red-700 text-sm">
+        <div className="rounded-md border bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 p-4 text-red-700 dark:text-red-300 text-sm">
           Erreur : {(error as Error).message}
         </div>
       </div>
@@ -259,7 +259,7 @@ export default function AuditPage() {
                 ))
               : sorted.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell className="text-sm text-gray-500 whitespace-nowrap">
+                    <TableCell className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       {format(new Date(log.createdAt), "dd MMM yyyy HH:mm", { locale: fr })}
                     </TableCell>
                     <TableCell className="text-sm">{log.userUpn}</TableCell>
@@ -268,7 +268,7 @@ export default function AuditPage() {
                         {actionLabels[log.action]?.label ?? log.action}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-gray-700">
+                    <TableCell className="text-sm text-gray-700 dark:text-gray-300">
                       {buildDescription(log)}
                     </TableCell>
                     <TableCell className="text-right">

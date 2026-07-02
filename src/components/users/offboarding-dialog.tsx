@@ -77,7 +77,7 @@ export function OffboardingDialog({ user, open, onClose }: Props) {
           <DialogTitle>Offboarder {user.displayName}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 min-w-0">
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+          <div className="rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-3 text-xs text-amber-700 dark:text-amber-300">
             Cette opération est <span className="font-medium">irréversible en bloc</span>. Elle va :
             <ul className="list-disc list-inside mt-1.5 space-y-0.5">
               <li>retirer <span className="font-medium">{licenseCount}</span> licence(s)</li>

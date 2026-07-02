@@ -12,7 +12,7 @@ import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent,
   DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Loader } from "@/components/ui/loader";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Columns, Phone, UserPlus } from "lucide-react";
@@ -231,7 +231,7 @@ export default function UsersPage() {
     return (
       <div>
         <h2 className="text-2xl font-bold mb-4">Utilisateurs</h2>
-        <div className="rounded-md border bg-red-50 border-red-200 p-4 text-red-700 text-sm">
+        <div className="rounded-md border bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 p-4 text-red-700 dark:text-red-300 text-sm">
           Erreur : {(error as Error).message}
         </div>
       </div>
@@ -369,13 +369,13 @@ export default function UsersPage() {
           </TableHeader>
           <TableBody>
             {isLoading
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: visibleColumns.size }).map((_, j) => (
-                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                    ))}
+              ? (
+                  <TableRow>
+                    <TableCell colSpan={visibleColumns.size + 1}>
+                      <div className="py-10"><Loader label="Chargement des utilisateurs…" /></div>
+                    </TableCell>
                   </TableRow>
-                ))
+                )
               : sorted.map((user) => {
                   const accountType = detectAccountType(
                     user,
@@ -469,7 +469,7 @@ export default function UsersPage() {
             <DialogTitle>Offboarder {selectedIds.size} compte(s)</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 min-w-0">
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+            <div className="rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-3 text-xs text-amber-700 dark:text-amber-300">
               Pour chaque compte : désactivation, retrait de toutes les licences et de toutes les
               appartenances aux groupes. Opération journalisée, non réversible en bloc.
             </div>

@@ -75,7 +75,7 @@ export default function GroupTreePage() {
     return (
       <div>
         <h2 className="text-2xl font-bold mb-4">Arborescence des groupes</h2>
-        <div className="rounded-md border bg-red-50 border-red-200 p-4 text-red-700 text-sm">
+        <div className="rounded-md border bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 p-4 text-red-700 dark:text-red-300 text-sm">
           Erreur : {(error as Error).message}
         </div>
       </div>

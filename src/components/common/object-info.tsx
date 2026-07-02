@@ -33,7 +33,7 @@ export function ObjectInfo({ id, type, createdDateTime, onPremisesSyncEnabled, o
       {created && <span>Créé le {created}</span>}
       {creator?.by && <span>par {creator.by}</span>}
       {onPremisesSyncEnabled === true && (
-        <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700">
+        <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 dark:text-amber-300">
           Synchronisé AD
         </Badge>
       )}

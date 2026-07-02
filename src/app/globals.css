@@ -157,13 +157,25 @@
 
 /* ─── Impression (export PDF) ───────────────────────────────────── */
 @media print {
+  /* Libère la hauteur d'écran : sans cela le contenu est tronqué à une page */
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+  }
   aside,
   .no-print {
     display: none !important;
   }
   main {
     overflow: visible !important;
+    height: auto !important;
     padding: 0 !important;
+  }
+  /* Conserve les fonds/couleurs des cartes et badges dans le PDF */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 

@@ -55,7 +55,7 @@ export default function InactiveUsersPage() {
     return (
       <div>
         <h2 className="text-2xl font-bold mb-4">Utilisateurs inactifs</h2>
-        <div className="rounded-md border bg-red-50 border-red-200 p-4 text-red-700 text-sm">
+        <div className="rounded-md border bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 p-4 text-red-700 dark:text-red-300 text-sm">
           Erreur : {(error as Error).message}
         </div>
       </div>
@@ -75,7 +75,7 @@ export default function InactiveUsersPage() {
       </div>
 
       {data?.supported === false ? (
-        <div className="rounded-md border bg-amber-50 border-amber-200 p-4 text-amber-700 text-sm">
+        <div className="rounded-md border bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 p-4 text-amber-700 dark:text-amber-300 text-sm">
           Données de connexion indisponibles — une licence Microsoft Entra Premium (P1/P2) est requise pour <code>signInActivity</code>.
         </div>
       ) : (
@@ -117,14 +117,14 @@ export default function InactiveUsersPage() {
                           onClick={() => openUser(u.id)}
                         >
                           <TableCell className="font-medium">{u.displayName}</TableCell>
-                          <TableCell className="text-sm text-gray-500">{u.userPrincipalName}</TableCell>
+                          <TableCell className="text-sm text-gray-500 dark:text-gray-400">{u.userPrincipalName}</TableCell>
                           <TableCell className="text-sm">{u.licenseCount}</TableCell>
-                          <TableCell className="text-sm text-gray-500">
+                          <TableCell className="text-sm text-gray-500 dark:text-gray-400">
                             {u.lastSignIn
                               ? format(new Date(u.lastSignIn), "dd MMM yyyy", { locale: fr })
                               : "jamais connecté"}
                           </TableCell>
-                          <TableCell className="text-sm text-gray-500">
+                          <TableCell className="text-sm text-gray-500 dark:text-gray-400">
                             {created ? `il y a ${formatDistanceToNow(new Date(created), { locale: fr })}` : "—"}
                           </TableCell>
                         </TableRow>

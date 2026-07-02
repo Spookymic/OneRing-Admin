@@ -125,7 +125,7 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
   return (
     <>
       <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-        <SheetContent className="w-[480px] sm:max-w-[480px] overflow-y-auto">
+        <SheetContent className="w-full sm:w-[640px] sm:max-w-[640px] overflow-y-auto">
           <SheetHeader className="mb-4">
             <div className="flex items-center gap-2 flex-wrap">
               {typeInfo && <Badge variant={typeInfo.variant}>{typeInfo.label}</Badge>}
@@ -166,7 +166,7 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
           </div>
 
           {exchangeError && (
-            <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
               <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
               <span>
                 Ce groupe est géré par Exchange. Les modifications de membres doivent être effectuées
@@ -203,7 +203,7 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-red-500 hover:text-red-700 h-7 px-2 shrink-0"
+                      className="text-red-500 hover:text-red-700 dark:text-red-300 h-7 px-2 shrink-0"
                       onClick={() => removeOwner.mutate(o.id)}
                       disabled={removeOwner.isPending}
                     >
@@ -246,7 +246,7 @@ export function GroupMembersSheet({ group, open, onClose }: Props) {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-red-500 hover:text-red-700 h-7 px-2 shrink-0"
+                      className="text-red-500 hover:text-red-700 dark:text-red-300 h-7 px-2 shrink-0"
                       onClick={() => removeMember.mutate(m.id)}
                       disabled={removeMember.isPending}
                     >

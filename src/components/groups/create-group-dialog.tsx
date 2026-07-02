@@ -102,7 +102,7 @@ export function CreateGroupDialog({ open, onClose }: Props) {
                 <SelectItem value="distribution">Distribution</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-gray-500">{groupTypeDescriptions[form.groupType]}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{groupTypeDescriptions[form.groupType]}</p>
           </div>
           <div className="space-y-1">
             <Label>Alias mail *</Label>

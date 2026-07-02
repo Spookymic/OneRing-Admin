@@ -3,6 +3,7 @@ import AzureADProvider from "next-auth/providers/azure-ad";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { verifyTotp } from "@/lib/totp";
 
 /**
  * Template IDs des rôles Azure AD acceptés pour accéder à l'application.
@@ -42,6 +43,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         username: { label: "Identifiant", type: "text" },
         password: { label: "Mot de passe", type: "password" },
+        totp: { label: "Code 2FA", type: "text" },
       },
       async authorize(creds) {
         if (!creds?.username || !creds?.password) return null;
@@ -49,7 +51,12 @@ export const authOptions: NextAuthOptions = {
         if (!admin) return null;
         // Verrouillage anti-brute-force
         if (admin.lockedUntil && admin.lockedUntil > new Date()) return null;
-        const ok = await bcrypt.compare(creds.password, admin.passwordHash);
+        const passwordOk = await bcrypt.compare(creds.password, admin.passwordHash);
+        // Si la 2FA est active, le code TOTP doit également être valide
+        const totpOk = admin.totpEnabled
+          ? verifyTotp(creds.totp ?? "", admin.totpSecret ?? "")
+          : true;
+        const ok = passwordOk && totpOk;
         if (!ok) {
           const failed = admin.failedAttempts + 1;
           await prisma.localAdmin.update({

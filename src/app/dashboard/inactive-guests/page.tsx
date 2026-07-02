@@ -51,7 +51,7 @@ export default function InactiveGuestsPage() {
     return (
       <div>
         <h2 className="text-2xl font-bold mb-4">Invités inactifs</h2>
-        <div className="rounded-md border bg-red-50 border-red-200 p-4 text-red-700 text-sm">
+        <div className="rounded-md border bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 p-4 text-red-700 dark:text-red-300 text-sm">
           Erreur : {(error as Error).message}
         </div>
       </div>
@@ -71,7 +71,7 @@ export default function InactiveGuestsPage() {
       </div>
 
       {data?.supported === false ? (
-        <div className="rounded-md border bg-amber-50 border-amber-200 p-4 text-amber-700 text-sm">
+        <div className="rounded-md border bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 p-4 text-amber-700 dark:text-amber-300 text-sm">
           Données de connexion indisponibles — une licence Microsoft Entra Premium (P1/P2) est requise pour <code>signInActivity</code>.
         </div>
       ) : (
