@@ -13,4 +13,14 @@
 	reverse_proxy app:3000
 
 	encode gzip
+
+	# HSTS — force HTTPS côté navigateur.
+	# ⚠️ NE PAS activer avec `tls internal` (certificat auto-signé) : HSTS rend
+	# l'avertissement de certificat NON contournable et bloquerait l'accès.
+	# À décommenter uniquement avec un certificat publiquement reconnu (DNS-01,
+	# voir docs/Deploiement-domaine.md).
+	# header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	# Masque la bannière serveur.
+	header -Server
 }

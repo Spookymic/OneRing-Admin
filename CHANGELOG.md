@@ -2,6 +2,15 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.22.4] — 2026-07-02
+
+### Sécurité v1.22.4 (findings d'audit Élevés)
+
+- **En-têtes de sécurité (E2)** : `next.config.ts` ajoute sur toutes les réponses `X-Frame-Options: DENY` + CSP `frame-ancestors 'none'` (anti-clickjacking), `X-Content-Type-Options: nosniff`, `Referrer-Policy` et `Permissions-Policy`. HSTS ajouté en commentaire dans le `Caddyfile` (à n'activer qu'avec un certificat publiquement reconnu — inopérant/bloquant avec `tls internal`).
+- **Rotation des secrets (E1)** : nouveau `docs/Rotation-secrets.md` (procédure par secret + impacts), `.env.example` durci (plus de `changeme`). La rotation des secrets réels reste une opération manuelle côté exploitant.
+
+---
+
 ## [1.22.3] — 2026-07-02
 
 ### Correctif critique v1.22.3
