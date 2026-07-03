@@ -12,6 +12,7 @@ import { fr } from "date-fns/locale";
 import { useCallback } from "react";
 import { Download, RotateCcw } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { csvCell } from "@/lib/csv";
 import { useSort } from "@/lib/use-sort";
 import { SortableHead } from "@/components/ui/sortable-head";
 import { useAdminSettings } from "@/lib/admin-settings";
@@ -142,12 +143,11 @@ type AuditSortCol = "createdAt" | "userUpn" | "action";
 function exportAuditCSV(logs: any[]) {
   const header = "Date,Administrateur,Action,Détail";
   const rows = logs.map((log) => {
-    const escape = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     return [
-      escape(format(new Date(log.createdAt), "dd/MM/yyyy HH:mm", { locale: fr })),
-      escape(log.userUpn ?? ""),
-      escape(actionLabels[log.action]?.label ?? log.action ?? ""),
-      escape(buildDescription(log)),
+      csvCell(format(new Date(log.createdAt), "dd/MM/yyyy HH:mm", { locale: fr })),
+      csvCell(log.userUpn ?? ""),
+      csvCell(actionLabels[log.action]?.label ?? log.action ?? ""),
+      csvCell(buildDescription(log)),
     ].join(",");
   });
   const csv = [header, ...rows].join("\n");

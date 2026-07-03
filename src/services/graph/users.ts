@@ -1,4 +1,4 @@
-import { graphFetch, graphFetchAll } from "@/lib/graph";
+import { graphFetch, graphFetchAll, escapeODataString } from "@/lib/graph";
 
 export interface M365User {
   id: string;
@@ -100,7 +100,7 @@ export async function listUserSignInLogs(
   userId: string
 ): Promise<SignInLog[]> {
   const params = new URLSearchParams({
-    $filter: `userId eq '${userId}'`,
+    $filter: `userId eq '${escapeODataString(userId)}'`,
     $top: "50",
     $orderby: "createdDateTime desc",
     $select: "id,createdDateTime,appDisplayName,ipAddress,status,location,clientAppUsed",

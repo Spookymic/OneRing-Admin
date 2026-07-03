@@ -25,6 +25,7 @@ import type { SubscribedSku } from "@/services/graph/licenses";
 import type { DirectoryRole } from "@/services/graph/roles";
 import { getSkuFriendlyName } from "@/lib/license-names";
 import { apiFetch } from "@/lib/api";
+import { csvCell } from "@/lib/csv";
 import { useAdminSettings } from "@/lib/admin-settings";
 import { OffboardingDialog } from "@/components/users/offboarding-dialog";
 import { ObjectInfo } from "@/components/common/object-info";
@@ -618,14 +619,13 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                       const rows = signInLogs.map((log) => {
                         const success = log.status.errorCode === 0 ? "Succès" : "Échec";
                         const location = [log.location?.city, log.location?.countryOrRegion].filter(Boolean).join(" - ") || "";
-                        const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
                         return [
-                          escape(new Date(log.createdDateTime).toLocaleString("fr-FR")),
-                          escape(log.appDisplayName || ""),
-                          escape(success),
-                          escape(log.ipAddress || ""),
-                          escape(location),
-                          escape(log.clientAppUsed || ""),
+                          csvCell(new Date(log.createdDateTime).toLocaleString("fr-FR")),
+                          csvCell(log.appDisplayName || ""),
+                          csvCell(success),
+                          csvCell(log.ipAddress || ""),
+                          csvCell(location),
+                          csvCell(log.clientAppUsed || ""),
                         ].join(",");
                       });
                       const csv = [header, ...rows].join("\n");

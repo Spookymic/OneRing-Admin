@@ -1,8 +1,14 @@
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { setTeamsStatusMessage } from "@/services/graph/users";
 import { logAudit } from "@/services/audit";
 import { NextResponse } from "next/server";
+
+const teamsSchema = z.object({
+  message: z.string().max(280),
+  targetName: z.string().max(256).optional(),
+});
 
 export async function POST(
   req: Request,
@@ -14,23 +20,23 @@ export async function POST(
   }
 
   const { id } = await params;
-  const body = await req.json();
-
-  if (typeof body.message !== "string") {
-    return NextResponse.json({ error: "message (string) requis" }, { status: 400 });
+  const parsed = teamsSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "message (≤ 280 caractères) requis" }, { status: 400 });
   }
+  const { message, targetName } = parsed.data;
 
   try {
-    await setTeamsStatusMessage(session.accessToken, id, body.message);
+    await setTeamsStatusMessage(session.accessToken, id, message);
 
     await logAudit({
       userId: session.user?.email ?? "unknown",
       userUpn: session.user?.email ?? "unknown",
       action: "TEAMS_STATUS_UPDATE",
       targetId: id,
-      targetName: body.targetName ?? id,
+      targetName: targetName ?? id,
       targetType: "user",
-      payloadAfter: { message: body.message },
+      payloadAfter: { message },
     });
 
     return NextResponse.json({ ok: true });

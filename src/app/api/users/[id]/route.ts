@@ -1,8 +1,11 @@
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { updateUserEnabled, getUser } from "@/services/graph/users";
 import { logAudit } from "@/services/audit";
 import { NextResponse } from "next/server";
+
+const patchSchema = z.object({ accountEnabled: z.boolean() });
 
 export async function PATCH(
   req: Request,
@@ -14,25 +17,25 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const body = await req.json();
-
-  if (typeof body.accountEnabled !== "boolean") {
+  const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) {
     return NextResponse.json({ error: "accountEnabled (boolean) requis" }, { status: 400 });
   }
+  const { accountEnabled } = parsed.data;
 
   try {
     const user = await getUser(session.accessToken, id);
-    await updateUserEnabled(session.accessToken, id, body.accountEnabled);
+    await updateUserEnabled(session.accessToken, id, accountEnabled);
 
     await logAudit({
       userId: session.user?.email ?? "unknown",
       userUpn: session.user?.email ?? "unknown",
-      action: body.accountEnabled ? "ACCOUNT_ENABLE" : "ACCOUNT_DISABLE",
+      action: accountEnabled ? "ACCOUNT_ENABLE" : "ACCOUNT_DISABLE",
       targetId: id,
       targetName: user.displayName,
       targetType: "user",
-      payloadBefore: { accountEnabled: !body.accountEnabled },
-      payloadAfter: { accountEnabled: body.accountEnabled },
+      payloadBefore: { accountEnabled: !accountEnabled },
+      payloadAfter: { accountEnabled },
     });
 
     return NextResponse.json({ ok: true });

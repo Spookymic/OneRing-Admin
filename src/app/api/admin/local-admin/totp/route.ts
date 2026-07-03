@@ -26,7 +26,8 @@ export async function GET() {
 }
 
 const schema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("setup") }),
+  // code requis uniquement pour re-provisionner une 2FA déjà active (voir ci-dessous)
+  z.object({ action: z.literal("setup"), code: z.string().min(6).max(8).optional() }),
   z.object({ action: z.literal("enable"), code: z.string().min(6).max(8) }),
   z.object({ action: z.literal("disable"), code: z.string().min(6).max(8) }),
 ]);
@@ -43,6 +44,27 @@ export async function POST(req: NextRequest) {
   try {
     // 1) Génère un secret provisoire (non activé tant que non vérifié) + QR code
     if (parsed.data.action === "setup") {
+      // Si la 2FA est DÉJÀ active, re-provisionner la désactive (totpEnabled repasse à false) :
+      // on exige donc un code courant valide pour prouver la possession du facteur, sinon une
+      // session volée pourrait neutraliser la 2FA silencieusement.
+      if (admin.totpEnabled) {
+        if (!verifyTotp(parsed.data.code ?? "", admin.totpSecret ?? "")) {
+          return NextResponse.json(
+            { error: "La 2FA est déjà active : saisissez un code courant valide pour la reconfigurer." },
+            { status: 400 }
+          );
+        }
+        await logAudit({
+          userId: admin.username,
+          userUpn: admin.username,
+          action: "LOCAL_ADMIN_SET",
+          targetId: admin.username,
+          targetName: admin.username,
+          targetType: "LocalAdmin",
+          payloadBefore: { totpEnabled: true },
+          payloadAfter: { totpEnabled: false, reason: "reconfiguration 2FA" },
+        });
+      }
       const secret = generateTotpSecret();
       await prisma.localAdmin.update({
         where: { id: admin.id },

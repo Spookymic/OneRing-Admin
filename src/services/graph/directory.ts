@@ -1,4 +1,4 @@
-import { graphFetch } from "@/lib/graph";
+import { graphFetch, escapeODataString } from "@/lib/graph";
 
 export interface CreatorInfo {
   by: string | null; // UPN ou nom de l'app à l'origine de la création
@@ -18,7 +18,7 @@ export async function getObjectCreator(
 ): Promise<CreatorInfo> {
   const activity = type === "user" ? "Add user" : "Add group";
   const params = new URLSearchParams({
-    $filter: `targetResources/any(t:t/id eq '${id}') and activityDisplayName eq '${activity}'`,
+    $filter: `targetResources/any(t:t/id eq '${escapeODataString(id)}') and activityDisplayName eq '${activity}'`,
     $top: "1",
   });
   try {

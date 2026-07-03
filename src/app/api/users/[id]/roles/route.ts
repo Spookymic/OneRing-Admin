@@ -1,9 +1,16 @@
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { listUserRoles, assignRole, removeRole } from "@/services/graph/roles";
 import { getUser } from "@/services/graph/users";
 import { logAudit } from "@/services/audit";
 import { NextResponse } from "next/server";
+
+const roleSchema = z.object({
+  roleId: z.string().uuid(),
+  roleName: z.string().min(1).max(256),
+  action: z.enum(["assign", "remove"]),
+});
 
 export async function GET(
   _req: Request,
@@ -34,29 +41,29 @@ export async function POST(
   }
 
   const { id } = await params;
-  const body = await req.json();
-
-  if (!body.roleId || !body.roleName || !["assign", "remove"].includes(body.action)) {
-    return NextResponse.json({ error: "roleId, roleName et action (assign|remove) requis" }, { status: 400 });
+  const parsed = roleSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "roleId (UUID), roleName et action (assign|remove) requis" }, { status: 400 });
   }
+  const { roleId, roleName, action } = parsed.data;
 
   try {
     const user = await getUser(session.accessToken, id);
 
-    if (body.action === "assign") {
-      await assignRole(session.accessToken, body.roleId, id);
+    if (action === "assign") {
+      await assignRole(session.accessToken, roleId, id);
     } else {
-      await removeRole(session.accessToken, body.roleId, id);
+      await removeRole(session.accessToken, roleId, id);
     }
 
     await logAudit({
       userId: session.user?.email ?? "unknown",
       userUpn: session.user?.email ?? "unknown",
-      action: body.action === "assign" ? "ROLE_ASSIGN" : "ROLE_REMOVE",
+      action: action === "assign" ? "ROLE_ASSIGN" : "ROLE_REMOVE",
       targetId: id,
       targetName: user.displayName,
       targetType: "user",
-      payloadAfter: { roleName: body.roleName, roleId: body.roleId },
+      payloadAfter: { roleName, roleId },
     });
 
     return NextResponse.json({ ok: true });

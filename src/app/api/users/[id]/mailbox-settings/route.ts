@@ -1,8 +1,21 @@
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { getMailboxSettings, updateMailboxSettings } from "@/services/graph/users";
 import { logAudit } from "@/services/audit";
 import { NextResponse } from "next/server";
+
+const oooSchema = z.object({
+  targetName: z.string().max(256).optional(),
+  automaticRepliesSetting: z.object({
+    status: z.enum(["disabled", "alwaysEnabled", "scheduledStartAndEnd"]),
+    internalReplyMessage: z.string().max(10000).optional(),
+    externalReplyMessage: z.string().max(10000).optional(),
+    externalAudienceScope: z.enum(["none", "contactsOnly", "all"]).optional(),
+    scheduledStartDateTime: z.object({ dateTime: z.string(), timeZone: z.string() }).optional(),
+    scheduledEndDateTime: z.object({ dateTime: z.string(), timeZone: z.string() }).optional(),
+  }),
+});
 
 export async function GET(
   _req: Request,
@@ -38,21 +51,23 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const body = await req.json();
+  const parsed = oooSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "automaticRepliesSetting invalide" }, { status: 400 });
+  }
+  const { automaticRepliesSetting, targetName } = parsed.data;
 
   try {
-    await updateMailboxSettings(session.accessToken, id, {
-      automaticRepliesSetting: body.automaticRepliesSetting,
-    });
+    await updateMailboxSettings(session.accessToken, id, { automaticRepliesSetting });
 
     await logAudit({
       userId: session.user?.email ?? "unknown",
       userUpn: session.user?.email ?? "unknown",
       action: "OOO_UPDATE",
       targetId: id,
-      targetName: body.targetName ?? id,
+      targetName: targetName ?? id,
       targetType: "user",
-      payloadAfter: { status: body.automaticRepliesSetting?.status },
+      payloadAfter: { status: automaticRepliesSetting.status },
     });
 
     return NextResponse.json({ ok: true });

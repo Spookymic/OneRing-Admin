@@ -2,6 +2,14 @@ const GRAPH_API = "https://graph.microsoft.com/v1.0";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Échappe une valeur destinée à un littéral de chaîne OData (`... eq '<valeur>'`).
+ * Double les apostrophes pour empêcher l'injection de clause `$filter`.
+ */
+export function escapeODataString(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
 export async function graphFetch<T = unknown>(
   accessToken: string,
   path: string,

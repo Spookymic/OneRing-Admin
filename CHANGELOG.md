@@ -2,6 +2,18 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.22.5] — 2026-07-02
+
+### Sécurité v1.22.5 (findings d'audit Moyens — lot « quick wins »)
+
+- **M1 — 2FA `setup` durci** : re-provisionner une 2FA déjà active exige désormais un code TOTP courant valide (empêche une session volée de la neutraliser silencieusement) et l'action est journalisée.
+- **M6 — Injection de formule CSV** : nouveau helper `src/lib/csv.ts` (`csvCell`) qui neutralise les préfixes `= + - @` (tab/CR) ; appliqué aux exports Historique et Connexions.
+- **M3 — Injection OData** : nouveau helper `escapeODataString` (doublage des apostrophes) appliqué aux `$filter` de `listUserSignInLogs` et `getObjectCreator`.
+- **M4 — Validation Zod** : schémas ajoutés sur les routes `users/[id]/roles` (roleId en UUID), `users/[id]/mailbox-settings`, `users/[id]/teams-presence` (≤ 280) et `users/[id]` PATCH.
+- **M8 — PostgreSQL** : suppression du fallback `changeme` dans `docker-compose.yml` (échec explicite si `POSTGRES_PASSWORD` non défini).
+
+---
+
 ## [1.22.4] — 2026-07-02
 
 ### Sécurité v1.22.4 (findings d'audit Élevés)
