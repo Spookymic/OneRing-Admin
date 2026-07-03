@@ -6,38 +6,44 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 
 ### Tableau de bord
 
-- Vue d'ensemble du tenant : KPIs utilisateurs, groupes, licences
-- Répartition des types de comptes (utilisateurs, boîtes partagées, salles, équipements, invités…)
-- Statut des comptes (actifs / désactivés)
-- Abonnements Microsoft 365 avec jauge de consommation
-- Dernières modifications de l'historique d'audit
+- KPIs tenant (utilisateurs, groupes, licences), répartition par type de compte, actifs / désactivés
+- Abonnements Microsoft 365 avec jauge de consommation, audit récent
+- **Détection d'anomalies** : comptes désactivés licenciés, invités licenciés, boîtes partagées/ressources licenciées, désactivés/ressources encore membres de groupes, **groupes à propriétaire désactivé**, groupes sans propriétaire, groupes vides, licences en conflit
+- **Utilisateurs & invités inactifs** (nécessite Entra Premium), pages dédiées
+- Export CSV des anomalies, export PDF du tableau de bord
 
 ### Utilisateurs
 
-- Liste complète avec tous les types de comptes (membres, invités, boîtes partagées, salles, équipements, comptes service)
-- Détection automatique du type de compte (heuristique sans appel extra)
-- Filtres : type de compte, statut, département, recherche libre
-- Clic sur un compte → panneau latéral de gestion des groupes (ajouter / retirer, choix du rôle)
-- Réinitialisation de mot de passe avec confirmation
+- Liste de tous les types de comptes, détection automatique du type, filtres (type, statut, département), tri, colonnes persistées
+- Panneau latéral : groupes, licences, **connexions** (journal + export CSV), **rôles Azure AD**, **absence** (réponse automatique + statut Teams), **statut MFA / méthodes d'authentification**
+- Réinitialisation de mot de passe, activation / désactivation, **offboarding**, actions groupées
 
-### Groupes
+### Groupes & arborescence
 
-- Liste par type : Microsoft 365, distribution, sécurité
-- Création de groupe (sécurité / M365 / distribution)
-- Détail : liste unifiée owners + membres avec colonne Rôle
-- Ajout de membre avec choix du rôle (Membre / Owner)
-- Suppression de membre ou d'owner
+- Liste par type (Microsoft 365, distribution, sécurité), création, gestion membres/owners
+- **Arborescence** des groupes (imbrication) avec expansion à la demande
+
+### Boîtes partagées
+
+- Liste, création et gestion des délégations (via le pont Exchange)
 
 ### Licences
 
-- Assignation et retrait de licences par SKU
-- Noms conviviaux des licences (Microsoft 365 Business Premium, Exchange Online Plan 1…)
-- Vue par utilisateur avec badges de licence
+- Assignation / retrait par SKU, noms conviviaux, vue par utilisateur, ancienneté du compte
 
-### Historique
+### Stockage
 
-- Audit log complet : Qui, Quand, Quoi, Cible
-- Toutes les actions tracées : membres, owners, licences, réinitialisations MDP, créations de groupe
+- Espace **OneDrive** et **Exchange** (utilisé / quota — quota Exchange réel via le pont) et **SharePoint** (part du total consommé, type de site, noms résolus via `getAllSites`)
+
+### Sécurité & administration
+
+- **Secrets & certificats** d'applications proches de l'expiration
+- **Administration** : paramètres d'interface (masquer des actions sensibles), mots-clés de détection de type, configuration SSO, **comptes administrateur locaux (accès de secours) avec 2FA TOTP**, santé du pont Exchange, export/import des paramètres
+- **Historique** d'audit complet (Qui/Quand/Quoi/Cible), rétention configurable, rollback, export CSV
+
+### Confort & accessibilité
+
+- Mode clair / sombre + couleurs d'accent, 6 modes d'accessibilité, interface responsive, déconnexion automatique après inactivité
 
 **Hors périmètre :** création et suppression de comptes utilisateurs.
 
@@ -83,7 +89,7 @@ Dans le portail Azure → App registrations → New registration :
    - `Reports.Read.All` — page **Stockage** (espace OneDrive / Exchange / SharePoint). Rapports avec ~1-2 j de latence. Pour afficher les noms réels plutôt que des identifiants masqués, désactiver l'anonymisation : centre d'admin Microsoft 365 → Paramètres → Rapports → décocher « Afficher les noms masqués ».
    - `Sites.Read.All` (**type Application**, pas Délégué) — page Stockage / SharePoint : résout les vrais noms et URLs des sites via `/sites/getAllSites` (réservé à l'app-only). Utilise le flux client-credentials de l'app registration (CLIENT_ID/SECRET). Best-effort : sans cette permission applicative consentie, le nom dérivé (URL ou groupe de propriétaires) est affiché à la place.
 
-   > **Note** : les permissions déléguées ne sont actives que si elles figurent **à la fois** dans le consentement Azure **et** dans la chaîne `scope` demandée au login (`src/lib/auth.ts`). Toutes celles ci-dessus y sont déjà déclarées ; il suffit d'accorder le consentement admin dans Azure puis de se reconnecter (le jeton est régénéré au login).
+   > **Note** : les permissions **déléguées** ne sont actives que si elles figurent **à la fois** dans le consentement Azure **et** dans la chaîne `scope` demandée au login (`src/lib/auth.ts`) — toutes celles listées ci-dessus (requises + optionnelles déléguées) y sont déjà déclarées ; il suffit d'accorder le consentement admin puis de se reconnecter (jeton régénéré au login). `Sites.Read.All` fait exception : c'est une permission **Application** (voir ci-dessous), obtenue en app-only côté serveur, sans rapport avec le scope de login.
    >
    > **Message de statut Teams** : Microsoft Graph ne fournit **pas** de permission déléguée permettant de définir la présence/le statut d'un *autre* utilisateur (`Presence.ReadWrite.All` n'existe pas ; `Presence.ReadWrite` ne couvre que le compte connecté). Cette fonctionnalité reste donc inopérante pour un tiers et n'est pas incluse dans les scopes demandés.
 
