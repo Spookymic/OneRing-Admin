@@ -38,7 +38,7 @@ export const authOptions: NextAuthOptions = {
       authorization: {
         params: {
           scope:
-            "openid profile email offline_access User.ReadWrite.All Group.ReadWrite.All GroupMember.ReadWrite.All Directory.ReadWrite.All Organization.Read.All MailboxSettings.ReadWrite UserAuthenticationMethod.Read.All AuditLog.Read.All Application.Read.All Reports.Read.All Sites.Read.All",
+            "openid profile email offline_access User.ReadWrite.All Group.ReadWrite.All GroupMember.ReadWrite.All Directory.ReadWrite.All Organization.Read.All MailboxSettings.ReadWrite UserAuthenticationMethod.Read.All AuditLog.Read.All Application.Read.All Reports.Read.All",
         },
       },
     }),

@@ -2,6 +2,18 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.23.1] — 2026-07-02
+
+### Améliorations v1.23.1
+
+- **Stockage / SharePoint — noms de sites fiables** : résolution des vrais noms et URLs via `/sites/getAllSites` en **app-only** (client-credentials sur l'app registration existante). Le rapport Graph renvoyant une URL vide chez certains tenants et `/sites/getAllSites` n'étant pas accessible en délégué (403), c'est la seule voie fiable — elle donne exactement les noms du portail d'administration SharePoint (y compris sites renommés et sites autonomes).
+  - Nouvelle permission requise : **Application** `Sites.Read.All` (+ consentement admin). Best-effort : sans elle, on retombe sur le nom dérivé (URL ou groupe de propriétaires).
+  - Retrait du scope **délégué** `Sites.Read.All` (devenu inutile).
+  - Badge de type de site clarifié : « Groupe M365 » (au lieu de « Teams / Groupe »), le rapport ne permettant pas de savoir si un Team existe réellement.
+- Nouveau helper `src/lib/graph-app.ts` (jeton Graph app-only, mis en cache).
+
+---
+
 ## [1.23.0] — 2026-07-02
 
 ### Nouvelles fonctionnalités v1.23.0

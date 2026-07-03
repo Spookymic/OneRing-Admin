@@ -1,4 +1,5 @@
-import { graphFetchCsv, graphBatch } from "@/lib/graph";
+import { graphFetchCsv, graphFetchAll } from "@/lib/graph";
+import { getAppOnlyGraphToken } from "@/lib/graph-app";
 
 /**
  * Rapports d'utilisation du stockage Microsoft 365 (Graph usage reports).
@@ -135,57 +136,54 @@ export function getMailboxUsage(accessToken: string): Promise<StorageItem[]> {
 function sharePointKind(template: string | undefined): string {
   const t = (template || "").toLowerCase();
   if (t.includes("teamchannel")) return "Canal Teams";
-  if (t.includes("group")) return "Teams / Groupe";
+  if (t.includes("group")) return "Groupe M365";
   if (t.includes("sitepagepublishing") || t.includes("communication")) return "Communication";
   return "SharePoint seul";
 }
 
+/**
+ * Map (GUID de collection de site → nom + URL réels) via /sites/getAllSites en APP-ONLY.
+ * getAllSites n'accepte que les permissions applicatives (403 en délégué) → on utilise un
+ * jeton client-credentials. Source unique et fiable (comme le portail d'admin SharePoint).
+ * Best-effort : nécessite l'application permission Sites.Read.All consentie ; sinon map vide.
+ */
+async function fetchSiteNameMap(): Promise<Map<string, { name: string; url: string }>> {
+  const map = new Map<string, { name: string; url: string }>();
+  try {
+    const appToken = await getAppOnlyGraphToken();
+    const sites = await graphFetchAll<{ id?: string; displayName?: string; name?: string; webUrl?: string }>(
+      appToken,
+      "https://graph.microsoft.com/beta/sites/getAllSites?$select=id,displayName,name,webUrl&$top=200"
+    );
+    for (const s of sites) {
+      // id composite = "hostname,{collectionGuid},{webGuid}" → on indexe par le GUID de collection.
+      const guid = (s.id ?? "").split(",")[1];
+      if (guid) map.set(guid.toLowerCase(), { name: s.displayName || s.name || "", url: s.webUrl || "" });
+    }
+  } catch (e: any) {
+    console.error("[reports] getAllSites (app-only) indisponible:", e?.message);
+  }
+  return map;
+}
+
 /** SharePoint : espace par site. */
 export async function getSharePointUsage(accessToken: string): Promise<StorageItem[]> {
-  const csv = await graphFetchCsv(accessToken, `/reports/getSharePointSiteUsageDetail(period='D7')`);
+  const [csv, siteNames] = await Promise.all([
+    graphFetchCsv(accessToken, `/reports/getSharePointSiteUsageDetail(period='D7')`),
+    fetchSiteNameMap(),
+  ]);
   const rows = parseCsv(csv).filter((r) => r["Is Deleted"] !== "True");
 
-  type Row = StorageItem & { siteId: string; needsResolve: boolean };
-  const items: Row[] = rows.map((r) => {
-    const urlName = siteNameFromUrl(r["Site URL"]);
-    const owner = (r["Owner Display Name"] || "").trim();
-    const stripped = siteNameFromOwner(r["Owner Display Name"]);
-    // Nom du site : URL > groupe de propriétaires (« Propriétaires de <Site> ») > propriétaire brut.
-    // `needsResolve` = aucun nom fiable trouvé (URL vide + propriétaire = personne) → à résoudre via Site Id.
+  return rows.map((r) => {
+    const resolved = siteNames.get((r["Site Id"] || "").toLowerCase());
+    // Vrai nom/URL (getAllSites) en priorité ; sinon dérivé de l'URL ou du groupe de propriétaires.
+    const derived = siteNameFromUrl(r["Site URL"]) || siteNameFromOwner(r["Owner Display Name"]) || r["Owner Display Name"] || "—";
     return {
-      name: urlName || stripped || owner || "—",
-      detail: r["Site URL"] || r["Owner Display Name"] || null,
+      name: resolved?.name || derived,
+      detail: resolved?.url || r["Site URL"] || r["Owner Display Name"] || null,
       used: toNum(r["Storage Used (Byte)"]),
       allocated: toNum(r["Storage Allocated (Byte)"]),
       tag: sharePointKind(r["Root Web Template"]),
-      siteId: r["Site Id"] || "",
-      needsResolve: !urlName && stripped === owner,
     };
   });
-
-  // Résolution best-effort des noms de sites autonomes via Graph /sites/{siteId} (lot $batch).
-  // Nécessite Sites.Read.All ; en son absence (403) on conserve l'affichage actuel.
-  const toResolve = items.filter((i) => i.needsResolve && i.siteId);
-  if (toResolve.length > 0) {
-    try {
-      const batch = await graphBatch<{ displayName?: string; name?: string; webUrl?: string }>(
-        accessToken,
-        toResolve.map((i) => ({ id: i.siteId, url: `/sites/${i.siteId}?$select=displayName,name,webUrl` }))
-      );
-      for (const i of toResolve) {
-        const resp = batch[i.siteId];
-        if (resp?.status === 200 && resp.body) {
-          const resolved = resp.body.displayName || resp.body.name || siteNameFromUrl(resp.body.webUrl);
-          if (resolved) {
-            i.name = resolved;
-            if (resp.body.webUrl) i.detail = resp.body.webUrl;
-          }
-        }
-      }
-    } catch {
-      // best-effort : on garde les noms dérivés
-    }
-  }
-
-  return items.map(({ siteId: _siteId, needsResolve: _needsResolve, ...rest }) => rest);
 }
