@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateTotpSecret, totpKeyUri, verifyTotp } from "@/lib/totp";
+import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { logAudit } from "@/services/audit";
 
 /**
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
       // on exige donc un code courant valide pour prouver la possession du facteur, sinon une
       // session volée pourrait neutraliser la 2FA silencieusement.
       if (admin.totpEnabled) {
-        if (!verifyTotp(parsed.data.code ?? "", admin.totpSecret ?? "")) {
+        if (!verifyTotp(parsed.data.code ?? "", decryptSecret(admin.totpSecret ?? ""))) {
           return NextResponse.json(
             { error: "La 2FA est déjà active : saisissez un code courant valide pour la reconfigurer." },
             { status: 400 }
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
       const secret = generateTotpSecret();
       await prisma.localAdmin.update({
         where: { id: admin.id },
-        data: { totpSecret: secret, totpEnabled: false },
+        data: { totpSecret: encryptSecret(secret), totpEnabled: false },
       });
       const uri = totpKeyUri(admin.username, secret);
       const qrDataUrl = await QRCode.toDataURL(uri);
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
       if (!admin.totpSecret) {
         return NextResponse.json({ error: "Aucune configuration en cours — relancez la mise en place." }, { status: 400 });
       }
-      if (!verifyTotp(parsed.data.code, admin.totpSecret)) {
+      if (!verifyTotp(parsed.data.code, decryptSecret(admin.totpSecret))) {
         return NextResponse.json({ error: "Code incorrect. Vérifiez l'heure de votre appareil." }, { status: 400 });
       }
       await prisma.localAdmin.update({
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
     if (!admin.totpEnabled || !admin.totpSecret) {
       return NextResponse.json({ error: "La 2FA n'est pas activée." }, { status: 400 });
     }
-    if (!verifyTotp(parsed.data.code, admin.totpSecret)) {
+    if (!verifyTotp(parsed.data.code, decryptSecret(admin.totpSecret))) {
       return NextResponse.json({ error: "Code incorrect." }, { status: 400 });
     }
     await prisma.localAdmin.update({

@@ -2,6 +2,16 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.22.7] — 2026-07-02
+
+### Sécurité v1.22.7 (findings d'audit Moyens M2, M5, M7)
+
+- **M2 — Rôle « Directory Readers » retiré** des rôles Azure AD autorisés : un compte en lecture seule n'ouvre plus l'accès à tout le périmètre de lecture de l'outil.
+- **M5 — `exo-bridge` en utilisateur non privilégié** : ajout d'un `USER` dédié (uid 10001) dans le Dockerfile — une RCE éventuelle n'obtient plus root alors que le conteneur monte le certificat app-only Exchange.
+- **M7 — Secret TOTP chiffré au repos** : nouveau `src/lib/crypto.ts` (AES-256-GCM), le `totpSecret` est chiffré en base (clé `TOTP_ENCRYPTION_KEY`, sinon `NEXTAUTH_SECRET`). Rétro-compatible : un secret en clair existant reste lisible et sera ré-écrit chiffré à la prochaine configuration.
+
+---
+
 ## [1.22.6] — 2026-07-02
 
 ### Sécurité v1.22.6 (findings d'audit Faibles — lot complet B1→B9)

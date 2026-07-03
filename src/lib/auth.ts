@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { verifyTotp } from "@/lib/totp";
+import { decryptSecret } from "@/lib/crypto";
 
 /**
  * Template IDs des rôles Azure AD acceptés pour accéder à l'application.
@@ -19,7 +20,8 @@ const ADMIN_ROLE_TEMPLATE_IDS = new Set([
   "729827e3-9c14-49f7-bb1b-9608f156bbb8", // Helpdesk Administrator
   "4d6ac14f-3453-41d0-bef9-a3e0c569773a", // License Administrator
   "fdd7a751-b60b-444a-984c-02652fe8fa1c", // Groups Administrator
-  "88d8e3e3-8f55-4a1e-953a-9b9898b8876b", // Directory Readers
+  // NB : « Directory Readers » (rôle lecture seule) volontairement exclu — il donnerait accès
+  // en lecture à tout le périmètre de l'outil sans intention d'administration (finding M2).
   "29232cdf-9323-42fd-ade2-1d097af3e4de", // Exchange Administrator
   "194ae4cb-b126-40b2-bd5b-6091b380977d", // Security Administrator
   "c4e39bd9-1100-46d3-8c65-fb160da0071f", // Authentication Administrator
@@ -63,7 +65,7 @@ export const authOptions: NextAuthOptions = {
         const passwordOk = await bcrypt.compare(creds.password, admin.passwordHash);
         // Si la 2FA est active, le code TOTP doit également être valide
         const totpOk = admin.totpEnabled
-          ? verifyTotp(creds.totp ?? "", admin.totpSecret ?? "")
+          ? verifyTotp(creds.totp ?? "", decryptSecret(admin.totpSecret ?? ""))
           : true;
         const ok = passwordOk && totpOk;
         if (!ok) {

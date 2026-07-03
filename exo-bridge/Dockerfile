@@ -12,6 +12,12 @@ RUN Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; \
 WORKDIR /app
 COPY server.ps1 ExoHelpers.psm1 ./
 
+# Exécution en utilisateur non privilégié (finding M5) : une RCE dans Pode/EXO n'obtient
+# pas root, alors que le conteneur monte le certificat app-only Exchange.
+RUN useradd --system --uid 10001 --create-home --home-dir /home/bridge bridge \
+    && chown -R bridge:bridge /app
+USER bridge
+
 # Aucun port publie cote hote : voir docker-compose.yml (reseau interne uniquement)
 EXPOSE 8080
 

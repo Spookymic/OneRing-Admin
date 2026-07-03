@@ -1,6 +1,6 @@
 {
   "name": "m365-administrator",
-  "version": "1.22.6",
+  "version": "1.22.7",
   "private": true,
   "scripts": {
     "dev": "next dev",
