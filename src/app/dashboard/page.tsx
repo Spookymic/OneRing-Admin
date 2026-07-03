@@ -230,6 +230,20 @@ export default function DashboardPage() {
     (g) => !dismissed.has("group-no-owner") && !dismissed.has(`group-no-owner:${g.id}`)
   );
 
+  // Groupes dont un propriétaire est un compte désactivé (vue group-centric)
+  type DisabledOwnerGroup = {
+    id: string; displayName: string; type: GroupType; mail: string | null;
+    owners: { id: string; displayName: string; userPrincipalName: string | null }[];
+  };
+  const { data: disabledOwnerGroups } = useQuery<DisabledOwnerGroup[]>({
+    queryKey: ["disabled-owners"],
+    queryFn: () => apiFetch<DisabledOwnerGroup[]>("/api/anomalies/disabled-owners"),
+    staleTime: 5 * 60 * 1000,
+  });
+  const activeDisabledOwners = (disabledOwnerGroups ?? []).filter(
+    (g) => !dismissed.has("group-disabled-owner") && !dismissed.has(`group-disabled-owner:${g.id}`)
+  );
+
   // Groupes M365/Sécurité sans aucun membre
   const { data: emptyGroups } = useQuery<{ id: string; displayName: string; type: GroupType }[]>({
     queryKey: ["empty-groups"],
@@ -643,6 +657,67 @@ export default function DashboardPage() {
                 </span>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Groupes à propriétaire désactivé */}
+      {!usersLoading && activeDisabledOwners.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            Groupes à propriétaire désactivé ({activeDisabledOwners.length})
+          </h3>
+          <div className="rounded-lg border px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300">
+            <p className="text-xs mb-2 opacity-80">
+              Un propriétaire désactivé ne peut plus gérer son groupe. Cliquez sur un groupe pour réattribuer la propriété.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {activeDisabledOwners.slice(0, 20).map((g) => (
+                <span
+                  key={g.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-card/60 pl-2.5 pr-1 py-0.5 text-xs"
+                >
+                  <span className="text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300/70 shrink-0">
+                    {GROUP_TYPE_SHORT[g.type] ?? g.type}
+                  </span>
+                  <button
+                    type="button"
+                    className="max-w-[220px] truncate hover:text-primary transition-colors"
+                    onClick={() =>
+                      setGroupSheet({
+                        id: g.id,
+                        displayName: g.displayName,
+                        type: g.type,
+                        mail: g.mail,
+                        description: null,
+                        groupTypes: [],
+                        mailEnabled: false,
+                        securityEnabled: false,
+                        membershipRule: null,
+                      })
+                    }
+                    title={`Propriétaire(s) désactivé(s) : ${g.owners.map((o) => o.displayName).join(", ")}`}
+                  >
+                    {g.displayName}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-amber-500 hover:text-amber-800 p-0.5"
+                    title="Marquer comme normal"
+                    onClick={() => dismissUser("group-disabled-owner", g.id)}
+                  >
+                    <EyeOff className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <Link
+              href="/dashboard/disabled-owners"
+              className="inline-block text-xs font-medium underline underline-offset-2 mt-2 hover:opacity-80"
+            >
+              Voir tous les groupes à propriétaire désactivé →
+            </Link>
           </div>
         </div>
       )}

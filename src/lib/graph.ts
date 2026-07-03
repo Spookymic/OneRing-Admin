@@ -57,6 +57,23 @@ export async function graphFetch<T = unknown>(
 }
 
 /**
+ * Récupère une ressource Graph renvoyée en CSV (ex. rapports d'utilisation
+ * `/reports/getX...Detail`, qui ne supportent pas `$format=application/json`).
+ * Graph répond par une redirection 302 vers une URL de téléchargement ; `fetch`
+ * la suit automatiquement (l'en-tête Authorization est retiré sur le saut cross-origin).
+ */
+export async function graphFetchCsv(accessToken: string, path: string): Promise<string> {
+  const url = path.startsWith("http") ? path : `${GRAPH_API}${path}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`[graphFetchCsv] ${res.status} ${path}`);
+    throw new Error(`[${res.status}] ${body.slice(0, 200)}`);
+  }
+  return res.text();
+}
+
+/**
  * Récupère toutes les pages d'une collection Graph en suivant `@odata.nextLink`.
  * Évite la troncature silencieuse au-delà de $top (ex. 999 utilisateurs/groupes).
  */

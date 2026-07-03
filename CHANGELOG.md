@@ -2,6 +2,24 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.23.0] — 2026-07-02
+
+### Nouvelles fonctionnalités v1.23.0
+
+- **Page Stockage** : visualisation de l'espace occupé pour OneDrive, Exchange et SharePoint (rapports d'utilisation Microsoft 365, latence ~1-2 j). Nouvelle entrée de menu « Stockage ».
+  - **OneDrive / Exchange** : barre utilisé / quota par entité + synthèse (total utilisé, quota total, nb ≥ 90 %).
+  - **Exchange** : le quota réel (ProhibitSendReceiveQuota) est récupéré via le pont Exchange (`Get-EXOMailbox` en un seul appel), car le rapport Graph renvoie souvent un quota par défaut erroné (50 Go). Dégradation propre si le pont est indisponible.
+  - **SharePoint** : part de chaque site dans l'espace total consommé (le quota 25 To/site par défaut n'est pas significatif). Badge de type de site (Teams / Groupe, Canal Teams, Communication, SharePoint seul) d'après `Root Web Template`. Nom de site dérivé de l'URL ou du groupe de propriétaires ; résolution best-effort du vrai nom des sites autonomes via `/sites/{siteId}`.
+  - Permissions requises : `Reports.Read.All` (données) et, optionnellement, `Sites.Read.All` (résolution des noms de sites autonomes). Dégradation explicite si absentes.
+- **Groupes à propriétaire désactivé** : détection group-centric des groupes dont un propriétaire est un compte désactivé. Nouvelle page dédiée `/dashboard/disabled-owners` (clic → réattribution de la propriété) + carte de synthèse sur le tableau de bord avec lien « Voir tout ».
+
+### Notes techniques v1.23.0
+
+- Scopes Graph ajoutés : `Reports.Read.All`, `Sites.Read.All` (nécessitent consentement admin + reconnexion).
+- Nouveau helper `graphFetchCsv` (les rapports d'utilisation ne sont disponibles qu'en CSV), utilitaires `formatBytes` / `usagePercent`, endpoint pont `/mailbox-quotas`.
+
+---
+
 ## [1.22.7] — 2026-07-02
 
 ### Sécurité v1.22.7 (findings d'audit Moyens M2, M5, M7)

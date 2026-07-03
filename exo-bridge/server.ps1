@@ -89,6 +89,30 @@ Start-PodeServer -Threads 1 {
         }
     }
 
+    # --- Quotas reels des boites aux lettres (ProhibitSendReceiveQuota) en UN seul appel ---
+    # Le rapport Graph renvoie souvent 50 Go (defaut obsolete) ; on lit ici la vraie valeur.
+    Add-PodeRoute -Method Get -Path '/mailbox-quotas' -ScriptBlock {
+        try {
+            Connect-ExoIfNeeded
+            $mbx = Get-EXOMailbox -ResultSize Unlimited -Properties ProhibitSendReceiveQuota |
+                Select-Object UserPrincipalName, PrimarySmtpAddress, ProhibitSendReceiveQuota
+            $quotas = foreach ($m in $mbx) {
+                $bytes = 0
+                $s = [string]$m.ProhibitSendReceiveQuota
+                # Format typique : "99 GB (106,300,440,576 bytes)" ; "Unlimited" => 0 (inconnu)
+                if ($s -notmatch 'Unlimited' -and $s -match '\(([\d,]+)\s*bytes\)') {
+                    $bytes = [long]($matches[1] -replace ',', '')
+                }
+                @{ upn = $m.UserPrincipalName; smtp = [string]$m.PrimarySmtpAddress; bytes = $bytes }
+            }
+            Write-PodeJsonResponse -Value @{ ok = $true; quotas = @($quotas) }
+        }
+        catch {
+            [Console]::Error.WriteLine("MAILBOX_QUOTAS_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
     # --- Membres d'une liste de distribution / groupe a extension messagerie ---
     # Body JSON : { groupSmtp, member, action: "add" | "remove" }
     # Convention : toujours HTTP 200 + { ok: bool, error? } (evite la page d'erreur HTML de Pode).

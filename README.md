@@ -80,6 +80,8 @@ Dans le portail Azure → App registrations → New registration :
    Optionnelles (déjà déclarées dans le scope demandé au login ; il reste à accorder le consentement admin Azure pour activer la fonctionnalité — sans elles, la fonctionnalité se désactive proprement) :
    - `AuditLog.Read.All` — journal de connexion détaillé (onglet Connexions) + « créé par » (auteur d'un objet)
    - `Application.Read.All` — alertes d'expiration des secrets/certificats d'applications
+   - `Reports.Read.All` — page **Stockage** (espace OneDrive / Exchange / SharePoint). Rapports avec ~1-2 j de latence. Pour afficher les noms réels plutôt que des identifiants masqués, désactiver l'anonymisation : centre d'admin Microsoft 365 → Paramètres → Rapports → décocher « Afficher les noms masqués ».
+   - `Sites.Read.All` — page Stockage / SharePoint : résout le vrai nom des sites autonomes (quand le rapport ne fournit pas l'URL). Best-effort : sans cette permission, le nom du propriétaire est affiché à la place.
 
    > **Note** : les permissions déléguées ne sont actives que si elles figurent **à la fois** dans le consentement Azure **et** dans la chaîne `scope` demandée au login (`src/lib/auth.ts`). Toutes celles ci-dessus y sont déjà déclarées ; il suffit d'accorder le consentement admin dans Azure puis de se reconnecter (le jeton est régénéré au login).
    >
