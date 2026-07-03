@@ -9,7 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import Link from "next/link";
+import { Plus, ShieldAlert } from "lucide-react";
 import { CreateSharedMailboxDialog } from "@/components/mailboxes/create-shared-mailbox-dialog";
 import { MailboxDelegationsSheet } from "@/components/mailboxes/mailbox-delegations-sheet";
 import { useAdminSettings } from "@/lib/admin-settings";
@@ -59,6 +60,14 @@ export default function MailboxesPage() {
         <h2 className="text-2xl font-bold">Boîtes partagées</h2>
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{filtered?.length ?? 0} / {mailboxes?.length ?? 0}</Badge>
+          <Link
+            href="/dashboard/orphan-delegations"
+            className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+            title="Détecter les délégations détenues par des comptes supprimés"
+          >
+            <ShieldAlert className="h-4 w-4" />
+            Délégations orphelines
+          </Link>
           {!settings.hideGroupCreation && (
             <Button size="sm" onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />Nouvelle boîte partagée

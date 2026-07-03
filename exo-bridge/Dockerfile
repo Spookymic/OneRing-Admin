@@ -10,7 +10,7 @@ RUN Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; \
     Install-Module -Name ExchangeOnlineManagement -MinimumVersion 3.0.0 -Scope AllUsers -Force
 
 WORKDIR /app
-COPY server.ps1 ExoHelpers.psm1 ./
+COPY server.ps1 ExoHelpers.psm1 server.psd1 ./
 
 # Exécution en utilisateur non privilégié (finding M5) : une RCE dans Pode/EXO n'obtient
 # pas root, alors que le conteneur monte le certificat app-only Exchange.

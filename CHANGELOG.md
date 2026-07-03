@@ -2,6 +2,18 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.24.0] — 2026-07-02
+
+### Nouvelle fonctionnalité v1.24.0
+
+- **Délégations orphelines** : détection des permissions de boîtes partagées (accès complet, envoyer en tant que / de la part de) détenues par un **compte supprimé** encore référencé (SID non résolu dans Exchange).
+  - **Panneau de délégations** : les SID orphelins s'affichent avec un badge « Compte supprimé » + le nom retrouvé via la corbeille Azure AD (`deletedItems`, best-effort < 30 j) + date de suppression, au lieu du SID brut.
+  - **Rapport global** (`/dashboard/orphan-delegations`, accessible depuis l'en-tête Boîtes partagées) : scan de toutes les boîtes partagées en **un seul appel pont** (cmdlets EXO rapides, filtrage direct des SID) avec **nettoyage en un clic** par ligne.
+  - Nouvel endpoint pont `/mailbox/orphan-delegations` ; timeout de requête Pode relevé à 15 min (`exo-bridge/server.psd1`) pour les gros volumes.
+  - Aucune nouvelle permission (récupération des noms couverte par `Directory.ReadWrite.All`).
+
+---
+
 ## [1.23.1] — 2026-07-02
 
 ### Améliorations v1.23.1

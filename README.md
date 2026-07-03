@@ -26,6 +26,7 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 ### Boîtes partagées
 
 - Liste, création et gestion des délégations (via le pont Exchange)
+- **Délégations orphelines** : détection des permissions détenues par un compte supprimé (SID non résolu) — badge « Compte supprimé » dans le panneau (nom retrouvé via la corbeille Azure) + **rapport global** avec nettoyage en un clic
 
 ### Licences
 

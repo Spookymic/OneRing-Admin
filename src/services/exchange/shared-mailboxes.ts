@@ -10,6 +10,9 @@ export interface MailboxDelegate {
   id: string | null;
   displayName: string;
   mail: string;
+  orphan?: boolean;            // true = compte supprimé encore référencé (SID non résolu)
+  deletedName?: string | null; // nom retrouvé dans la corbeille Azure (best-effort)
+  deletedDate?: string | null; // date de suppression (corbeille)
 }
 
 export type DelegationType = "fullAccess" | "sendAs" | "sendOnBehalf";
@@ -56,6 +59,19 @@ export async function listMailboxPermissions(mailbox: string): Promise<MailboxPe
     sendAs: data.sendAs ?? [],
     sendOnBehalf: data.sendOnBehalf ?? [],
   };
+}
+
+export interface RawOrphanDelegation {
+  mailbox: string;
+  mailboxMail: string;
+  type: DelegationType;
+  sid: string;
+}
+
+/** Scan global (un seul appel pont) des délégations orphelines sur toutes les boîtes partagées. */
+export async function listOrphanDelegations(): Promise<RawOrphanDelegation[]> {
+  const data = await bridgeFetch<{ orphans?: RawOrphanDelegation[] }>("/mailbox/orphan-delegations");
+  return data.orphans ?? [];
 }
 
 /** Ajoute ou retire une délégation d'un type donné. */

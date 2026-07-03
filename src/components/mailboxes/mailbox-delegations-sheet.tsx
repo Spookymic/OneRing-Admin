@@ -5,9 +5,11 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Trash2, UserPlus, RefreshCw, KeyRound, Send, Users } from "lucide-react";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
@@ -105,8 +107,23 @@ export function MailboxDelegationsSheet({ mailbox, open, onClose }: Props) {
                       {delegates.map((d) => (
                         <div key={`${type}-${d.mail}`} className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-foreground/5">
                           <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{d.displayName}</p>
-                            <p className="text-xs text-foreground/40 truncate">{d.mail}</p>
+                            {d.orphan ? (
+                              <>
+                                <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                                  {d.deletedName || "Compte supprimé"}
+                                  <Badge variant="destructive" className="text-[10px] shrink-0">Compte supprimé</Badge>
+                                </p>
+                                <p className="text-xs text-foreground/40 truncate">
+                                  {d.deletedDate ? `supprimé le ${format(new Date(d.deletedDate), "dd/MM/yyyy")} · ` : ""}
+                                  SID {d.mail}
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-sm font-medium truncate">{d.displayName}</p>
+                                <p className="text-xs text-foreground/40 truncate">{d.mail}</p>
+                              </>
+                            )}
                           </div>
                           <Button
                             size="sm"
@@ -114,6 +131,7 @@ export function MailboxDelegationsSheet({ mailbox, open, onClose }: Props) {
                             className="text-red-500 hover:text-red-700 dark:text-red-300 h-7 px-2 shrink-0"
                             onClick={() => removeDelegation.mutate({ member: d.mail, type })}
                             disabled={removeDelegation.isPending}
+                            title={d.orphan ? "Nettoyer cette délégation orpheline" : "Retirer la délégation"}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>

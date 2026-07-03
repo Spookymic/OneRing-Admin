@@ -387,6 +387,45 @@ Start-PodeServer -Threads 1 {
         }
     }
 
+    # --- Rapport global : delegations orphelines (SID de comptes supprimes) sur TOUTES les BAL partagees ---
+    # Un seul appel : on scanne cote bridge (cmdlets EXO rapides) et on filtre directement les SID
+    # (pas de re-resolution de chaque trustee). GET /mailbox/orphan-delegations
+    Add-PodeRoute -Method Get -Path '/mailbox/orphan-delegations' -ScriptBlock {
+        try {
+            Connect-ExoIfNeeded
+            $orphans = @()
+            $shared = Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited -Properties GrantSendOnBehalfTo |
+                Select-Object DisplayName, PrimarySmtpAddress, GrantSendOnBehalfTo
+            foreach ($m in $shared) {
+                $smtp = "$($m.PrimarySmtpAddress)"
+                $name = "$($m.DisplayName)"
+
+                Get-EXOMailboxPermission -Identity $smtp -ErrorAction SilentlyContinue | ForEach-Object {
+                    if ($_.AccessRights -contains 'FullAccess' -and "$($_.User)" -match 'S-1-[0-9-]+') {
+                        $orphans += @{ mailbox = $name; mailboxMail = $smtp; type = 'fullAccess'; sid = $matches[0] }
+                    }
+                }
+
+                Get-EXORecipientPermission -Identity $smtp -ErrorAction SilentlyContinue | ForEach-Object {
+                    if ($_.AccessRights -contains 'SendAs' -and "$($_.Trustee)" -match 'S-1-[0-9-]+') {
+                        $orphans += @{ mailbox = $name; mailboxMail = $smtp; type = 'sendAs'; sid = $matches[0] }
+                    }
+                }
+
+                foreach ($t in $m.GrantSendOnBehalfTo) {
+                    if ("$t" -match 'S-1-[0-9-]+') {
+                        $orphans += @{ mailbox = $name; mailboxMail = $smtp; type = 'sendOnBehalf'; sid = $matches[0] }
+                    }
+                }
+            }
+            Write-PodeJsonResponse -Value @{ ok = $true; orphans = @($orphans) }
+        }
+        catch {
+            [Console]::Error.WriteLine("ORPHAN_DELEG_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
     # --- Délégations d'une boîte : ajout / retrait ---
     # Body JSON : { mailbox, member, type: fullAccess|sendAs|sendOnBehalf, action: add|remove }
     Add-PodeRoute -Method Post -Path '/mailbox/permissions' -ScriptBlock {

@@ -3,8 +3,22 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { isExchangeAdmin } from "@/lib/exchange-guard";
-import { listMailboxPermissions, setMailboxPermission } from "@/services/exchange/shared-mailboxes";
+import { listMailboxPermissions, setMailboxPermission, type MailboxDelegate } from "@/services/exchange/shared-mailboxes";
+import { getDeletedUserSidMap, type DeletedAccount } from "@/services/graph/directory";
+import { isOrphanSid } from "@/lib/orphan";
 import { logAudit } from "@/services/audit";
+
+/** Marque les délégués orphelins (SID non résolu) et tente de retrouver le compte supprimé. */
+function markOrphans(list: MailboxDelegate[], deleted: Map<string, DeletedAccount>): MailboxDelegate[] {
+  return list.map((d) => {
+    const val = d.mail || d.displayName;
+    if (!d.id && isOrphanSid(val)) {
+      const rec = deleted.get(val.toLowerCase());
+      return { ...d, orphan: true, deletedName: rec?.displayName ?? null, deletedDate: rec?.deletedDateTime ?? null };
+    }
+    return d;
+  });
+}
 
 // [id] = adresse SMTP de la boîte (encodée côté client)
 
@@ -15,8 +29,15 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   }
   const { id } = await params;
   try {
-    const permissions = await listMailboxPermissions(id);
-    return NextResponse.json(permissions);
+    const [permissions, deleted] = await Promise.all([
+      listMailboxPermissions(id),
+      getDeletedUserSidMap(session.accessToken),
+    ]);
+    return NextResponse.json({
+      fullAccess: markOrphans(permissions.fullAccess, deleted),
+      sendAs: markOrphans(permissions.sendAs, deleted),
+      sendOnBehalf: markOrphans(permissions.sendOnBehalf, deleted),
+    });
   } catch (error: any) {
     console.error("[/api/mailboxes/[id]/permissions GET]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
