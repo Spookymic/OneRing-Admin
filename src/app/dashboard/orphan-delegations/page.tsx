@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader } from "@/components/ui/loader";
-import { Trash2, AlertTriangle } from "lucide-react";
+import { Trash2, AlertTriangle, Users } from "lucide-react";
 import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -75,12 +76,21 @@ export default function OrphanDelegationsPage() {
 
   return (
     <div>
-      <div className="mb-2">
-        <h2 className="text-2xl font-bold">Délégations orphelines</h2>
-        <p className="text-sm text-foreground/50 mt-0.5">
-          Permissions de boîtes partagées (accès complet, envoyer en tant que / de la part de) détenues par
-          un <strong>compte supprimé</strong> encore référencé (SID non résolu). Nettoyez-les pour lever ces accès résiduels.
-        </p>
+      <div className="flex items-start justify-between mb-2 gap-3">
+        <div>
+          <h2 className="text-2xl font-bold">Délégations orphelines</h2>
+          <p className="text-sm text-foreground/50 mt-0.5">
+            Permissions de boîtes partagées (accès complet, envoyer en tant que / de la part de) détenues par
+            un <strong>compte supprimé</strong> encore référencé (SID non résolu). Nettoyez-les pour lever ces accès résiduels.
+          </p>
+        </div>
+        <Link
+          href="/dashboard/deleted-accounts"
+          className="shrink-0 inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+        >
+          <Users className="h-4 w-4" />
+          Comptes supprimés
+        </Link>
       </div>
 
       {data?.supported === false ? (

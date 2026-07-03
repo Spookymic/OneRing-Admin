@@ -134,7 +134,7 @@ export default function SignInPage() {
           </div>
         </div>
 
-        <p className="text-xs text-white/20">OneRing Admin v1.24.0</p>
+        <p className="text-xs text-white/20">OneRing Admin v1.25.0</p>
       </div>
     </div>
   );

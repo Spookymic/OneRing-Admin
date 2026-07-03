@@ -2,6 +2,19 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.25.0] — 2026-07-02
+
+### Nouvelle fonctionnalité v1.25.0
+
+- **Écran « Comptes supprimés »** (corbeille Azure AD) : nouvelle entrée de menu listant les comptes supprimés depuis moins de 30 jours (avant purge définitive) — nom, UPN, **SID**, date de suppression, jours restants avant purge (alerte ≤ 5 j). Recherche par nom/UPN/SID. Complète l'identification des délégations orphelines. Endpoint `/api/directory/deleted-users` (best-effort, `Directory.Read`).
+- Cross-liens entre « Comptes supprimés » et « Délégations orphelines ».
+
+### Retrait v1.25.0
+
+- Suppression de la vue consolidée par SID sur le rapport de délégations orphelines (peu utile : les comptes concernés étant généralement purgés, elle n'affichait que « Compte supprimé (inconnu) »).
+
+---
+
 ## [1.24.0] — 2026-07-02
 
 ### Nouvelle fonctionnalité v1.24.0

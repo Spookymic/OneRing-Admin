@@ -6,16 +6,23 @@ export interface DeletedAccount {
   deletedDateTime: string | null;
 }
 
+export interface DeletedUserEntry {
+  id: string;
+  displayName: string;
+  userPrincipalName: string | null;
+  sid: string | null;         // securityIdentifier (SID cloud)
+  onPremSid: string | null;   // onPremisesSecurityIdentifier (SID on-premise)
+  deletedDateTime: string | null;
+}
+
 /**
- * Construit une map (SID → compte supprimé) depuis la corbeille Azure AD (deletedItems).
- * Permet de retrouver le nom d'un compte supprimé encore référencé dans des permissions
- * Exchange (SID orphelin). Best-effort : ne couvre que les comptes supprimés depuis < 30 j
- * (au-delà ils sont purgés). Indexé par `securityIdentifier` et `onPremisesSecurityIdentifier`.
+ * Liste la corbeille Azure AD (comptes supprimés, conservés ~30 j avant purge).
+ * Best-effort : renvoie [] si la lecture échoue (permission Directory.Read manquante).
  */
-export async function getDeletedUserSidMap(accessToken: string): Promise<Map<string, DeletedAccount>> {
-  const map = new Map<string, DeletedAccount>();
+export async function listDeletedUsers(accessToken: string): Promise<DeletedUserEntry[]> {
   try {
     const rows = await graphFetchAll<{
+      id?: string;
       displayName?: string;
       userPrincipalName?: string;
       deletedDateTime?: string;
@@ -23,20 +30,43 @@ export async function getDeletedUserSidMap(accessToken: string): Promise<Map<str
       onPremisesSecurityIdentifier?: string;
     }>(
       accessToken,
-      "/directory/deletedItems/microsoft.graph.user?$select=displayName,userPrincipalName,deletedDateTime,securityIdentifier,onPremisesSecurityIdentifier&$top=999"
+      "/directory/deletedItems/microsoft.graph.user?$select=id,displayName,userPrincipalName,deletedDateTime,securityIdentifier,onPremisesSecurityIdentifier&$top=999"
     );
-    for (const r of rows) {
+    return rows.map((r) => ({
+      id: r.id ?? "",
+      displayName: r.displayName || r.userPrincipalName || "Compte supprimé",
+      userPrincipalName: r.userPrincipalName ?? null,
+      sid: r.securityIdentifier ?? null,
+      onPremSid: r.onPremisesSecurityIdentifier ?? null,
+      deletedDateTime: r.deletedDateTime ?? null,
+    }));
+  } catch (e: any) {
+    console.error("[directory] corbeille (deletedItems) indisponible:", e?.message);
+    throw e;
+  }
+}
+
+/**
+ * Construit une map (SID → compte supprimé) depuis la corbeille Azure AD, pour retrouver le nom
+ * d'un compte supprimé encore référencé dans des permissions Exchange (SID orphelin).
+ * Best-effort : couvre les comptes supprimés depuis < 30 j (au-delà, purgés).
+ */
+export async function getDeletedUserSidMap(accessToken: string): Promise<Map<string, DeletedAccount>> {
+  const map = new Map<string, DeletedAccount>();
+  try {
+    const users = await listDeletedUsers(accessToken);
+    for (const u of users) {
       const acct: DeletedAccount = {
-        displayName: r.displayName || r.userPrincipalName || "Compte supprimé",
-        userPrincipalName: r.userPrincipalName ?? null,
-        deletedDateTime: r.deletedDateTime ?? null,
+        displayName: u.displayName,
+        userPrincipalName: u.userPrincipalName,
+        deletedDateTime: u.deletedDateTime,
       };
-      for (const sid of [r.securityIdentifier, r.onPremisesSecurityIdentifier]) {
+      for (const sid of [u.sid, u.onPremSid]) {
         if (sid) map.set(sid.toLowerCase(), acct);
       }
     }
-  } catch (e: any) {
-    console.error("[directory] corbeille (deletedItems) indisponible:", e?.message);
+  } catch {
+    // best-effort : map vide
   }
   return map;
 }
