@@ -12,7 +12,11 @@ export async function GET() {
   if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
+  // Un admin local ne voit que son propre compte (pas d'énumération de tous les comptes) ;
+  // la liste complète est réservée aux admins SSO.
+  const where = session.role === "local" ? { username: session.user.email ?? "" } : {};
   const admins = await prisma.localAdmin.findMany({
+    where,
     select: { id: true, username: true, createdAt: true, totpEnabled: true },
     orderBy: { username: "asc" },
   });
@@ -21,7 +25,7 @@ export async function GET() {
 
 const schema = z.object({
   username: z.string().min(3).max(64).regex(/^[a-zA-Z0-9._-]+$/),
-  password: z.string().min(8).max(128),
+  password: z.string().min(12).max(128),
 });
 
 // Crée un compte (ou réinitialise son mot de passe si l'identifiant existe) — admins SSO uniquement
@@ -32,10 +36,10 @@ export async function POST(req: NextRequest) {
   }
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Identifiant (≥3, alphanumérique) et mot de passe (≥8) requis" }, { status: 400 });
+    return NextResponse.json({ error: "Identifiant (≥3, alphanumérique) et mot de passe (≥12) requis" }, { status: 400 });
   }
   try {
-    const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+    const passwordHash = await bcrypt.hash(parsed.data.password, 12);
     await prisma.localAdmin.upsert({
       where: { username: parsed.data.username },
       update: { passwordHash },

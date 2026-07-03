@@ -520,12 +520,12 @@ export default function AdminPage() {
             <Input placeholder="Identifiant" value={laUser} onChange={(e) => setLaUser(e.target.value)} />
             <Input
               type="password"
-              placeholder="Mot de passe (≥ 8 caractères)"
+              placeholder="Mot de passe (≥ 12 caractères)"
               value={laPass}
               onChange={(e) => setLaPass(e.target.value)}
             />
             {laMsg && <p className="text-xs text-foreground/60">{laMsg}</p>}
-            <Button size="sm" onClick={saveLocalAdmin} disabled={laBusy || laUser.length < 3 || laPass.length < 8}>
+            <Button size="sm" onClick={saveLocalAdmin} disabled={laBusy || laUser.length < 3 || laPass.length < 12}>
               {laBusy ? "Enregistrement…" : "Enregistrer le compte"}
             </Button>
             <p className="text-xs text-foreground/40">
@@ -686,7 +686,7 @@ export default function AdminPage() {
           Version
         </h3>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-sm font-mono">v1.22.5</Badge>
+          <Badge variant="outline" className="text-sm font-mono">v1.22.6</Badge>
           <p className="text-xs text-foreground/50">OneRing Admin — M365 Administrator</p>
         </div>
       </Card>

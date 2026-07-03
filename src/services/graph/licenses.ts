@@ -17,7 +17,7 @@ export async function assignLicense(
   userId: string,
   skuId: string
 ): Promise<void> {
-  await graphFetch(accessToken, `/users/${userId}/assignLicense`, {
+  await graphFetch(accessToken, `/users/${encodeURIComponent(userId)}/assignLicense`, {
     method: "POST",
     body: JSON.stringify({ addLicenses: [{ skuId }], removeLicenses: [] }),
   });
@@ -28,7 +28,7 @@ export async function removeLicense(
   userId: string,
   skuId: string
 ): Promise<void> {
-  await graphFetch(accessToken, `/users/${userId}/assignLicense`, {
+  await graphFetch(accessToken, `/users/${encodeURIComponent(userId)}/assignLicense`, {
     method: "POST",
     body: JSON.stringify({ addLicenses: [], removeLicenses: [skuId] }),
   });

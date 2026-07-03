@@ -67,7 +67,7 @@ export async function getGroup(
 ): Promise<M365Group & { type: GroupType }> {
   const group = await graphFetch<M365Group>(
     accessToken,
-    `/groups/${groupId}?$select=${DETAIL_SELECT}`
+    `/groups/${encodeURIComponent(groupId)}?$select=${DETAIL_SELECT}`
   );
   return { ...group, type: detectGroupType(group) };
 }
@@ -88,7 +88,7 @@ export async function listSubgroups(
 ): Promise<(M365Group & { type: GroupType })[]> {
   const data = await graphFetch<{ value: M365Group[] }>(
     accessToken,
-    `/groups/${groupId}/members/microsoft.graph.group?$select=${RELATION_SELECT}`
+    `/groups/${encodeURIComponent(groupId)}/members/microsoft.graph.group?$select=${RELATION_SELECT}`
   );
   return data.value.map((g) => ({ ...g, type: detectGroupType(g) }));
 }
@@ -100,7 +100,7 @@ export async function listParentGroups(
 ): Promise<(M365Group & { type: GroupType })[]> {
   const data = await graphFetch<{ value: M365Group[] }>(
     accessToken,
-    `/groups/${groupId}/memberOf/microsoft.graph.group?$select=${RELATION_SELECT}`
+    `/groups/${encodeURIComponent(groupId)}/memberOf/microsoft.graph.group?$select=${RELATION_SELECT}`
   );
   return data.value.map((g) => ({ ...g, type: detectGroupType(g) }));
 }
@@ -111,7 +111,7 @@ export async function getGroupBasic(
 ): Promise<M365Group & { type: GroupType }> {
   const group = await graphFetch<M365Group>(
     accessToken,
-    `/groups/${groupId}?$select=${LIST_SELECT}`
+    `/groups/${encodeURIComponent(groupId)}?$select=${LIST_SELECT}`
   );
   return { ...group, type: detectGroupType(group) };
 }
@@ -123,7 +123,7 @@ const OWNER_SELECT = "id,displayName,mail";
 export async function listGroupMembers(accessToken: string, groupId: string): Promise<any[]> {
   const data = await graphFetch<{ value: any[] }>(
     accessToken,
-    `/groups/${groupId}/members/microsoft.graph.user?$select=${MEMBER_SELECT}`
+    `/groups/${encodeURIComponent(groupId)}/members/microsoft.graph.user?$select=${MEMBER_SELECT}`
   );
   return data.value;
 }
@@ -134,7 +134,7 @@ export async function listGroupOwners(accessToken: string, groupId: string): Pro
     // Select réduit à id,displayName,mail car userPrincipalName/jobTitle n'existent pas sur les non-utilisateurs.
     const data = await graphFetch<{ value: any[] }>(
       accessToken,
-      `/groups/${groupId}/owners?$select=${OWNER_SELECT}`
+      `/groups/${encodeURIComponent(groupId)}/owners?$select=${OWNER_SELECT}`
     );
     return data.value;
   } catch {
@@ -147,7 +147,7 @@ export async function addGroupMember(
   groupId: string,
   userId: string
 ): Promise<void> {
-  await graphFetch(accessToken, `/groups/${groupId}/members/$ref`, {
+  await graphFetch(accessToken, `/groups/${encodeURIComponent(groupId)}/members/$ref`, {
     method: "POST",
     body: JSON.stringify({
       "@odata.id": `https://graph.microsoft.com/v1.0/directoryObjects/${userId}`,
@@ -160,7 +160,7 @@ export async function addGroupOwner(
   groupId: string,
   userId: string
 ): Promise<void> {
-  await graphFetch(accessToken, `/groups/${groupId}/owners/$ref`, {
+  await graphFetch(accessToken, `/groups/${encodeURIComponent(groupId)}/owners/$ref`, {
     method: "POST",
     body: JSON.stringify({
       "@odata.id": `https://graph.microsoft.com/v1.0/directoryObjects/${userId}`,
@@ -173,7 +173,7 @@ export async function removeGroupMember(
   groupId: string,
   userId: string
 ): Promise<void> {
-  await graphFetch(accessToken, `/groups/${groupId}/members/${userId}/$ref`, {
+  await graphFetch(accessToken, `/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}/$ref`, {
     method: "DELETE",
   });
 }
@@ -183,7 +183,7 @@ export async function removeGroupOwner(
   groupId: string,
   userId: string
 ): Promise<void> {
-  await graphFetch(accessToken, `/groups/${groupId}/owners/${userId}/$ref`, {
+  await graphFetch(accessToken, `/groups/${encodeURIComponent(groupId)}/owners/${encodeURIComponent(userId)}/$ref`, {
     method: "DELETE",
   });
 }
@@ -204,13 +204,13 @@ export async function listGroupCounts(
       {
         id: `m${i + j}`,
         method: "GET",
-        url: `/groups/${id}/members/$count`,
+        url: `/groups/${encodeURIComponent(id)}/members/$count`,
         headers: { ConsistencyLevel: "eventual" },
       },
       {
         id: `o${i + j}`,
         method: "GET",
-        url: `/groups/${id}/owners/$count`,
+        url: `/groups/${encodeURIComponent(id)}/owners/$count`,
         headers: { ConsistencyLevel: "eventual" },
       },
     ]);

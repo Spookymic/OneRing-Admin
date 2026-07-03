@@ -49,7 +49,7 @@ export async function listUsers(accessToken: string): Promise<M365User[]> {
 }
 
 export async function getUser(accessToken: string, userId: string): Promise<M365User> {
-  return graphFetch<M365User>(accessToken, `/users/${userId}?$select=${SELECT}`);
+  return graphFetch<M365User>(accessToken, `/users/${encodeURIComponent(userId)}?$select=${SELECT}`);
 }
 
 export async function listUserMemberOf(accessToken: string, userId: string): Promise<M365UserGroup[]> {
@@ -59,7 +59,7 @@ export async function listUserMemberOf(accessToken: string, userId: string): Pro
   });
   const data = await graphFetch<{ value: M365UserGroup[] }>(
     accessToken,
-    `/users/${userId}/memberOf/microsoft.graph.group?${params}`
+    `/users/${encodeURIComponent(userId)}/memberOf/microsoft.graph.group?${params}`
   );
   return data.value.sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
@@ -72,7 +72,7 @@ export async function listUserOwnedGroups(accessToken: string, userId: string): 
   });
   const data = await graphFetch<{ value: M365UserGroup[] }>(
     accessToken,
-    `/users/${userId}/ownedObjects/microsoft.graph.group?${params}`
+    `/users/${encodeURIComponent(userId)}/ownedObjects/microsoft.graph.group?${params}`
   );
   return data.value.sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
@@ -149,7 +149,7 @@ export async function getUserAuthMethods(
   try {
     const data = await graphFetch<{ value: Array<Record<string, unknown>> }>(
       accessToken,
-      `/users/${userId}/authentication/methods`
+      `/users/${encodeURIComponent(userId)}/authentication/methods`
     );
     const methods: AuthMethod[] = (data.value ?? []).map((m) => {
       const odataType = String(m["@odata.type"] ?? "").replace("#microsoft.graph.", "");
@@ -180,7 +180,7 @@ export async function resetUserPassword(
   userId: string,
   newPassword: string
 ): Promise<void> {
-  await graphFetch(accessToken, `/users/${userId}`, {
+  await graphFetch(accessToken, `/users/${encodeURIComponent(userId)}`, {
     method: "PATCH",
     body: JSON.stringify({
       passwordProfile: {
@@ -196,7 +196,7 @@ export async function updateUserEnabled(
   userId: string,
   enabled: boolean
 ): Promise<void> {
-  await graphFetch(accessToken, `/users/${userId}`, {
+  await graphFetch(accessToken, `/users/${encodeURIComponent(userId)}`, {
     method: "PATCH",
     body: JSON.stringify({ accountEnabled: enabled }),
   });
@@ -220,7 +220,7 @@ export async function getMailboxSettings(
   accessToken: string,
   userId: string
 ): Promise<MailboxSettings> {
-  return graphFetch<MailboxSettings>(accessToken, `/users/${userId}/mailboxSettings`);
+  return graphFetch<MailboxSettings>(accessToken, `/users/${encodeURIComponent(userId)}/mailboxSettings`);
 }
 
 export async function updateMailboxSettings(
@@ -228,7 +228,7 @@ export async function updateMailboxSettings(
   userId: string,
   settings: { automaticRepliesSetting: Partial<AutomaticRepliesSetting> }
 ): Promise<void> {
-  await graphFetch(accessToken, `/users/${userId}/mailboxSettings`, {
+  await graphFetch(accessToken, `/users/${encodeURIComponent(userId)}/mailboxSettings`, {
     method: "PATCH",
     body: JSON.stringify(settings),
   });
@@ -239,7 +239,7 @@ export async function setTeamsStatusMessage(
   userId: string,
   message: string
 ): Promise<void> {
-  await graphFetch(accessToken, `/users/${userId}/presence/setStatusMessage`, {
+  await graphFetch(accessToken, `/users/${encodeURIComponent(userId)}/presence/setStatusMessage`, {
     method: "POST",
     body: JSON.stringify({
       statusMessage: {

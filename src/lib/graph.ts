@@ -33,9 +33,10 @@ export async function graphFetch<T = unknown>(
     }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      // Log serveur complet (innerError, request-id, date) pour diagnostiquer les 403/throttling
-      console.error(`[graphFetch] ${res.status} ${path}`, JSON.stringify(body.error ?? body));
-      // En cas de 403, logguer les scopes effectivement présents dans le jeton (claim scp)
+      // Log volontairement restreint au code d'erreur Graph (pas au corps complet, qui peut
+      // contenir des UPN / données personnelles selon l'endpoint).
+      console.error(`[graphFetch] ${res.status} ${path} — ${body.error?.code ?? "unknown_error"}`);
+      // En cas de 403, logguer les scopes effectivement présents dans le jeton (claim scp — non sensible)
       if (res.status === 403) {
         try {
           const claims = JSON.parse(

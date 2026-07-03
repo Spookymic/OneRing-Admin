@@ -9,6 +9,10 @@ import { verifyTotp } from "@/lib/totp";
  * Template IDs des rôles Azure AD acceptés pour accéder à l'application.
  * Source : https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/permissions-reference
  */
+// Hash bcrypt (coût 12) constant, comparé quand aucun compte ne correspond, pour uniformiser
+// le temps de réponse du login local (défense anti-énumération par timing).
+const DUMMY_BCRYPT_HASH = "$2a$12$nP6PC5kY1wVSjat3gawJEO3UC7m1EjurnXoXbufqcE0b006tXokBy";
+
 const ADMIN_ROLE_TEMPLATE_IDS = new Set([
   "62e90394-69f5-4237-9190-012177145e10", // Global Administrator
   "fe930be7-5e62-47db-91af-98c3a49a38b1", // User Administrator
@@ -48,7 +52,12 @@ export const authOptions: NextAuthOptions = {
       async authorize(creds) {
         if (!creds?.username || !creds?.password) return null;
         const admin = await prisma.localAdmin.findUnique({ where: { username: creds.username } });
-        if (!admin) return null;
+        if (!admin) {
+          // Comparaison factice à coût constant : évite l'énumération d'identifiants par timing
+          // (sinon un compte inexistant répond nettement plus vite qu'un compte existant).
+          await bcrypt.compare(creds.password, DUMMY_BCRYPT_HASH);
+          return null;
+        }
         // Verrouillage anti-brute-force
         if (admin.lockedUntil && admin.lockedUntil > new Date()) return null;
         const passwordOk = await bcrypt.compare(creds.password, admin.passwordHash);
@@ -134,5 +143,19 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 8 * 60 * 60, // 8h max absolu — l'inactivité est gérée côté client
+  },
+  // Cookie de session explicitement en SameSite=Lax + HttpOnly + Secure (prod).
+  // Lax bloque l'envoi du cookie sur les requêtes de mutation cross-site → protection CSRF.
+  // Ces valeurs correspondent aux défauts NextAuth, rendus explicites (défense en profondeur).
+  cookies: {
+    sessionToken: {
+      name: `${process.env.NODE_ENV === "production" ? "__Secure-" : ""}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
 };

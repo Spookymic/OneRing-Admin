@@ -37,7 +37,18 @@ Start-PodeServer -Threads 1 {
     Add-PodeMiddleware -Name 'BridgeAuth' -ScriptBlock {
         if ($WebEvent.Path -eq '/health') { return $true }
         $provided = Get-PodeHeader -Name 'X-Bridge-Secret'
-        if ([string]::IsNullOrEmpty($provided) -or $provided -ne $env:EXO_BRIDGE_SECRET) {
+        $expected = $env:EXO_BRIDGE_SECRET
+        # Comparaison à temps constant (SHA-256 puis XOR) — évite une attaque temporelle sur le secret.
+        $ok = $false
+        if (-not [string]::IsNullOrEmpty($provided) -and -not [string]::IsNullOrEmpty($expected)) {
+            $sha = [System.Security.Cryptography.SHA256]::Create()
+            $hp = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($provided))
+            $he = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($expected))
+            $diff = 0
+            for ($i = 0; $i -lt $hp.Length; $i++) { $diff = $diff -bor ($hp[$i] -bxor $he[$i]) }
+            $ok = ($diff -eq 0)
+        }
+        if (-not $ok) {
             Set-PodeResponseStatus -Code 401
             Write-PodeJsonResponse -Value @{ error = 'unauthorized' }
             return $false
@@ -53,9 +64,9 @@ Start-PodeServer -Threads 1 {
             $connected = [bool]($conn | Where-Object { $_.State -eq 'Connected' })
         }
         catch { }
+        # Ne divulgue pas le domaine tenant ($env:EXO_ORG) sur une route non authentifiée.
         Write-PodeJsonResponse -Value @{
             status       = 'ok'
-            org          = $env:EXO_ORG
             exoConnected = $connected
         }
     }

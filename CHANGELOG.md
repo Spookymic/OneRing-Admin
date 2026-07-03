@@ -2,6 +2,22 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.22.6] — 2026-07-02
+
+### Sécurité v1.22.6 (findings d'audit Faibles — lot complet B1→B9)
+
+- **B1 — Confinement admin local côté serveur** : nouveau `src/middleware.ts` qui redirige un compte `local` vers /dashboard/admin (non contournable, en plus de la redirection client existante).
+- **B2 — `GET /api/admin/local-admin`** : un compte local ne voit plus que son propre compte (plus d'énumération de tous les comptes) ; liste complète réservée aux admins SSO.
+- **B3 — Anti-énumération par timing** : comparaison bcrypt factice à coût constant quand l'identifiant local n'existe pas.
+- **B4 — `encodeURIComponent`** appliqué à tous les segments d'identifiant interpolés dans les URL Graph (`users`, `groups`, `roles`, `licenses`).
+- **B5 — Cookie de session** : `SameSite=Lax` + `HttpOnly` + `Secure` (prod) déclarés explicitement (protection CSRF documentée).
+- **B6 — Écriture d'audit** : `POST /api/audit` valide le payload (objets bornés, garde-fou de taille) — plus d'injection de contenu volumineux.
+- **B7 — Pont Exchange** : comparaison du secret à temps constant (SHA-256 + XOR) et route `/health` ne divulgue plus le domaine tenant.
+- **B8 — Compte admin local** : mot de passe minimum porté à 12 caractères, coût bcrypt porté à 12.
+- **B9 — Logs `graphFetch`** : ne loggue plus le corps d'erreur complet (PII possible), seulement le code d'erreur Graph.
+
+---
+
 ## [1.22.5] — 2026-07-02
 
 ### Sécurité v1.22.5 (findings d'audit Moyens — lot « quick wins »)

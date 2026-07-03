@@ -23,7 +23,7 @@ export async function listUserRoles(
 ): Promise<DirectoryRole[]> {
   const data = await graphFetch<{ value: DirectoryRole[] }>(
     accessToken,
-    `/users/${userId}/transitiveMemberOf/microsoft.graph.directoryRole?$select=id,displayName,description,roleTemplateId`
+    `/users/${encodeURIComponent(userId)}/transitiveMemberOf/microsoft.graph.directoryRole?$select=id,displayName,description,roleTemplateId`
   );
   return data.value.sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
@@ -34,7 +34,7 @@ export async function assignRole(
   roleId: string,
   userId: string
 ): Promise<void> {
-  await graphFetch(accessToken, `/directoryRoles/${roleId}/members/$ref`, {
+  await graphFetch(accessToken, `/directoryRoles/${encodeURIComponent(roleId)}/members/$ref`, {
     method: "POST",
     body: JSON.stringify({
       "@odata.id": `https://graph.microsoft.com/v1.0/directoryObjects/${userId}`,
@@ -48,7 +48,7 @@ export async function removeRole(
   roleId: string,
   userId: string
 ): Promise<void> {
-  await graphFetch(accessToken, `/directoryRoles/${roleId}/members/${userId}/$ref`, {
+  await graphFetch(accessToken, `/directoryRoles/${encodeURIComponent(roleId)}/members/${encodeURIComponent(userId)}/$ref`, {
     method: "DELETE",
   });
 }
