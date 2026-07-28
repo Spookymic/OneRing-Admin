@@ -31,6 +31,7 @@ Start-PodeServer -Threads 1 {
 
     # Rend les cmdlets EXO + nos helpers disponibles dans tous les runspaces de routes
     Import-PodeModule -Name ExchangeOnlineManagement
+    Import-PodeModule -Name PnP.PowerShell
     Import-PodeModule -Path '/app/ExoHelpers.psm1'
 
     # --- Auth : secret partage exige sur toutes les routes sauf /health ---
@@ -422,6 +423,50 @@ Start-PodeServer -Threads 1 {
         }
         catch {
             [Console]::Error.WriteLine("ORPHAN_DELEG_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
+    # --- Parametres SharePoint par site (PnP, app-only) : un seul Get-PnPTenantSite ---
+    Add-PodeRoute -Method Get -Path '/sharepoint/site-settings' -ScriptBlock {
+        $adminUrl = if (-not [string]::IsNullOrWhiteSpace($env:SPO_ADMIN_URL)) {
+            $env:SPO_ADMIN_URL
+        } else {
+            $tenantName = ($env:EXO_ORG -split '\.')[0]
+            "https://$tenantName-admin.sharepoint.com"
+        }
+        try {
+            $needConnect = $true
+            try { $null = Get-PnPConnection -ErrorAction Stop; $needConnect = $false } catch {}
+            if ($needConnect) {
+                [Console]::Error.WriteLine("SPO_CONNECT: url=$adminUrl tenant=$($env:EXO_ORG) appId=$($env:EXO_APP_ID)")
+                $securePwd = ConvertTo-SecureString $env:EXO_CERT_PASSWORD -AsPlainText -Force
+                Connect-PnPOnline -Url $adminUrl -ClientId $env:EXO_APP_ID -Tenant $env:EXO_ORG `
+                    -CertificatePath $env:EXO_CERT_PATH -CertificatePassword $securePwd -ErrorAction Stop
+            }
+            $sites = Get-PnPTenantSite -ErrorAction Stop
+            $out = foreach ($s in $sites) {
+                @{
+                    url                      = "$($s.Url)"
+                    template                 = "$($s.Template)"
+                    sharingCapability        = "$($s.SharingCapability)"
+                    lockState                = "$($s.LockState)"
+                    sensitivityLabel         = "$($s.SensitivityLabel)"
+                    storageQuotaMB           = [long]($s.StorageQuota)
+                    storageUsageCurrentMB    = [long]($s.StorageUsageCurrent)
+                    isHubSite                = [bool]($s.IsHubSite)
+                    groupId                  = "$($s.GroupId)"
+                    conditionalAccessPolicy  = "$($s.ConditionalAccessPolicy)"
+                    denyAddAndCustomizePages = "$($s.DenyAddAndCustomizePages)"
+                }
+            }
+            Write-PodeJsonResponse -Value @{ ok = $true; sites = @($out) }
+        }
+        catch {
+            [Console]::Error.WriteLine("SPO_SETTINGS_ERROR (url=$adminUrl): " + $_.Exception.Message)
+            if ($_.Exception.InnerException) {
+                [Console]::Error.WriteLine("SPO_SETTINGS_INNER: " + $_.Exception.InnerException.Message)
+            }
             Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
         }
     }

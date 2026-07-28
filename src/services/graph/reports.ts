@@ -166,8 +166,21 @@ async function fetchSiteNameMap(): Promise<Map<string, { name: string; url: stri
   return map;
 }
 
-/** SharePoint : espace par site. */
-export async function getSharePointUsage(accessToken: string): Promise<StorageItem[]> {
+export interface SharePointSite {
+  name: string;
+  url: string | null;
+  kind: string;               // type de site (Groupe M365, Communication…)
+  storageUsed: number;        // octets
+  storageAllocated: number;   // octets (quota, souvent 25 To par défaut)
+  fileCount: number;
+  activeFileCount: number;
+  pageViewCount: number;
+  visitedPageCount: number;
+  lastActivityDate: string | null;
+}
+
+/** SharePoint : détail complet par site (volumes + activité), depuis le rapport d'utilisation. */
+export async function getSharePointSites(accessToken: string): Promise<SharePointSite[]> {
   const [csv, siteNames] = await Promise.all([
     graphFetchCsv(accessToken, `/reports/getSharePointSiteUsageDetail(period='D7')`),
     fetchSiteNameMap(),
@@ -180,10 +193,27 @@ export async function getSharePointUsage(accessToken: string): Promise<StorageIt
     const derived = siteNameFromUrl(r["Site URL"]) || siteNameFromOwner(r["Owner Display Name"]) || r["Owner Display Name"] || "—";
     return {
       name: resolved?.name || derived,
-      detail: resolved?.url || r["Site URL"] || r["Owner Display Name"] || null,
-      used: toNum(r["Storage Used (Byte)"]),
-      allocated: toNum(r["Storage Allocated (Byte)"]),
-      tag: sharePointKind(r["Root Web Template"]),
+      url: resolved?.url || r["Site URL"] || null,
+      kind: sharePointKind(r["Root Web Template"]),
+      storageUsed: toNum(r["Storage Used (Byte)"]),
+      storageAllocated: toNum(r["Storage Allocated (Byte)"]),
+      fileCount: toNum(r["File Count"]),
+      activeFileCount: toNum(r["Active File Count"]),
+      pageViewCount: toNum(r["Page View Count"]),
+      visitedPageCount: toNum(r["Visited Page Count"]),
+      lastActivityDate: r["Last Activity Date"] || null,
     };
   });
+}
+
+/** SharePoint : espace par site (vue Stockage). Dérivé de getSharePointSites. */
+export async function getSharePointUsage(accessToken: string): Promise<StorageItem[]> {
+  const sites = await getSharePointSites(accessToken);
+  return sites.map((s) => ({
+    name: s.name,
+    detail: s.url,
+    used: s.storageUsed,
+    allocated: s.storageAllocated,
+    tag: s.kind,
+  }));
 }

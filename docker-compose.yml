@@ -49,6 +49,8 @@ services:
       EXO_CERT_PATH: /certs/onering-exo.pfx
       EXO_CERT_PASSWORD: ${EXO_CERT_PASSWORD}
       EXO_BRIDGE_SECRET: ${EXO_BRIDGE_SECRET}
+      # Optionnel : URL admin SharePoint (déduite de EXO_ORG si absente : https://<tenant>-admin.sharepoint.com)
+      SPO_ADMIN_URL: ${SPO_ADMIN_URL:-}
     volumes:
       - ./exo-bridge/secrets:/certs:ro
     restart: unless-stopped

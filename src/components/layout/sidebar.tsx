@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Users, Shield, History, LogOut, LayoutDashboard, Users2,
-  Settings, Eye, X, Check, Inbox, Network, KeyRound, Sun, Moon, Monitor, HardDrive, UserX,
+  Settings, Eye, X, Check, Inbox, Network, KeyRound, Sun, Moon, Monitor, HardDrive, UserX, Globe,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
@@ -23,6 +23,7 @@ const navItems = [
   { href: "/dashboard/mailboxes", label: "Boîtes partagées", icon: Inbox },
   { href: "/dashboard/licenses", label: "Licences", icon: Shield },
   { href: "/dashboard/storage", label: "Stockage", icon: HardDrive },
+  { href: "/dashboard/sharepoint-sites", label: "Sites SharePoint", icon: Globe },
   { href: "/dashboard/credentials", label: "Secrets & certificats", icon: KeyRound },
   { href: "/dashboard/deleted-accounts", label: "Comptes supprimés", icon: UserX },
   { href: "/dashboard/audit", label: "Historique", icon: History },
@@ -206,7 +207,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
           <LogOut className="h-4 w-4 mr-3" />
           Déconnexion
         </Button>
-        <p className="text-center text-white/25 text-xs pt-1">v1.25.0</p>
+        <p className="text-center text-white/25 text-xs pt-1">v1.26.0</p>
       </div>
     </aside>
   );

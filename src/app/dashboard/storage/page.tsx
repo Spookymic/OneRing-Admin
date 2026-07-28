@@ -5,7 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Loader } from "@/components/ui/loader";
-import { HardDrive, Mail, Globe, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { HardDrive, Mail, Globe, AlertTriangle, ArrowRight } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { formatBytes, usagePercent } from "@/lib/format";
 import type { StorageItem } from "@/services/graph/reports";
@@ -228,13 +229,22 @@ export default function StoragePage() {
         ))}
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 flex items-center gap-3">
         <Input
           placeholder="Rechercher…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
         />
+        {tab === "sharepoint" && (
+          <Link
+            href="/dashboard/sharepoint-sites"
+            className="shrink-0 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            Vue détaillée des sites
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        )}
       </div>
 
       <StorageSection tab={tab} mode={active.mode} unit={active.unit} search={search} />

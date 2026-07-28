@@ -2,6 +2,16 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.26.0] — 2026-07-02
+
+### Nouvelle fonctionnalité v1.26.0
+
+- **Écran « Sites SharePoint »** (entrée de menu dédiée) : tableau triable des sites — volumes (espace, fichiers, fichiers actifs), activité (pages vues, pages visitées, dernière activité), type de site. Données issues du rapport d'utilisation Microsoft 365 (aucune permission supplémentaire).
+- **Info-bulle de paramétrage par site** : partage externe (badge coloré selon le risque), verrou, étiquette de confidentialité, quota configuré + usage, modèle, hub, connexion à un Groupe M365, accès conditionnel, scripts personnalisés. Source : `Get-PnPTenantSite` (PnP PowerShell) en app-only via le pont, en un seul appel.
+  - Prérequis : module PnP.PowerShell ajouté au pont + permission **Application `Sites.FullControl.All` sous la ressource SharePoint** (distincte de Graph) + consentement admin. Variable `SPO_ADMIN_URL` optionnelle (déduite de `EXO_ORG`). Best-effort : sans la permission, l'écran fonctionne sans la colonne Paramètres.
+
+---
+
 ## [1.25.0] — 2026-07-02
 
 ### Nouvelle fonctionnalité v1.25.0

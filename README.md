@@ -28,6 +28,11 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 - Liste, création et gestion des délégations (via le pont Exchange)
 - **Délégations orphelines** : détection des permissions détenues par un compte supprimé (SID non résolu) — badge « Compte supprimé » dans le panneau (nom retrouvé via la corbeille Azure) + **rapport global** avec nettoyage en un clic
 
+### Sites SharePoint
+
+- Écran dédié : tableau triable des sites (volumes, fichiers, activité, pages vues), recherche
+- **Info-bulle de paramétrage par site** (via PnP app-only) : partage externe, verrou, étiquette de confidentialité, quota configuré, modèle, hub, connexion à un Groupe M365, accès conditionnel, scripts personnalisés
+
 ### Comptes supprimés
 
 - Écran dédié listant la **corbeille Azure AD** (comptes supprimés < 30 j avant purge) : nom, UPN, **SID**, date de suppression, jours restants — utile pour corréler avec les délégations orphelines
@@ -102,6 +107,8 @@ Dans le portail Azure → App registrations → New registration :
 4. Créer un **Client secret** et copier les valeurs dans `.env`
 
 > **Pont Exchange (optionnel)** : les fonctionnalités listes de distribution et boîtes partagées passent par un service `exo-bridge` (PowerShell) en authentification **app-only** (certificat). Voir la documentation dédiée pour l'enregistrement d'application et la génération du certificat.
+>
+> **Paramètres de sites SharePoint (optionnel)** : l'info-bulle de paramétrage par site (page Sites SharePoint) utilise PnP PowerShell en app-only (même certificat) et nécessite la permission **`Sites.FullControl.All` de type Application sous la ressource « SharePoint »** (⚠️ pas « Microsoft Graph »), avec consentement admin. Sans elle, l'écran fonctionne mais sans la colonne Paramètres. URL admin optionnelle via `SPO_ADMIN_URL` (déduite de `EXO_ORG` sinon).
 
 ## Variables d'environnement
 
