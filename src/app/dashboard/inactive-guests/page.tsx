@@ -11,6 +11,7 @@ import { apiFetch } from "@/lib/api";
 import type { M365User } from "@/services/graph/users";
 import { UserGroupsSheet } from "@/components/users/user-groups-sheet";
 import { Loader } from "@/components/ui/loader";
+import { ExportButton } from "@/components/ui/export-button";
 
 interface InactiveGuest {
   id: string;
@@ -67,7 +68,30 @@ export default function InactiveGuestsPage() {
             Comptes invités sans connexion depuis &gt; {data?.days ?? 90} jours — candidats au nettoyage.
           </p>
         </div>
-        <Badge variant="secondary">{guests.length} invité{guests.length > 1 ? "s" : ""}</Badge>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            fileBase="onering-invites-inactifs"
+            disabled={data?.supported === false}
+            sheets={() => [{
+              name: "Invités inactifs",
+              columns: [
+                { header: "Nom", key: "nom", width: 28 },
+                { header: "UPN", key: "upn", width: 40 },
+                { header: "Email", key: "mail", width: 34 },
+                { header: "Dernier accès", key: "acces", width: 16 },
+                { header: "Créé le", key: "cree", width: 14 },
+              ],
+              rows: guests.map((g) => ({
+                nom: g.displayName,
+                upn: g.userPrincipalName,
+                mail: g.mail ?? "",
+                acces: g.lastSignIn ? format(new Date(g.lastSignIn), "dd/MM/yyyy") : "jamais connecté",
+                cree: g.createdDateTime ? format(new Date(g.createdDateTime), "dd/MM/yyyy") : "",
+              })),
+            }]}
+          />
+          <Badge variant="secondary">{guests.length} invité{guests.length > 1 ? "s" : ""}</Badge>
+        </div>
       </div>
 
       {data?.supported === false ? (

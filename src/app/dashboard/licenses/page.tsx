@@ -19,6 +19,7 @@ import type { M365User } from "@/services/graph/users";
 import type { SubscribedSku } from "@/services/graph/licenses";
 import { getSkuFriendlyName } from "@/lib/license-names";
 import { apiFetch } from "@/lib/api";
+import { ExportButton } from "@/components/ui/export-button";
 
 export default function LicensesPage() {
   const searchParams = useSearchParams();
@@ -109,11 +110,39 @@ export default function LicensesPage() {
             Gestion des abonnements Microsoft 365
           </p>
         </div>
-        {skus && (
-          <Badge variant="secondary">
-            {totalConsumed} / {totalEnabled} utilisées
-          </Badge>
-        )}
+        <div className="flex items-center gap-3">
+          <ExportButton
+            fileBase="onering-licences"
+            disabled={!skus}
+            sheets={() => [{
+              name: "Licences",
+              columns: [
+                { header: "Licence", key: "licence", width: 42 },
+                { header: "SKU", key: "sku", width: 28 },
+                { header: "Consommées", key: "consommees", width: 12 },
+                { header: "Total", key: "total", width: 10 },
+                { header: "Disponibles", key: "dispo", width: 12 },
+                { header: "% occupé", key: "pct", width: 10 },
+              ],
+              rows: (skus ?? []).map((s) => {
+                const total = s.prepaidUnits.enabled;
+                return {
+                  licence: getSkuFriendlyName(s.skuPartNumber),
+                  sku: s.skuPartNumber,
+                  consommees: s.consumedUnits,
+                  total,
+                  dispo: Math.max(0, total - s.consumedUnits),
+                  pct: total > 0 ? Math.round((s.consumedUnits / total) * 100) : 0,
+                };
+              }),
+            }]}
+          />
+          {skus && (
+            <Badge variant="secondary">
+              {totalConsumed} / {totalEnabled} utilisées
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* SKU cards grid */}

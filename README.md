@@ -51,6 +51,11 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 - **Administration** : paramètres d'interface (masquer des actions sensibles), mots-clés de détection de type, configuration SSO, **comptes administrateur locaux (accès de secours) avec 2FA TOTP**, santé du pont Exchange, export/import des paramètres
 - **Historique** d'audit complet (Qui/Quand/Quoi/Cible), rétention configurable, rollback, export CSV
 
+### Exports Excel
+
+- **Exports `.xlsx`** sur tous les écrans en liste (Utilisateurs, Groupes, Licences, Boîtes partagées, Stockage, Sites SharePoint, Comptes supprimés, Délégations orphelines, Secrets & certificats, inactifs, Historique) — colonnes détaillées, respectent les filtres en cours
+- **Tableau de bord** : export global multi-onglets (« Tout exporter ») + un export par cadre
+
 ### Confort & accessibilité
 
 - Mode clair / sombre + couleurs d'accent, 6 modes d'accessibilité, interface responsive, déconnexion automatique après inactivité

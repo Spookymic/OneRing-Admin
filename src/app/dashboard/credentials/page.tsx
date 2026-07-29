@@ -12,6 +12,7 @@ import { Loader } from "@/components/ui/loader";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { apiFetch } from "@/lib/api";
+import { ExportButton } from "@/components/ui/export-button";
 
 interface Cred {
   appObjectId: string;
@@ -65,6 +66,29 @@ export default function CredentialsPage() {
         <div className="flex items-center gap-2">
           {expiredCount > 0 && <Badge variant="destructive">{expiredCount} expiré(s)</Badge>}
           {soonCount > 0 && <Badge variant="secondary">{soonCount} ≤ 30 j</Badge>}
+          <ExportButton
+            fileBase="onering-secrets-certificats"
+            disabled={data?.supported === false}
+            sheets={() => [{
+              name: "Secrets et certificats",
+              columns: [
+                { header: "Application", key: "app", width: 36 },
+                { header: "App ID", key: "appId", width: 38 },
+                { header: "Type", key: "type", width: 14 },
+                { header: "Identifiant", key: "nom", width: 28 },
+                { header: "Expiration", key: "exp", width: 14 },
+                { header: "Jours restants", key: "jours", width: 14 },
+              ],
+              rows: creds.map((c) => ({
+                app: c.appName,
+                appId: c.appId,
+                type: c.type === "certificate" ? "Certificat" : "Secret",
+                nom: c.name ?? "",
+                exp: format(new Date(c.endDateTime), "dd/MM/yyyy"),
+                jours: c.daysLeft,
+              })),
+            }]}
+          />
         </div>
       </div>
 

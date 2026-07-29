@@ -26,6 +26,7 @@ import { useAdminSettings } from "@/lib/admin-settings";
 import { ResetPasswordDialog } from "@/components/users/reset-password-dialog";
 import { UserGroupsSheet } from "@/components/users/user-groups-sheet";
 import { apiFetch } from "@/lib/api";
+import { ExportButton } from "@/components/ui/export-button";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
@@ -249,6 +250,37 @@ export default function UsersPage() {
               Nouvel utilisateur
             </Button>
           )}
+          <ExportButton
+            fileBase="onering-utilisateurs"
+            disabled={!users}
+            sheets={() => [{
+              name: "Utilisateurs",
+              columns: [
+                { header: "Nom", key: "nom", width: 28 },
+                { header: "Email / UPN", key: "upn", width: 34 },
+                { header: "Fonction", key: "fonction", width: 24 },
+                { header: "Département", key: "dept", width: 20 },
+                { header: "Bureau", key: "bureau", width: 16 },
+                { header: "Téléphone", key: "tel", width: 18 },
+                { header: "Type", key: "type", width: 16 },
+                { header: "Statut", key: "statut", width: 12 },
+                { header: "Nb licences", key: "licences", width: 12 },
+                { header: "Créé le", key: "cree", width: 14 },
+              ],
+              rows: sorted.map((u) => ({
+                nom: u.displayName,
+                upn: u.userPrincipalName ?? u.mail ?? "",
+                fonction: u.jobTitle ?? "",
+                dept: u.department ?? "",
+                bureau: u.officeLocation ?? "",
+                tel: u.mobilePhone ?? u.businessPhones?.[0] ?? "",
+                type: ACCOUNT_TYPE_CONFIG[detectAccountType(u)]?.label ?? detectAccountType(u),
+                statut: u.accountEnabled ? "Actif" : "Désactivé",
+                licences: u.assignedLicenses.length,
+                cree: u.createdDateTime ? format(new Date(u.createdDateTime), "dd/MM/yyyy") : "",
+              })),
+            }]}
+          />
           <Badge variant="secondary">
             {filtered?.length ?? 0} / {users?.length ?? 0} comptes
           </Badge>

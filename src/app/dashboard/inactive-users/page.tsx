@@ -11,6 +11,7 @@ import { Loader } from "@/components/ui/loader";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { apiFetch } from "@/lib/api";
+import { ExportButton } from "@/components/ui/export-button";
 import type { M365User } from "@/services/graph/users";
 import { UserGroupsSheet } from "@/components/users/user-groups-sheet";
 
@@ -71,7 +72,28 @@ export default function InactiveUsersPage() {
             Comptes actifs et licenciés sans connexion depuis &gt; {data?.days ?? 90} jours.
           </p>
         </div>
-        {totalLicenses > 0 && <Badge variant="secondary">≈ {totalLicenses} licence(s) récupérable(s)</Badge>}
+        <div className="flex items-center gap-2">
+          {totalLicenses > 0 && <Badge variant="secondary">≈ {totalLicenses} licence(s) récupérable(s)</Badge>}
+          <ExportButton
+            fileBase="onering-utilisateurs-inactifs"
+            disabled={data?.supported === false}
+            sheets={() => [{
+              name: "Utilisateurs inactifs",
+              columns: [
+                { header: "Nom", key: "nom", width: 28 },
+                { header: "UPN", key: "upn", width: 34 },
+                { header: "Nb licences", key: "licences", width: 12 },
+                { header: "Dernier accès", key: "acces", width: 16 },
+              ],
+              rows: users.map((u) => ({
+                nom: u.displayName,
+                upn: u.userPrincipalName,
+                licences: u.licenseCount,
+                acces: u.lastSignIn ? format(new Date(u.lastSignIn), "dd/MM/yyyy") : "jamais connecté",
+              })),
+            }]}
+          />
+        </div>
       </div>
 
       {data?.supported === false ? (

@@ -19,6 +19,7 @@ import { useAdminSettings } from "@/lib/admin-settings";
 import { apiFetch } from "@/lib/api";
 import { useSort } from "@/lib/use-sort";
 import { SortableHead } from "@/components/ui/sortable-head";
+import { ExportButton } from "@/components/ui/export-button";
 
 type GroupWithType = M365Group & { type: GroupType };
 type GroupSortCol = "displayName" | "type" | "mail";
@@ -89,6 +90,23 @@ export default function GroupsPage() {
         <h2 className="text-2xl font-bold">Groupes</h2>
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{filtered?.length ?? 0} / {groups?.length ?? 0} groupes</Badge>
+          <ExportButton
+            fileBase="onering-groupes"
+            disabled={!groups}
+            sheets={() => [{
+              name: "Groupes",
+              columns: [
+                { header: "Nom", key: "nom", width: 40 },
+                { header: "Type", key: "type", width: 18 },
+                { header: "Email", key: "mail", width: 36 },
+              ],
+              rows: sorted.map((g) => ({
+                nom: g.displayName,
+                type: groupTypeLabels[g.type]?.label ?? g.type,
+                mail: g.mail ?? "",
+              })),
+            }]}
+          />
           {!settings.hideGroupCreation && (
             <Button size="sm" onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />Nouveau groupe

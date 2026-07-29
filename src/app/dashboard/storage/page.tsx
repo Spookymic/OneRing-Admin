@@ -9,6 +9,7 @@ import Link from "next/link";
 import { HardDrive, Mail, Globe, AlertTriangle, ArrowRight } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { formatBytes, usagePercent } from "@/lib/format";
+import { ExportButton } from "@/components/ui/export-button";
 import type { StorageItem } from "@/services/graph/reports";
 
 type Tab = "onedrive" | "exchange" | "sharepoint";
@@ -148,6 +149,39 @@ function StorageSection({ tab, mode, unit, search }: { tab: Tab; mode: Mode; uni
             />
           </>
         )}
+      </div>
+
+      <div className="flex justify-end">
+        <ExportButton
+          fileBase={`onering-stockage-${tab}`}
+          sheets={() => [{
+            name: unit === "site" ? "SharePoint" : unit === "boîte" ? "Exchange" : "OneDrive",
+            columns: mode === "quota"
+              ? [
+                  { header: unit === "boîte" ? "Boîte" : "Utilisateur", key: "nom", width: 30 },
+                  { header: "Détail", key: "detail", width: 40 },
+                  { header: "Utilisé (Go)", key: "go", width: 14 },
+                  { header: "Quota (Go)", key: "quota", width: 14 },
+                  { header: "% occupé", key: "pct", width: 10 },
+                ]
+              : [
+                  { header: "Site", key: "nom", width: 30 },
+                  { header: "Détail", key: "detail", width: 44 },
+                  { header: "Utilisé (Go)", key: "go", width: 14 },
+                  { header: "% du total", key: "pct", width: 12 },
+                ],
+            rows: filtered.map((i) => {
+              const base: Record<string, unknown> = {
+                nom: i.name,
+                detail: i.detail ?? "",
+                go: Math.round((i.used / 1073741824) * 100) / 100,
+                pct: rowPct(i) ?? "",
+              };
+              if (mode === "quota") base.quota = i.allocated > 0 ? Math.round((i.allocated / 1073741824) * 100) / 100 : "";
+              return base;
+            }),
+          }]}
+        />
       </div>
 
       {/* Liste triée par espace décroissant */}

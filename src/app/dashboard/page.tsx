@@ -18,6 +18,7 @@ import type { SubscribedSku } from "@/services/graph/licenses";
 import { detectAccountType, ACCOUNT_TYPE_CONFIG } from "@/lib/account-types";
 import { getSkuFriendlyName } from "@/lib/license-names";
 import { apiFetch } from "@/lib/api";
+import { downloadXlsx, type XlsxSheet } from "@/lib/xlsx";
 import { UserGroupsSheet } from "@/components/users/user-groups-sheet";
 import { GroupMembersSheet } from "@/components/groups/group-members-sheet";
 
@@ -128,6 +129,28 @@ function exportStatsCSV(
   a.download = `onering-stats-${format(new Date(), "yyyy-MM-dd")}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/** Libellé lisible d'un type de groupe (exports Excel). */
+const GROUP_TYPE_LABEL: Record<string, string> = {
+  unified: "Microsoft 365",
+  security: "Sécurité",
+  distribution: "Distribution",
+  sharedMailbox: "Boîte partagée",
+};
+
+/** Bouton d'export Excel discret, placé dans l'en-tête de chaque cadre. */
+function ExportBtn({ onClick, title = "Exporter ce cadre en Excel" }: { onClick: () => void; title?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="ml-auto shrink-0 text-foreground/40 hover:text-primary transition-colors p-1 no-print"
+    >
+      <Download className="h-3.5 w-3.5" />
+    </button>
+  );
 }
 
 const DISMISSED_KEY = "onering-dismissed-anomalies";
@@ -474,6 +497,215 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url);
   }
 
+  // ── Exports Excel (par cadre + global) ────────────────────────────
+  const dstr = () => format(new Date(), "yyyy-MM-dd");
+  const typeLabel = (u: M365User) => ACCOUNT_TYPE_CONFIG[detectAccountType(u)]?.label ?? detectAccountType(u);
+
+  const buildSynthese = (): XlsxSheet => {
+    const rows: Record<string, unknown>[] = [];
+    if (users) {
+      rows.push({ c: "Utilisateurs", m: "Total", v: users.length });
+      rows.push({ c: "Utilisateurs", m: "Actifs", v: users.filter((u) => u.accountEnabled).length });
+      rows.push({ c: "Utilisateurs", m: "Désactivés", v: users.filter((u) => !u.accountEnabled).length });
+      rows.push({ c: "Utilisateurs", m: "Invités", v: users.filter((u) => u.userType === "Guest").length });
+      rows.push({ c: "Utilisateurs", m: "Avec licence", v: users.filter((u) => u.assignedLicenses.length > 0).length });
+      for (const [t, n] of Object.entries(accountTypeBreakdown ?? {})) {
+        rows.push({ c: "Type de compte", m: ACCOUNT_TYPE_CONFIG[t as keyof typeof ACCOUNT_TYPE_CONFIG]?.label ?? t, v: n });
+      }
+    }
+    if (groups) {
+      rows.push({ c: "Groupes", m: "Total", v: groups.length });
+      rows.push({ c: "Groupes", m: "Microsoft 365", v: groups.filter((g) => g.type === "unified").length });
+      rows.push({ c: "Groupes", m: "Sécurité", v: groups.filter((g) => g.type === "security").length });
+      rows.push({ c: "Groupes", m: "Distribution", v: groups.filter((g) => g.type === "distribution").length });
+    }
+    return {
+      name: "Synthèse",
+      columns: [
+        { header: "Catégorie", key: "c", width: 24 },
+        { header: "Métrique", key: "m", width: 32 },
+        { header: "Valeur", key: "v", width: 14 },
+      ],
+      rows,
+    };
+  };
+
+  const buildAnomalies = (): XlsxSheet => ({
+    name: "Anomalies",
+    columns: [
+      { header: "Anomalie", key: "anomalie", width: 42 },
+      { header: "Sévérité", key: "severite", width: 12 },
+      { header: "Nom", key: "nom", width: 28 },
+      { header: "UPN", key: "upn", width: 34 },
+      { header: "Type de compte", key: "type", width: 18 },
+      { header: "Statut", key: "statut", width: 12 },
+      { header: "Nb licences", key: "licences", width: 12 },
+      { header: "Invité", key: "invite", width: 10 },
+    ],
+    rows: allAnomalies.flatMap((a) =>
+      a.users.map((u) => ({
+        anomalie: a.label,
+        severite: a.severity,
+        nom: u.displayName,
+        upn: u.userPrincipalName,
+        type: typeLabel(u),
+        statut: u.accountEnabled ? "Actif" : "Désactivé",
+        licences: u.assignedLicenses.length,
+        invite: u.userType === "Guest" ? "Oui" : "Non",
+      }))
+    ),
+  });
+
+  const buildLicences = (): XlsxSheet => ({
+    name: "Licences",
+    columns: [
+      { header: "Licence", key: "licence", width: 42 },
+      { header: "SKU", key: "sku", width: 28 },
+      { header: "Consommées", key: "consommees", width: 12 },
+      { header: "Total", key: "total", width: 10 },
+      { header: "Disponibles", key: "dispo", width: 12 },
+      { header: "% occupé", key: "pct", width: 10 },
+    ],
+    rows: (skus ?? []).map((s) => {
+      const total = s.prepaidUnits.enabled;
+      return {
+        licence: getSkuFriendlyName(s.skuPartNumber),
+        sku: s.skuPartNumber,
+        consommees: s.consumedUnits,
+        total,
+        dispo: Math.max(0, total - s.consumedUnits),
+        pct: total > 0 ? Math.round((s.consumedUnits / total) * 100) : 0,
+      };
+    }),
+  });
+
+  const buildOwnerless = (): XlsxSheet => ({
+    name: "Groupes sans propriétaire",
+    columns: [
+      { header: "Groupe", key: "nom", width: 40 },
+      { header: "Type", key: "type", width: 18 },
+    ],
+    rows: (ownerlessGroups ?? []).map((g) => ({ nom: g.displayName, type: GROUP_TYPE_LABEL[g.type] ?? g.type })),
+  });
+
+  const buildDisabledOwners = (): XlsxSheet => ({
+    name: "Propriétaires désactivés",
+    columns: [
+      { header: "Groupe", key: "groupe", width: 40 },
+      { header: "Type", key: "type", width: 18 },
+      { header: "Email du groupe", key: "mail", width: 34 },
+      { header: "Propriétaire désactivé", key: "owner", width: 28 },
+      { header: "UPN propriétaire", key: "upn", width: 34 },
+    ],
+    rows: (disabledOwnerGroups ?? []).flatMap((g) =>
+      g.owners.map((o) => ({
+        groupe: g.displayName,
+        type: GROUP_TYPE_LABEL[g.type] ?? g.type,
+        mail: g.mail ?? "",
+        owner: o.displayName,
+        upn: o.userPrincipalName ?? "",
+      }))
+    ),
+  });
+
+  const buildEmpty = (): XlsxSheet => ({
+    name: "Groupes vides",
+    columns: [
+      { header: "Groupe", key: "nom", width: 40 },
+      { header: "Type", key: "type", width: 18 },
+    ],
+    rows: (emptyGroups ?? []).map((g) => ({ nom: g.displayName, type: GROUP_TYPE_LABEL[g.type] ?? g.type })),
+  });
+
+  const buildCreds = (): XlsxSheet => ({
+    name: "Secrets et certificats",
+    columns: [
+      { header: "Application", key: "app", width: 36 },
+      { header: "Type", key: "type", width: 14 },
+      { header: "Nom", key: "nom", width: 28 },
+      { header: "Expiration", key: "exp", width: 14 },
+      { header: "Jours restants", key: "jours", width: 14 },
+      { header: "Statut", key: "statut", width: 14 },
+    ],
+    rows: expiringCreds.map((c) => ({
+      app: c.appName,
+      type: c.type === "secret" ? "Secret" : "Certificat",
+      nom: c.name ?? "",
+      exp: c.endDateTime ? format(new Date(c.endDateTime), "dd/MM/yyyy") : "",
+      jours: c.daysLeft,
+      statut: c.daysLeft < 0 ? "Expiré" : c.daysLeft <= 7 ? "Critique" : "Bientôt",
+    })),
+  });
+
+  const buildInactiveUsers = (): XlsxSheet => ({
+    name: "Utilisateurs inactifs",
+    columns: [
+      { header: "Nom", key: "nom", width: 28 },
+      { header: "UPN", key: "upn", width: 34 },
+      { header: "Nb licences", key: "licences", width: 12 },
+      { header: "Dernier accès", key: "acces", width: 16 },
+    ],
+    rows: inactiveUsers.map((u) => ({
+      nom: u.displayName,
+      upn: u.userPrincipalName,
+      licences: u.licenseCount,
+      acces: u.lastSignIn ? format(new Date(u.lastSignIn), "dd/MM/yyyy") : "jamais connecté",
+    })),
+  });
+
+  const buildInactiveGuests = (): XlsxSheet => ({
+    name: "Invités inactifs",
+    columns: [
+      { header: "Nom", key: "nom", width: 28 },
+      { header: "UPN", key: "upn", width: 40 },
+      { header: "Dernier accès", key: "acces", width: 16 },
+      { header: "Créé le", key: "cree", width: 14 },
+    ],
+    rows: inactiveGuests.map((g) => ({
+      nom: g.displayName,
+      upn: g.userPrincipalName,
+      acces: g.lastSignIn ? format(new Date(g.lastSignIn), "dd/MM/yyyy") : "jamais connecté",
+      cree: g.createdDateTime ? format(new Date(g.createdDateTime), "dd/MM/yyyy") : "",
+    })),
+  });
+
+  const buildLicenseConflicts = (): XlsxSheet => ({
+    name: "Licences en conflit",
+    columns: [
+      { header: "Nom", key: "nom", width: 28 },
+      { header: "UPN", key: "upn", width: 34 },
+      { header: "Licences en conflit", key: "conflits", width: 50 },
+    ],
+    rows: licenseConflicts.map((u) => ({
+      nom: u.displayName,
+      upn: u.userPrincipalName,
+      conflits: u.skuIds.map(skuName).join(", "),
+    })),
+  });
+
+  const buildAudit = (): XlsxSheet => ({
+    name: "Historique récent",
+    columns: [
+      { header: "Date", key: "date", width: 18 },
+      { header: "Administrateur", key: "admin", width: 34 },
+      { header: "Action", key: "action", width: 22 },
+      { header: "Cible", key: "cible", width: 34 },
+    ],
+    rows: (auditLogs ?? []).map((l) => ({
+      date: l.createdAt ? format(new Date(l.createdAt), "dd/MM/yyyy HH:mm") : "",
+      admin: l.userUpn ?? "",
+      action: actionLabels[l.action] ?? l.action,
+      cible: l.targetName ?? "",
+    })),
+  });
+
+  const exportAll = () =>
+    downloadXlsx(`onering-dashboard-${dstr()}`, [
+      buildSynthese(), buildAnomalies(), buildLicences(), buildOwnerless(),
+      buildDisabledOwners(), buildEmpty(), buildCreds(), buildInactiveUsers(),
+      buildInactiveGuests(), buildLicenseConflicts(), buildAudit(),
+    ].filter((s) => s.rows.length > 0));
+
   const severityStyle = {
     high: "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 text-red-700 dark:text-red-300",
     medium: "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300",
@@ -495,20 +727,11 @@ export default function DashboardPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={exportAnomaliesCSV}
-            disabled={!users}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Anomalies CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => exportStatsCSV(users, groups, skus)}
+            onClick={exportAll}
             disabled={!users || !groups}
           >
             <Download className="h-4 w-4 mr-2" />
-            Exporter CSV
+            Tout exporter (Excel)
           </Button>
         </div>
       </div>
@@ -556,6 +779,7 @@ export default function DashboardPage() {
                 {totalDismissed} ignoré{totalDismissed > 1 ? "s" : ""} — Réafficher tout
               </button>
             )}
+            <ExportBtn onClick={() => downloadXlsx(`onering-anomalies-${dstr()}`, [buildAnomalies()])} />
           </h3>
           <div className="space-y-2">
             {anomalies.map((anomaly) => (
@@ -612,6 +836,7 @@ export default function DashboardPage() {
           <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             Groupes sans propriétaire ({activeOwnerless.length})
+            <ExportBtn onClick={() => downloadXlsx(`onering-groupes-sans-proprietaire-${dstr()}`, [buildOwnerless()])} />
           </h3>
           <div className="rounded-lg border px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300">
             <p className="text-xs mb-2 opacity-80">
@@ -667,6 +892,7 @@ export default function DashboardPage() {
           <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             Groupes à propriétaire désactivé ({activeDisabledOwners.length})
+            <ExportBtn onClick={() => downloadXlsx(`onering-proprietaires-desactives-${dstr()}`, [buildDisabledOwners()])} />
           </h3>
           <div className="rounded-lg border px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300">
             <p className="text-xs mb-2 opacity-80">
@@ -728,6 +954,7 @@ export default function DashboardPage() {
           <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             Groupes vides ({activeEmpty.length})
+            <ExportBtn onClick={() => downloadXlsx(`onering-groupes-vides-${dstr()}`, [buildEmpty()])} />
           </h3>
           <div className="rounded-lg border px-4 py-3 bg-primary/5 border-primary/20 text-primary">
             <p className="text-xs mb-2 opacity-80">
@@ -771,6 +998,7 @@ export default function DashboardPage() {
           <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-red-500" />
             Certificats / secrets d&apos;applications à renouveler ({expiringCreds.length})
+            <ExportBtn onClick={() => downloadXlsx(`onering-secrets-certificats-${dstr()}`, [buildCreds()])} />
           </h3>
           <div className="rounded-lg border px-4 py-3 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 space-y-1">
             {expiringCreds.slice(0, 8).map((c, i) => (
@@ -800,6 +1028,7 @@ export default function DashboardPage() {
           <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-amber-500" />
             Optimisation des licences
+            <ExportBtn onClick={() => downloadXlsx(`onering-utilisateurs-inactifs-${dstr()}`, [buildInactiveUsers()])} />
           </h3>
           <div className="rounded-lg border px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300">
             <p className="text-sm font-medium">≈ {wastedTotal} licence(s) récupérable(s)</p>
@@ -851,6 +1080,7 @@ export default function DashboardPage() {
           <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
             <Users className="h-4 w-4 text-amber-500" />
             Invités inactifs ({inactiveGuests.length})
+            <ExportBtn onClick={() => downloadXlsx(`onering-invites-inactifs-${dstr()}`, [buildInactiveGuests()])} />
           </h3>
           <div className="rounded-lg border px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300">
             <p className="text-xs mb-2 opacity-80">
@@ -890,6 +1120,7 @@ export default function DashboardPage() {
           <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             Licences en conflit ({licenseConflicts.length})
+            <ExportBtn onClick={() => downloadXlsx(`onering-licences-conflit-${dstr()}`, [buildLicenseConflicts()])} />
           </h3>
           <div className="rounded-lg border px-4 py-3 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300">
             <p className="text-xs mb-2 opacity-80">
@@ -1057,6 +1288,7 @@ export default function DashboardPage() {
           <h3 className="font-semibold text-sm mb-1 flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
             Types de comptes
+            <ExportBtn onClick={() => downloadXlsx(`onering-synthese-${dstr()}`, [buildSynthese()])} title="Exporter la synthèse (Excel)" />
           </h3>
           <p className="text-xs text-foreground/40 mb-4">
             Chaque compte reçoit un seul type primaire. Survolez un type pour voir le critère de classification.
@@ -1225,6 +1457,7 @@ export default function DashboardPage() {
             <Shield className="h-4 w-4 text-primary" />
             Abonnements Microsoft 365
             <span className="text-foreground/40 font-normal">(cliquer pour voir les utilisateurs)</span>
+            <ExportBtn onClick={() => downloadXlsx(`onering-licences-${dstr()}`, [buildLicences()])} />
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {skusLoading
@@ -1301,6 +1534,7 @@ export default function DashboardPage() {
         <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
           <History className="h-4 w-4 text-primary" />
           Modifications récentes
+          <ExportBtn onClick={() => downloadXlsx(`onering-historique-${dstr()}`, [buildAudit()])} />
         </h3>
         <Card>
           <Table>

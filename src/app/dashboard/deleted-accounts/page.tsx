@@ -10,6 +10,7 @@ import { Loader } from "@/components/ui/loader";
 import { ShieldAlert, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
+import { ExportButton } from "@/components/ui/export-button";
 
 interface DeletedUser {
   id: string;
@@ -68,13 +69,36 @@ export default function DeletedAccountsPage() {
             avec leur SID — utile pour identifier les délégations orphelines.
           </p>
         </div>
-        <Link
-          href="/dashboard/orphan-delegations"
-          className="shrink-0 inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
-        >
-          <ShieldAlert className="h-4 w-4" />
-          Délégations orphelines
-        </Link>
+        <div className="flex items-center gap-3 shrink-0">
+          <ExportButton
+            fileBase="onering-comptes-supprimes"
+            disabled={data?.supported === false}
+            sheets={() => [{
+              name: "Comptes supprimés",
+              columns: [
+                { header: "Nom", key: "nom", width: 28 },
+                { header: "UPN", key: "upn", width: 40 },
+                { header: "SID", key: "sid", width: 46 },
+                { header: "Supprimé le", key: "supp", width: 14 },
+                { header: "Purge dans (j)", key: "purge", width: 14 },
+              ],
+              rows: users.map((u) => ({
+                nom: u.displayName,
+                upn: u.userPrincipalName ?? "",
+                sid: u.onPremSid || u.sid || "",
+                supp: u.deletedDateTime ? format(new Date(u.deletedDateTime), "dd/MM/yyyy") : "",
+                purge: daysLeft(u.deletedDateTime) ?? "",
+              })),
+            }]}
+          />
+          <Link
+            href="/dashboard/orphan-delegations"
+            className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+          >
+            <ShieldAlert className="h-4 w-4" />
+            Délégations orphelines
+          </Link>
+        </div>
       </div>
 
       {data?.supported === false ? (

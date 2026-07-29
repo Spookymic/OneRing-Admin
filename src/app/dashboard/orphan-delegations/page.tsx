@@ -9,6 +9,7 @@ import { Loader } from "@/components/ui/loader";
 import { Trash2, AlertTriangle, Users } from "lucide-react";
 import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
+import { ExportButton } from "@/components/ui/export-button";
 import { useToast } from "@/hooks/use-toast";
 import type { DelegationType } from "@/services/exchange/shared-mailboxes";
 
@@ -84,13 +85,38 @@ export default function OrphanDelegationsPage() {
             un <strong>compte supprimé</strong> encore référencé (SID non résolu). Nettoyez-les pour lever ces accès résiduels.
           </p>
         </div>
-        <Link
-          href="/dashboard/deleted-accounts"
-          className="shrink-0 inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
-        >
-          <Users className="h-4 w-4" />
-          Comptes supprimés
-        </Link>
+        <div className="flex items-center gap-3 shrink-0">
+          <ExportButton
+            fileBase="onering-delegations-orphelines"
+            disabled={data?.supported === false}
+            sheets={() => [{
+              name: "Délégations orphelines",
+              columns: [
+                { header: "Boîte partagée", key: "boite", width: 30 },
+                { header: "Email", key: "mail", width: 34 },
+                { header: "Permission", key: "perm", width: 22 },
+                { header: "Compte supprimé", key: "compte", width: 28 },
+                { header: "SID", key: "sid", width: 46 },
+                { header: "Supprimé le", key: "supp", width: 14 },
+              ],
+              rows: orphans.map((o) => ({
+                boite: o.mailbox,
+                mail: o.mailboxMail,
+                perm: typeLabels[o.type],
+                compte: o.deletedName || "Compte supprimé (inconnu)",
+                sid: o.sid,
+                supp: o.deletedDate ? format(new Date(o.deletedDate), "dd/MM/yyyy") : "",
+              })),
+            }]}
+          />
+          <Link
+            href="/dashboard/deleted-accounts"
+            className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+          >
+            <Users className="h-4 w-4" />
+            Comptes supprimés
+          </Link>
+        </div>
       </div>
 
       {data?.supported === false ? (

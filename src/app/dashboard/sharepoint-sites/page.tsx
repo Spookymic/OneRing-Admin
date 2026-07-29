@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
 import { formatBytes } from "@/lib/format";
 import { useSort } from "@/lib/use-sort";
+import { ExportButton } from "@/components/ui/export-button";
 import type { SharePointSite } from "@/services/graph/reports";
 import type { SpoSiteSettings } from "@/services/sharepoint/site-settings";
 
@@ -123,6 +124,46 @@ export default function SharePointSitesPage() {
               className="max-w-sm"
             />
             <Badge variant="secondary" className="self-center">{filtered.length} sites</Badge>
+            <ExportButton
+              fileBase="onering-sites-sharepoint"
+              sheets={() => [{
+                name: "Sites SharePoint",
+                columns: [
+                  { header: "Site", key: "site", width: 30 },
+                  { header: "URL", key: "url", width: 44 },
+                  { header: "Type", key: "type", width: 16 },
+                  { header: "Espace utilisé (Go)", key: "go", width: 16 },
+                  { header: "Fichiers", key: "fichiers", width: 12 },
+                  { header: "Fichiers actifs", key: "actifs", width: 14 },
+                  { header: "Pages vues", key: "vues", width: 12 },
+                  { header: "Pages visitées", key: "visitees", width: 14 },
+                  { header: "Dernière activité", key: "activite", width: 16 },
+                  { header: "Partage externe", key: "partage", width: 22 },
+                  { header: "Verrou", key: "verrou", width: 14 },
+                  { header: "Étiquette", key: "etiquette", width: 18 },
+                  { header: "Quota (Go)", key: "quota", width: 12 },
+                  { header: "Hub", key: "hub", width: 8 },
+                  { header: "Groupe M365", key: "groupe", width: 12 },
+                ],
+                rows: sorted.map((s) => ({
+                  site: s.name,
+                  url: s.url ?? "",
+                  type: s.kind,
+                  go: Math.round((s.storageUsed / 1073741824) * 100) / 100,
+                  fichiers: s.fileCount,
+                  actifs: s.activeFileCount,
+                  vues: s.pageViewCount,
+                  visitees: s.visitedPageCount,
+                  activite: s.lastActivityDate ? format(new Date(s.lastActivityDate), "dd/MM/yyyy") : "",
+                  partage: s.settings ? (sharingLabels[s.settings.sharingCapability ?? ""] ?? s.settings.sharingCapability ?? "") : "",
+                  verrou: s.settings ? (lockLabels[s.settings.lockState ?? ""] ?? s.settings.lockState ?? "") : "",
+                  etiquette: s.settings?.sensitivityLabel ?? "",
+                  quota: s.settings?.storageQuotaMB ? Math.round((s.settings.storageQuotaMB / 1024) * 10) / 10 : "",
+                  hub: s.settings?.isHubSite ? "Oui" : "Non",
+                  groupe: s.settings && s.settings.groupId && s.settings.groupId !== "00000000-0000-0000-0000-000000000000" ? "Oui" : "Non",
+                })),
+              }]}
+            />
           </div>
 
           <div className="rounded-md border bg-card overflow-x-auto">

@@ -13,6 +13,7 @@ import { useCallback } from "react";
 import { Download, RotateCcw } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { csvCell } from "@/lib/csv";
+import { ExportButton } from "@/components/ui/export-button";
 import { useSort } from "@/lib/use-sort";
 import { SortableHead } from "@/components/ui/sortable-head";
 import { useAdminSettings } from "@/lib/admin-settings";
@@ -230,10 +231,24 @@ export default function AuditPage() {
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{logs?.length ?? 0} entrées</Badge>
           {logs && logs.length > 0 && (
-            <Button size="sm" variant="outline" onClick={() => exportAuditCSV(logs)}>
-              <Download className="h-4 w-4 mr-1" />
-              Exporter CSV
-            </Button>
+            <ExportButton
+              fileBase="onering-historique"
+              sheets={() => [{
+                name: "Historique",
+                columns: [
+                  { header: "Date", key: "date", width: 18 },
+                  { header: "Administrateur", key: "admin", width: 34 },
+                  { header: "Action", key: "action", width: 22 },
+                  { header: "Détail", key: "detail", width: 60 },
+                ],
+                rows: logs.map((l) => ({
+                  date: l.createdAt ? format(new Date(l.createdAt), "dd/MM/yyyy HH:mm") : "",
+                  admin: l.userUpn ?? "",
+                  action: actionLabels[l.action]?.label ?? l.action,
+                  detail: buildDescription(l),
+                })),
+              }]}
+            />
           )}
         </div>
       </div>

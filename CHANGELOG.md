@@ -2,6 +2,17 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.27.0] — 2026-07-02
+
+### Nouvelle fonctionnalité v1.27.0 — Exports Excel
+
+- **Passage des exports CSV en `.xlsx`** (via `exceljs`, chargé à la demande) : en-têtes en gras, filtres automatiques, colonnes dimensionnées.
+- **Tableau de bord** : bouton global « Tout exporter (Excel) » (classeur multi-onglets : Synthèse, Anomalies, Licences, Groupes sans propriétaire, Propriétaires désactivés, Groupes vides, Secrets/certificats, Utilisateurs inactifs, Invités inactifs, Licences en conflit, Historique) **+ un export par cadre** (icône dans chaque en-tête), avec colonnes enrichies (type de compte, statut, nb licences, invité…).
+- **Exports sur tous les écrans en liste** : Utilisateurs, Groupes, Licences, Boîtes partagées, Stockage (par onglet), Sites SharePoint (avec paramètres), Comptes supprimés, Délégations orphelines, Secrets & certificats, Utilisateurs/Invités inactifs, Historique. Chaque export respecte les filtres/tri en cours.
+- Nouveau composant réutilisable `ExportButton` + helper `src/lib/xlsx.ts` ; dépendance `exceljs` ajoutée.
+
+---
+
 ## [1.26.0] — 2026-07-02
 
 ### Nouvelle fonctionnalité v1.26.0

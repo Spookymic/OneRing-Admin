@@ -17,6 +17,7 @@ import { useAdminSettings } from "@/lib/admin-settings";
 import { apiFetch } from "@/lib/api";
 import { useSort } from "@/lib/use-sort";
 import { SortableHead } from "@/components/ui/sortable-head";
+import { ExportButton } from "@/components/ui/export-button";
 import type { SharedMailbox } from "@/services/exchange/shared-mailboxes";
 
 type MbxSortCol = "displayName" | "mail";
@@ -60,6 +61,18 @@ export default function MailboxesPage() {
         <h2 className="text-2xl font-bold">Boîtes partagées</h2>
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{filtered?.length ?? 0} / {mailboxes?.length ?? 0}</Badge>
+          <ExportButton
+            fileBase="onering-boites-partagees"
+            disabled={!mailboxes}
+            sheets={() => [{
+              name: "Boîtes partagées",
+              columns: [
+                { header: "Nom", key: "nom", width: 34 },
+                { header: "Email", key: "mail", width: 40 },
+              ],
+              rows: sorted.map((m) => ({ nom: m.displayName, mail: m.mail ?? "" })),
+            }]}
+          />
           <Link
             href="/dashboard/orphan-delegations"
             className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
