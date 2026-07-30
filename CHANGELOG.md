@@ -2,6 +2,51 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.29.1] — 2026-07-30
+
+### Correctif v1.29.1 — Journaux de connexion : écran vide
+
+- `/auditLogs/signIns` renvoyait systématiquement une erreur 400 (« Could not find a property named `authenticationRequirement` ») sur certains tenants, faisant échouer toute la requête sans qu'aucun message ne s'affiche (la page ne gérait pas l'état d'erreur de la requête). Corrigé : `$select` explicite retiré (dépendait d'un champ non reconnu par Graph sur ce tenant) et ajout d'une bannière d'erreur sur l'écran, cohérente avec les autres écrans de l'application.
+
+## [1.29.0] — 2026-07-30
+
+### Nouvelle fonctionnalité v1.29.0 — Journaux de connexion
+
+- **Écran « Journaux de connexion »** (entrée de menu dédiée) : analyse des connexions Entra ID du tenant sur 24h ou 7 jours (`/auditLogs/signIns`, permission `AuditLog.Read.All` déjà utilisée par le journal individuel de la fiche utilisateur — aucune nouvelle permission). Tuiles de synthèse (total, % succès, % MFA, % authentification legacy), timeline succès/échec par heure ou jour, top applications/pays/IP/motifs d'échec, tableau détaillé des 100 événements les plus récents avec export Excel et pagination.
+- Volumétrie maîtrisée : analyse plafonnée à 2000 événements récupérés (Graph ne permet pas d'agréger côté serveur) — un badge explicite l'indique si la période demandée dépasse ce plafond, jamais de troncature silencieuse.
+- Nouveau service `src/services/graph/signins.ts` (`listTenantSignIns`, `computeSignInStats`), route `/api/security/sign-ins`.
+
+## [1.28.3] — 2026-07-30
+
+### Amélioration v1.28.3 — Détails Accès conditionnel
+
+- **Stratégies d'accès conditionnel** : les utilisateurs/groupes inclus-exclus sont désormais résolus par nom (best-effort, résolution par lot via `/$batch`) au lieu d'un simple décompte, de même que les applications ciblées et les emplacements nommés. Chaque ligne se déplie pour afficher le détail complet : plateformes, types de client, emplacements, niveaux de risque (connexion/utilisateur) et contrôles de session (fréquence de connexion, navigateur persistant, restrictions applicatives, Cloud App Security). Export Excel enrichi avec toutes ces colonnes.
+- **Connexions à risque** : ajout du motif détaillé de détection (`riskDetail`, ex. « connexion confirmée compromise par un admin ») en complément du type d'événement.
+
+## [1.28.2] — 2026-07-30
+
+### Amélioration v1.28.2 — Diagnostic licence sur l'écran Connexions à risque
+
+- La bannière « indisponible » de l'écran Connexions à risque affiche désormais si le tenant dispose déjà d'une licence incluant **Entra ID P2** (détection via le service plan `AAD_PREMIUM_P2` dans `/subscribedSkus`, y compris quand il est intégré à un bundle comme EMS E5 ou Microsoft 365 E5) — et sinon la liste des licences actuellement actives sur le tenant, pour aider à diagnostiquer si le blocage vient de la licence ou du consentement `IdentityRiskEvent.Read.All`.
+
+## [1.28.1] — 2026-07-30
+
+### Amélioration v1.28.1 — Menu utilisateur
+
+- **Menu déroulant utilisateur** (clic sur le nom/email en haut de la sidebar) : regroupe Administration, Accessibilité, Thème, Couleur d'accent et Déconnexion — retirés de la liste de navigation principale et du bloc fixe en bas de sidebar. Sidebar principale recentrée sur les écrans métier.
+
+## [1.28.0] — 2026-07-30
+
+### Nouvelle fonctionnalité v1.28.0 — Accès conditionnel & connexions à risque
+
+- **Écran « Accès conditionnel »** (entrée de menu dédiée) : stratégies d'accès conditionnel du tenant (nom, état, contrôles d'octroi, périmètre inclus/exclus, dernière modification) et connexions à risque Identity Protection (niveau, type de détection, IP, localisation, date). Deux nouveaux scopes `Policy.Read.All` et `IdentityRiskEvent.Read.All` (optionnels, dégradation propre si consentement/licence P2 absents). Endpoints `/api/security/conditional-access-policies` et `/api/security/risky-sign-ins`. Export Excel sur les deux sections.
+
+### Amélioration v1.28.0 — Pagination d'affichage
+
+- **Pagination des tableaux** (Utilisateurs, Groupes, Accès conditionnel) : composant réutilisable `Pagination` + hook `usePagination`, taille de page configurable (25/50/100/250, persistée pour l'écran Utilisateurs). Recherche, tri, filtres, sélection multiple et exports continuent de porter sur tout le jeu de données filtré — seul le rendu du tableau est paginé, pour rester fluide sur les tenants à grand nombre de comptes.
+
+---
+
 ## [1.27.0] — 2026-07-02
 
 ### Nouvelle fonctionnalité v1.27.0 — Exports Excel

@@ -20,6 +20,8 @@ import { apiFetch } from "@/lib/api";
 import { useSort } from "@/lib/use-sort";
 import { SortableHead } from "@/components/ui/sortable-head";
 import { ExportButton } from "@/components/ui/export-button";
+import { usePagination } from "@/lib/use-pagination";
+import { Pagination } from "@/components/ui/pagination";
 
 type GroupWithType = M365Group & { type: GroupType };
 type GroupSortCol = "displayName" | "type" | "mail";
@@ -72,6 +74,8 @@ export default function GroupsPage() {
     filtered ?? [],
     getGroupSortVal
   );
+
+  const pagination = usePagination(sorted, 50);
 
   if (error) {
     return (
@@ -152,7 +156,7 @@ export default function GroupsPage() {
                     </TableCell>
                   </TableRow>
                 )
-              : sorted.map((group) => (
+              : pagination.pageItems.map((group) => (
                   <TableRow
                     key={group.id}
                     className="cursor-pointer hover:bg-foreground/5"
@@ -170,6 +174,14 @@ export default function GroupsPage() {
           </TableBody>
         </Table>
       </div>
+      <Pagination
+        page={pagination.page}
+        pageCount={pagination.pageCount}
+        pageSize={pagination.pageSize}
+        totalItems={pagination.totalItems}
+        onPageChange={pagination.setPage}
+        onPageSizeChange={pagination.setPageSize}
+      />
       <CreateGroupDialog open={createOpen} onClose={() => setCreateOpen(false)} />
 
       <GroupMembersSheet

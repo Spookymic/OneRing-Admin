@@ -18,6 +18,8 @@ import { useSearchParams } from "next/navigation";
 import { Columns, Phone, UserPlus } from "lucide-react";
 import { useSort } from "@/lib/use-sort";
 import { SortableHead } from "@/components/ui/sortable-head";
+import { usePagination } from "@/lib/use-pagination";
+import { Pagination } from "@/components/ui/pagination";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { M365User } from "@/services/graph/users";
@@ -50,6 +52,7 @@ const COLUMN_DEFS: { id: ColumnId; label: string; defaultVisible: boolean }[] = 
 ];
 
 const COLUMNS_STORAGE_KEY = "onering-visible-columns";
+const PAGE_SIZE_STORAGE_KEY = "onering-users-page-size";
 
 export default function UsersPage() {
   const searchParams = useSearchParams();
@@ -168,6 +171,25 @@ export default function UsersPage() {
     filtered ?? [],
     getSortVal
   );
+
+  const pagination = usePagination(sorted, 50);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PAGE_SIZE_STORAGE_KEY);
+      if (saved) pagination.setPageSize(Number(saved));
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const handlePageSizeChange = (size: number) => {
+    pagination.setPageSize(size);
+    try {
+      localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(size));
+    } catch {
+      // ignore
+    }
+  };
 
   // ── Sélection multiple / actions groupées ──────────────────────────
   const allSelected = sorted.length > 0 && sorted.every((u) => selectedIds.has(u.id));
@@ -408,7 +430,7 @@ export default function UsersPage() {
                     </TableCell>
                   </TableRow>
                 )
-              : sorted.map((user) => {
+              : pagination.pageItems.map((user) => {
                   const accountType = detectAccountType(
                     user,
                     settings.customRoomPatterns,
@@ -478,6 +500,15 @@ export default function UsersPage() {
           </TableBody>
         </Table>
       </div>
+
+      <Pagination
+        page={pagination.page}
+        pageCount={pagination.pageCount}
+        pageSize={pagination.pageSize}
+        totalItems={pagination.totalItems}
+        onPageChange={pagination.setPage}
+        onPageSizeChange={handlePageSizeChange}
+      />
 
       {selectedUser && (
         <UserGroupsSheet

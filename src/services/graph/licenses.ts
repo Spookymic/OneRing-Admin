@@ -5,6 +5,7 @@ export interface SubscribedSku {
   skuPartNumber: string;
   consumedUnits: number;
   prepaidUnits: { enabled: number; suspended: number; warning: number };
+  servicePlans?: { servicePlanName: string; provisioningStatus: string }[];
 }
 
 export async function listSubscribedSkus(accessToken: string): Promise<SubscribedSku[]> {

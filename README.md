@@ -14,7 +14,7 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 
 ### Utilisateurs
 
-- Liste de tous les types de comptes, détection automatique du type, filtres (type, statut, département), tri, colonnes persistées
+- Liste de tous les types de comptes, détection automatique du type, filtres (type, statut, département), tri, colonnes persistées, pagination
 - Panneau latéral : groupes, licences, **connexions** (journal + export CSV), **rôles Azure AD**, **absence** (réponse automatique + statut Teams), **statut MFA / méthodes d'authentification**
 - Réinitialisation de mot de passe, activation / désactivation, **offboarding**, actions groupées
 
@@ -27,6 +27,16 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 
 - Liste, création et gestion des délégations (via le pont Exchange)
 - **Délégations orphelines** : détection des permissions détenues par un compte supprimé (SID non résolu) — badge « Compte supprimé » dans le panneau (nom retrouvé via la corbeille Azure) + **rapport global** avec nettoyage en un clic
+
+### Accès conditionnel & connexions à risque
+
+- **Stratégies d'accès conditionnel** : liste triable (nom, état, utilisateurs/groupes et applications ciblés — noms résolus, contrôles d'octroi, dernière modification), avec détail dépliable par stratégie (plateformes, types de client, emplacements, niveaux de risque, contrôles de session)
+- **Connexions à risque** (Identity Protection) : détections de risque (niveau, type, motif détaillé, IP, localisation, date), nécessite une licence **Microsoft Entra ID P2** ; la bannière d'indisponibilité indique si une licence incluant P2 est déjà présente sur le tenant
+
+### Journaux de connexion
+
+- Analyse des connexions Entra ID du tenant sur 24h ou 7 jours : tuiles de synthèse (total, % succès, % MFA, % authentification legacy), timeline succès/échec, top applications/pays/IP/motifs d'échec, tableau détaillé des 100 événements les plus récents (export Excel)
+- Aucune permission supplémentaire (`AuditLog.Read.All`, déjà optionnelle) ; analyse plafonnée à 2000 événements par souci de performance (Graph ne permet pas d'agréger côté serveur), signalé explicitement si atteint
 
 ### Sites SharePoint
 
@@ -53,7 +63,7 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 
 ### Exports Excel
 
-- **Exports `.xlsx`** sur tous les écrans en liste (Utilisateurs, Groupes, Licences, Boîtes partagées, Stockage, Sites SharePoint, Comptes supprimés, Délégations orphelines, Secrets & certificats, inactifs, Historique) — colonnes détaillées, respectent les filtres en cours
+- **Exports `.xlsx`** sur tous les écrans en liste (Utilisateurs, Groupes, Licences, Boîtes partagées, Stockage, Sites SharePoint, Accès conditionnel, Journaux de connexion, Comptes supprimés, Délégations orphelines, Secrets & certificats, inactifs, Historique) — colonnes détaillées, respectent les filtres en cours
 - **Tableau de bord** : export global multi-onglets (« Tout exporter ») + un export par cadre
 
 ### Confort & accessibilité
@@ -103,6 +113,8 @@ Dans le portail Azure → App registrations → New registration :
    - `Application.Read.All` — alertes d'expiration des secrets/certificats d'applications
    - `Reports.Read.All` — page **Stockage** (espace OneDrive / Exchange / SharePoint). Rapports avec ~1-2 j de latence. Pour afficher les noms réels plutôt que des identifiants masqués, désactiver l'anonymisation : centre d'admin Microsoft 365 → Paramètres → Rapports → décocher « Afficher les noms masqués ».
    - `Sites.Read.All` (**type Application**, pas Délégué) — page Stockage / SharePoint : résout les vrais noms et URLs des sites via `/sites/getAllSites` (réservé à l'app-only). Utilise le flux client-credentials de l'app registration (CLIENT_ID/SECRET). Best-effort : sans cette permission applicative consentie, le nom dérivé (URL ou groupe de propriétaires) est affiché à la place.
+   - `Policy.Read.All` — page Accès conditionnel : liste des stratégies. Sans elle, l'écran fonctionne mais affiche une bannière « indisponible » sur cette section.
+   - `IdentityRiskEvent.Read.All` — page Accès conditionnel : connexions à risque (Identity Protection). Nécessite en plus une licence **Microsoft Entra ID P2** sur le tenant ; sans l'une ou l'autre, la section se désactive proprement.
 
    > **Note** : les permissions **déléguées** ne sont actives que si elles figurent **à la fois** dans le consentement Azure **et** dans la chaîne `scope` demandée au login (`src/lib/auth.ts`) — toutes celles listées ci-dessus (requises + optionnelles déléguées) y sont déjà déclarées ; il suffit d'accorder le consentement admin puis de se reconnecter (jeton régénéré au login). `Sites.Read.All` fait exception : c'est une permission **Application** (voir ci-dessous), obtenue en app-only côté serveur, sans rapport avec le scope de login.
    >

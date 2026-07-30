@@ -7,7 +7,7 @@ Ce document permet de reprendre le projet rapidement entre deux sessions Claude.
 Outil Next.js 16 + TypeScript remplaçant les consoles M365 (Entra, Exchange, Admin Center).
 Auth SSO Microsoft (NextAuth v4 + Azure AD). Appels Microsoft Graph API. Audit log PostgreSQL. Échéance : 31/03/2026.
 
-## Version actuelle : 1.27.0 (2026-07-02)
+## Version actuelle : 1.29.1 (2026-07-30)
 
 Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 
@@ -44,6 +44,10 @@ Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 | Pont Exchange — membres DL | Terminé | Add/Remove via bridge, garde `isExchangeAdmin`, audit `DL_MEMBER_ADD/REMOVE` |
 | Pont Exchange — owners DL + création DL | Terminé | `ManagedBy` (lecture+écriture), `New-DistributionGroup`, audit `DL_OWNER_ADD/REMOVE`, `DL_CREATE` |
 | Pont Exchange — boîtes partagées | Terminé | Page dédiée, création `New-Mailbox -Shared`, délégations FullAccess/SendAs/SendOnBehalf, audit `SHARED_MAILBOX_CREATE`, `MAILBOX_PERMISSION_ADD/REMOVE` |
+| Écran Accès conditionnel & connexions à risque | Terminé | Stratégies CA (`Policy.Read.All`) + détections Identity Protection (`IdentityRiskEvent.Read.All`, licence P2), best-effort |
+| Pagination d'affichage | Terminé | Hook `usePagination` + composant `Pagination`, écrans Utilisateurs/Groupes/Accès conditionnel — recherche/tri/sélection/export restent sur tout le jeu filtré |
+| Menu utilisateur (sidebar) | Terminé | Administration, Accessibilité, Thème, Accent, Déconnexion regroupés dans un menu déroulant (clic sur le nom/email) |
+| Écran Journaux de connexion | Terminé | Analyse `/auditLogs/signIns` (24h/7j) : succès/échec, timeline, top apps/pays/IP, MFA, auth legacy — plafonné à 2000 événements, `AuditLog.Read.All` |
 | Rollback UI | À faire | payloadBefore présent, bouton UI manquant |
 
 ## Adaptations techniques notables
@@ -72,6 +76,10 @@ src/
       users/[id]/teams-presence/route.ts  # POST statut Teams
       users/[id]/roles/route.ts           # GET/POST rôles AD d'un user
       roles/route.ts                      # GET tous les rôles AD du tenant
+      security/
+        conditional-access-policies/route.ts # GET stratégies CA (Policy.Read.All)
+        risky-sign-ins/route.ts              # GET détections Identity Protection (IdentityRiskEvent.Read.All, licence P2)
+        sign-ins/route.ts                    # GET analyse journaux de connexion (AuditLog.Read.All, plafonné à 2000 events)
       groups/route.ts                     # GET liste + POST création
       groups/[id]/members/route.ts
       groups/[id]/owners/route.ts
@@ -84,6 +92,8 @@ src/
       licenses/page.tsx
       audit/page.tsx                      # Tri, labels actions v1.2.0
       admin/page.tsx                      # Paramètres locaux
+      conditional-access/page.tsx         # Onglets stratégies CA / connexions à risque
+      sign-in-logs/page.tsx                # Analyse journaux de connexion (stats, timeline, top N, tableau)
   components/
     users/
       user-groups-sheet.tsx               # + désactiver/activer, onglet Rôles, onglet Absence
@@ -103,15 +113,19 @@ src/
     groups.ts                             # + isExchangeManagedGroup
     licenses.ts
     roles.ts                              # listDirectoryRoles, listUserRoles, assignRole, removeRole
+    security.ts                           # listConditionalAccessPolicies, listRiskyDetections
+    signins.ts                            # listTenantSignIns (plafonné), computeSignInStats
   lib/
     account-types.ts                      # detectAccountType, ACCOUNT_TYPE_CONFIG
     license-names.ts
-    auth.ts                               # + signIn callback rôles AD
+    auth.ts                               # + signIn callback rôles AD, scopes Policy.Read.All / IdentityRiskEvent.Read.All
     exchange-guard.ts                     # isExchangeAdmin — garde du canal app-only
     admin-settings.ts                     # + showDisableUser, showUserRoles
     use-sort.ts                           # Hook générique tri colonnes
+    use-pagination.ts                     # Hook générique pagination d'affichage
   components/ui/
     sortable-head.tsx                     # Composant en-tête de colonne triable
+    pagination.tsx                        # Composant pagination (page/taille de page)
   services/audit.ts                       # + ACCOUNT_DISABLE/ENABLE, ROLE_ASSIGN/REMOVE, OOO_UPDATE, TEAMS_STATUS_UPDATE
 ```
 
@@ -146,4 +160,4 @@ npx tsc --noEmit
 
 - Hébergement cible : on-premise Docker. Accès par domaine HTTPS via Caddy (`tls internal`) — voir [Deploiement-domaine.md](Deploiement-domaine.md). Reste à trancher : domaine définitif + distribution de la CA interne (GPO) ou bascule DNS-01 pour des certificats publiquement reconnus.
 - **Pont Exchange Online** (DL, groupes mail-enabled, boîtes partagées) : cadré dans [ADR-001-pont-exchange.md](ADR-001-pont-exchange.md). Décision : sidecar PowerShell Docker on-premise, livraison par étapes (DL membres en premier). En attente du provisionnement tenant (app reg + certificat + rôle Exchange Admin).
-- Pagination côté serveur pour les tenants de très grande taille (> 999 utilisateurs) ?
+- ~~Pagination côté serveur pour les tenants de très grande taille (> 999 utilisateurs) ?~~ → l'API gérait déjà la boucle `@odata.nextLink` (`graphFetchAll`) ; ajout d'une pagination d'affichage côté client (v1.28.0) pour le rendu. Une vraie pagination serveur (page/curseur sur l'API + recherche/tri serveur) resterait à évaluer si le rendu redevenait un problème sur un tenant réellement massif.
