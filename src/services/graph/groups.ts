@@ -86,11 +86,11 @@ export async function listSubgroups(
   accessToken: string,
   groupId: string
 ): Promise<(M365Group & { type: GroupType })[]> {
-  const data = await graphFetch<{ value: M365Group[] }>(
+  const value = await graphFetchAll<M365Group>(
     accessToken,
-    `/groups/${encodeURIComponent(groupId)}/members/microsoft.graph.group?$select=${RELATION_SELECT}`
+    `/groups/${encodeURIComponent(groupId)}/members/microsoft.graph.group?$select=${RELATION_SELECT}&$top=999`
   );
-  return data.value.map((g) => ({ ...g, type: detectGroupType(g) }));
+  return value.map((g) => ({ ...g, type: detectGroupType(g) }));
 }
 
 /** Groupes dont ce groupe est membre (vue inversée « membre de »), via Graph. */
@@ -98,11 +98,11 @@ export async function listParentGroups(
   accessToken: string,
   groupId: string
 ): Promise<(M365Group & { type: GroupType })[]> {
-  const data = await graphFetch<{ value: M365Group[] }>(
+  const value = await graphFetchAll<M365Group>(
     accessToken,
-    `/groups/${encodeURIComponent(groupId)}/memberOf/microsoft.graph.group?$select=${RELATION_SELECT}`
+    `/groups/${encodeURIComponent(groupId)}/memberOf/microsoft.graph.group?$select=${RELATION_SELECT}&$top=999`
   );
-  return data.value.map((g) => ({ ...g, type: detectGroupType(g) }));
+  return value.map((g) => ({ ...g, type: detectGroupType(g) }));
 }
 
 export async function getGroupBasic(
@@ -121,22 +121,21 @@ const MEMBER_SELECT = "id,displayName,userPrincipalName,mail,jobTitle";
 const OWNER_SELECT = "id,displayName,mail";
 
 export async function listGroupMembers(accessToken: string, groupId: string): Promise<any[]> {
-  const data = await graphFetch<{ value: any[] }>(
+  // graphFetchAll suit @odata.nextLink : sinon Graph plafonne à ~100 membres par page.
+  return graphFetchAll<any>(
     accessToken,
-    `/groups/${encodeURIComponent(groupId)}/members/microsoft.graph.user?$select=${MEMBER_SELECT}`
+    `/groups/${encodeURIComponent(groupId)}/members/microsoft.graph.user?$select=${MEMBER_SELECT}&$top=999`
   );
-  return data.value;
 }
 
 export async function listGroupOwners(accessToken: string, groupId: string): Promise<any[]> {
   try {
     // Utilise /owners sans cast microsoft.graph.user pour inclure DL et groupes de sécurité.
     // Select réduit à id,displayName,mail car userPrincipalName/jobTitle n'existent pas sur les non-utilisateurs.
-    const data = await graphFetch<{ value: any[] }>(
+    return await graphFetchAll<any>(
       accessToken,
-      `/groups/${encodeURIComponent(groupId)}/owners?$select=${OWNER_SELECT}`
+      `/groups/${encodeURIComponent(groupId)}/owners?$select=${OWNER_SELECT}&$top=999`
     );
-    return data.value;
   } catch {
     return [];
   }

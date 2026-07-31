@@ -55,26 +55,27 @@ export async function getUser(accessToken: string, userId: string): Promise<M365
 export async function listUserMemberOf(accessToken: string, userId: string): Promise<M365UserGroup[]> {
   const params = new URLSearchParams({
     $select: "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled",
-    $top: "100",
+    $top: "999",
   });
-  const data = await graphFetch<{ value: M365UserGroup[] }>(
+  // graphFetchAll suit @odata.nextLink : sinon plafonné à une page (un utilisateur peut être membre de > 100 groupes).
+  const value = await graphFetchAll<M365UserGroup>(
     accessToken,
     `/users/${encodeURIComponent(userId)}/memberOf/microsoft.graph.group?${params}`
   );
-  return data.value.sort((a, b) => a.displayName.localeCompare(b.displayName));
+  return value.sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
 /** Groupes dont l'utilisateur est propriétaire. */
 export async function listUserOwnedGroups(accessToken: string, userId: string): Promise<M365UserGroup[]> {
   const params = new URLSearchParams({
     $select: "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled",
-    $top: "100",
+    $top: "999",
   });
-  const data = await graphFetch<{ value: M365UserGroup[] }>(
+  const value = await graphFetchAll<M365UserGroup>(
     accessToken,
     `/users/${encodeURIComponent(userId)}/ownedObjects/microsoft.graph.group?${params}`
   );
-  return data.value.sort((a, b) => a.displayName.localeCompare(b.displayName));
+  return value.sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
 export interface SignInLog {

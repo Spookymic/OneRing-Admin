@@ -7,7 +7,7 @@ Ce document permet de reprendre le projet rapidement entre deux sessions Claude.
 Outil Next.js 16 + TypeScript remplaçant les consoles M365 (Entra, Exchange, Admin Center).
 Auth SSO Microsoft (NextAuth v4 + Azure AD). Appels Microsoft Graph API. Audit log PostgreSQL. Échéance : 31/03/2026.
 
-## Version actuelle : 1.29.1 (2026-07-30)
+## Version actuelle : 1.29.2 (2026-07-31)
 
 Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 

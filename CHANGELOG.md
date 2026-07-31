@@ -2,6 +2,15 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.29.2] — 2026-07-31
+
+### Corrections v1.29.2
+
+- **Listes tronquées à 100** : plusieurs collections Graph ne récupéraient qu'une page (défaut ~100), coupant les résultats — membres d'un groupe, propriétaires, sous-groupes / groupes parents (arborescence), groupes d'un utilisateur (memberOf) et groupes possédés. Passées en `graphFetchAll` (suivi de `@odata.nextLink`, `$top=999`) → toutes les entrées sont désormais renvoyées.
+- Alignement des badges de version de la page de connexion et de l'écran Administration (restés à 1.27.0).
+
+---
+
 ## [1.29.1] — 2026-07-30
 
 ### Correctif v1.29.1 — Journaux de connexion : écran vide
