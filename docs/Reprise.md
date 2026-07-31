@@ -7,7 +7,7 @@ Ce document permet de reprendre le projet rapidement entre deux sessions Claude.
 Outil Next.js 16 + TypeScript remplaçant les consoles M365 (Entra, Exchange, Admin Center).
 Auth SSO Microsoft (NextAuth v4 + Azure AD). Appels Microsoft Graph API. Audit log PostgreSQL. Échéance : 31/03/2026.
 
-## Version actuelle : 1.29.2 (2026-07-31)
+## Version actuelle : 1.30.0 (2026-07-31)
 
 Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 
@@ -48,6 +48,7 @@ Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 | Pagination d'affichage | Terminé | Hook `usePagination` + composant `Pagination`, écrans Utilisateurs/Groupes/Accès conditionnel — recherche/tri/sélection/export restent sur tout le jeu filtré |
 | Menu utilisateur (sidebar) | Terminé | Administration, Accessibilité, Thème, Accent, Déconnexion regroupés dans un menu déroulant (clic sur le nom/email) |
 | Écran Journaux de connexion | Terminé | Analyse `/auditLogs/signIns` (24h/7j) : succès/échec, timeline, top apps/pays/IP, MFA, auth legacy — plafonné à 2000 événements, `AuditLog.Read.All` |
+| Écran Postes de travail | Terminé | Vue unifiée Entra/Intune/Autopilot (corrélation deviceId + n° série), « Supprimer partout » (audit `DEVICE_DELETE`, irréversible), badge propriétaire désactivé, tri par colonne, surbrillance doublons de nom — permissions `Device.ReadWrite.All`, `DeviceManagementManagedDevices.ReadWrite.All`, `DeviceManagementServiceConfig.ReadWrite.All` |
 | Rollback UI | À faire | payloadBefore présent, bouton UI manquant |
 
 ## Adaptations techniques notables

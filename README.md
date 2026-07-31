@@ -47,6 +47,12 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 
 - Écran dédié listant la **corbeille Azure AD** (comptes supprimés < 30 j avant purge) : nom, UPN, **SID**, date de suppression, jours restants — utile pour corréler avec les délégations orphelines
 
+### Postes de travail
+
+- Vue **unifiée** des machines corrélées à travers **Entra ID**, **Intune** et **Autopilot** (dédoublonnage par identifiant d'appareil Azure AD puis numéro de série) : Machine, OS, Propriétaire, Présence par source, dernière activité, conformité — recherche, tri par colonne, export Excel
+- **« Supprimer partout »** (1 clic + confirmation) retire la machine de **tous les référentiels** où elle existe, sans changer de console — opération **irréversible** et **journalisée** (`DEVICE_DELETE`), avec résultat par source. Ne touche pas l'AD on-premise (postes hybrides — hors portée Graph)
+- **Badge « Propriétaire désactivé »** (croisement avec `accountEnabled`) et **surbrillance des noms en doublon** pour repérer machines orphelines et homonymes
+
 ### Licences
 
 - Assignation / retrait par SKU, noms conviviaux, vue par utilisateur, ancienneté du compte
@@ -115,6 +121,9 @@ Dans le portail Azure → App registrations → New registration :
    - `Sites.Read.All` (**type Application**, pas Délégué) — page Stockage / SharePoint : résout les vrais noms et URLs des sites via `/sites/getAllSites` (réservé à l'app-only). Utilise le flux client-credentials de l'app registration (CLIENT_ID/SECRET). Best-effort : sans cette permission applicative consentie, le nom dérivé (URL ou groupe de propriétaires) est affiché à la place.
    - `Policy.Read.All` — page Accès conditionnel : liste des stratégies. Sans elle, l'écran fonctionne mais affiche une bannière « indisponible » sur cette section.
    - `IdentityRiskEvent.Read.All` — page Accès conditionnel : connexions à risque (Identity Protection). Nécessite en plus une licence **Microsoft Entra ID P2** sur le tenant ; sans l'une ou l'autre, la section se désactive proprement.
+   - `Device.ReadWrite.All` — page Postes de travail : lecture et suppression des appareils **Entra ID**. Sans elle, la source Entra apparaît « ✗ » et est ignorée.
+   - `DeviceManagementManagedDevices.ReadWrite.All` — page Postes de travail : lecture et suppression des appareils **Intune** (MDM). Source ignorée si absente.
+   - `DeviceManagementServiceConfig.ReadWrite.All` — page Postes de travail : lecture et suppression des inscriptions **Autopilot**. Source ignorée si absente.
 
    > **Note** : les permissions **déléguées** ne sont actives que si elles figurent **à la fois** dans le consentement Azure **et** dans la chaîne `scope` demandée au login (`src/lib/auth.ts`) — toutes celles listées ci-dessus (requises + optionnelles déléguées) y sont déjà déclarées ; il suffit d'accorder le consentement admin puis de se reconnecter (jeton régénéré au login). `Sites.Read.All` fait exception : c'est une permission **Application** (voir ci-dessous), obtenue en app-only côté serveur, sans rapport avec le scope de login.
    >

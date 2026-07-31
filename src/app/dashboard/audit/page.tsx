@@ -43,6 +43,7 @@ const actionLabels: Record<string, { label: string; variant: "default" | "second
   ROLE_REMOVE:         { label: "Rôle retiré",      variant: "destructive" },
   OOO_UPDATE:          { label: "Absence mail",     variant: "secondary" },
   TEAMS_STATUS_UPDATE:   { label: "Statut Teams",     variant: "secondary" },
+  DEVICE_DELETE:         { label: "Machine supprimée", variant: "destructive" },
   ADMIN_SETTINGS_UPDATE: { label: "Paramètres admin", variant: "secondary" },
 };
 
@@ -123,6 +124,11 @@ function buildDescription(log: {
 
     case "TEAMS_STATUS_UPDATE":
       return `Message de statut Teams mis à jour pour ${log.targetName}`;
+
+    case "DEVICE_DELETE": {
+      const del = (after.deleted as string[] | undefined) ?? [];
+      return `Machine « ${log.targetName} » supprimée${del.length ? ` de : ${del.join(", ")}` : ""}`;
+    }
 
     case "ADMIN_SETTINGS_UPDATE": {
       const keys = Object.keys(log.payloadAfter ?? {});

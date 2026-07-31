@@ -26,6 +26,7 @@ export type AuditAction =
   | "ROLE_REMOVE"
   | "OOO_UPDATE"
   | "TEAMS_STATUS_UPDATE"
+  | "DEVICE_DELETE"
   | "ADMIN_SETTINGS_UPDATE";
 
 interface AuditParams {

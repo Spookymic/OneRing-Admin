@@ -37,6 +37,7 @@ const actionLabels: Record<string, string> = {
   ROLE_REMOVE: "Rôle retiré",
   OOO_UPDATE: "Absence mail",
   TEAMS_STATUS_UPDATE: "Statut Teams",
+  DEVICE_DELETE: "Machine supprimée",
 };
 
 /** Libellé court de type de groupe pour les pastilles d'anomalie */

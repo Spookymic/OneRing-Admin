@@ -2,6 +2,20 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.30.0] — 2026-07-31
+
+### Nouvelle fonctionnalité v1.30.0 — Postes de travail (suppression multi-consoles)
+
+- **Écran « Postes de travail »** (entrée de menu dédiée) : vue **unifiée** des machines corrélées à travers **Entra ID**, **Intune** et **Autopilot**. La corrélation se fait par identifiant d'appareil Azure AD puis par numéro de série, pour dédupliquer une même machine présente dans plusieurs référentiels. Colonnes Machine (n° de série, conformité), OS, Propriétaire, Présence (badges par source), Dernière activité. Recherche et export Excel.
+- **« Supprimer partout »** : un seul clic (avec confirmation listant les référentiels concernés) supprime la machine **de toutes les sources où elle existe** — plus besoin d'aller dans plusieurs consoles. Opération **irréversible** (aucun rollback), **journalisée** (`DEVICE_DELETE`), avec remontée du résultat par source (succès / échec). Ne touche pas l'AD on-premise pour les postes hybrides (hors portée Graph).
+- **Badge « Propriétaire désactivé »** : le propriétaire (utilisateur principal Intune) est croisé avec l'annuaire (`accountEnabled`) — un badge rouge signale les postes rattachés à un compte désactivé (ancien collaborateur). Statut exporté dans l'Excel.
+- **Tri par colonne** (Machine, OS, Propriétaire, Présence, Dernière activité) et **surbrillance des noms en doublon** (case à cocher) pour repérer les machines homonymes.
+- Dégradation propre : une source dont la permission n'est pas accordée apparaît « ✗ » et est simplement ignorée (les autres continuent de fonctionner).
+- Nouvelles permissions Graph déléguées requises (+ consentement admin, reconnexion) : `Device.ReadWrite.All`, `DeviceManagementManagedDevices.ReadWrite.All`, `DeviceManagementServiceConfig.ReadWrite.All`.
+- Nouveau service `src/services/graph/devices.ts`, routes `/api/devices` (corrélation) et `/api/devices/delete` (suppression multi-sources + audit).
+
+---
+
 ## [1.29.2] — 2026-07-31
 
 ### Corrections v1.29.2

@@ -29,6 +29,7 @@ const navItems = [
   { href: "/dashboard/sign-in-logs", label: "Journaux de connexion", icon: Activity },
   { href: "/dashboard/credentials", label: "Secrets & certificats", icon: KeyRound },
   { href: "/dashboard/deleted-accounts", label: "Comptes supprimés", icon: UserX },
+  { href: "/dashboard/devices", label: "Postes de travail", icon: Monitor },
   { href: "/dashboard/audit", label: "Historique", icon: History },
 ];
 
@@ -239,7 +240,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
         })}
       </nav>
 
-      <p className="text-center text-white/25 text-xs py-3 border-t border-white/10">v1.29.2</p>
+      <p className="text-center text-white/25 text-xs py-3 border-t border-white/10">v1.30.0</p>
     </aside>
   );
 }
