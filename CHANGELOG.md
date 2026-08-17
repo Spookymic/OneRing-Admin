@@ -2,6 +2,14 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.30.1] — 2026-08-17
+
+### Amélioration v1.30.1 — Export des groupes d'un utilisateur
+
+- **Fiche utilisateur, onglet Groupes** : bouton **« Exporter »** (Excel `.xlsx`) qui exporte la **liste complète** des groupes de l'utilisateur (Nom, Type, Description, adresse mail, ID). La liste s'appuie sur `graphFetchAll` (`$top=999`), donc aucune troncature même au-delà de 100 groupes. Bouton désactivé si aucun groupe.
+
+---
+
 ## [1.30.0] — 2026-07-31
 
 ### Nouvelle fonctionnalité v1.30.0 — Postes de travail (suppression multi-consoles)

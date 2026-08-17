@@ -30,6 +30,7 @@ import { useAdminSettings } from "@/lib/admin-settings";
 import { OffboardingDialog } from "@/components/users/offboarding-dialog";
 import { ObjectInfo } from "@/components/common/object-info";
 import { Loader } from "@/components/ui/loader";
+import { ExportButton } from "@/components/ui/export-button";
 
 interface Props {
   user: M365User;
@@ -461,10 +462,33 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                     <Users className="h-4 w-4" />
                     Groupes ({userGroups?.length ?? 0})
                   </h3>
-                  <Button size="sm" variant="outline" onClick={() => setAddOpen(!addOpen)}>
-                    <UserPlus className="h-3 w-3 mr-1" />
-                    Ajouter
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <ExportButton
+                      fileBase={`groupes-${user.userPrincipalName}`}
+                      disabled={!userGroups || userGroups.length === 0}
+                      sheets={() => [{
+                        name: "Groupes",
+                        columns: [
+                          { header: "Nom", key: "nom", width: 36 },
+                          { header: "Type", key: "type", width: 14 },
+                          { header: "Description", key: "desc", width: 44 },
+                          { header: "Adresse mail", key: "mail", width: 30 },
+                          { header: "ID", key: "id", width: 38 },
+                        ],
+                        rows: (userGroups ?? []).map((g) => ({
+                          nom: g.displayName,
+                          type: getGroupTypeLabel(g).label,
+                          desc: g.description ?? "",
+                          mail: g.mail ?? "",
+                          id: g.id,
+                        })),
+                      }]}
+                    />
+                    <Button size="sm" variant="outline" onClick={() => setAddOpen(!addOpen)}>
+                      <UserPlus className="h-3 w-3 mr-1" />
+                      Ajouter
+                    </Button>
+                  </div>
                 </div>
 
                 {groupsLoading ? (
