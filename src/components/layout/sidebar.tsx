@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   Users, Shield, History, LogOut, LayoutDashboard, Users2,
   Settings, Eye, X, Check, Inbox, Network, KeyRound, Sun, Moon, Monitor, HardDrive, UserX, Globe, ShieldAlert,
-  ChevronDown, Activity,
+  ChevronDown, Activity, FileSpreadsheet,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
@@ -30,6 +30,7 @@ const navItems = [
   { href: "/dashboard/credentials", label: "Secrets & certificats", icon: KeyRound },
   { href: "/dashboard/deleted-accounts", label: "Comptes supprimés", icon: UserX },
   { href: "/dashboard/devices", label: "Postes de travail", icon: Monitor },
+  { href: "/dashboard/reports", label: "Rapports", icon: FileSpreadsheet },
   { href: "/dashboard/audit", label: "Historique", icon: History },
 ];
 
@@ -240,7 +241,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
         })}
       </nav>
 
-      <p className="text-center text-white/25 text-xs py-3 border-t border-white/10">v1.30.1</p>
+      <p className="text-center text-white/25 text-xs py-3 border-t border-white/10">v1.31.0</p>
     </aside>
   );
 }

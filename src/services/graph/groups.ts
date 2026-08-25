@@ -128,6 +128,62 @@ export async function listGroupMembers(accessToken: string, groupId: string): Pr
   );
 }
 
+export interface ReportMember {
+  id: string;
+  displayName: string;
+  mail: string | null;
+  userPrincipalName: string | null;
+  /** Utilisateur / Contact / Groupe / … (dérivé de @odata.type) */
+  kind: string;
+}
+
+function kindFromODataType(t: string | undefined): string {
+  switch (t) {
+    case "#microsoft.graph.user": return "Utilisateur";
+    case "#microsoft.graph.group": return "Groupe";
+    case "#microsoft.graph.orgContact": return "Contact";
+    case "#microsoft.graph.device": return "Appareil";
+    case "#microsoft.graph.servicePrincipal": return "Principal de service";
+    default: return t?.replace("#microsoft.graph.", "") ?? "Objet";
+  }
+}
+
+/**
+ * Membres d'un groupe/DL, tous types confondus (utilisateurs, contacts de messagerie,
+ * groupes imbriqués). Enrichit l'UPN pour les utilisateurs. Pensé pour les rapports.
+ */
+export async function listGroupMembersDetailed(accessToken: string, groupId: string): Promise<ReportMember[]> {
+  const id = encodeURIComponent(groupId);
+  let all: any[];
+  try {
+    // Sélection minimale valable pour tous les types d'objets annuaire.
+    all = await graphFetchAll<any>(accessToken, `/groups/${id}/members?$select=id,displayName,mail&$top=999`);
+  } catch {
+    // Repli : au moins les utilisateurs (cast) si la requête mixte échoue sur le tenant.
+    all = await graphFetchAll<any>(
+      accessToken,
+      `/groups/${id}/members/microsoft.graph.user?$select=${MEMBER_SELECT}&$top=999`
+    );
+  }
+  // UPN des membres de type utilisateur (le cast permet de sélectionner userPrincipalName).
+  const upnById = new Map<string, string>();
+  try {
+    const users = await graphFetchAll<any>(
+      accessToken,
+      `/groups/${id}/members/microsoft.graph.user?$select=id,userPrincipalName&$top=999`
+    );
+    for (const u of users) if (u.userPrincipalName) upnById.set(u.id, u.userPrincipalName);
+  } catch { /* pas d'UPN si indisponible */ }
+
+  return all.map((m) => ({
+    id: m.id,
+    displayName: m.displayName ?? "",
+    mail: m.mail ?? null,
+    userPrincipalName: upnById.get(m.id) ?? m.userPrincipalName ?? null,
+    kind: kindFromODataType(m["@odata.type"]),
+  }));
+}
+
 export async function listGroupOwners(accessToken: string, groupId: string): Promise<any[]> {
   try {
     // Utilise /owners sans cast microsoft.graph.user pour inclure DL et groupes de sécurité.

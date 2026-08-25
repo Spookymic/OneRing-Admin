@@ -2,6 +2,23 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.31.0] — 2026-08-25
+
+### Nouvelle fonctionnalité v1.31.0 — Onglet Rapports (exports configurables)
+
+- **Écran « Rapports »** (entrée de menu dédiée) : générateur d'exports Excel personnalisés. On choisit un rapport dans un catalogue, on configure la portée, et on génère un classeur **avec une feuille consolidée + une feuille par entité** sélectionnée.
+- **5 rapports** au catalogue :
+  - **Membres de listes de distribution** — sélection multiple de DL → tous leurs membres (utilisateurs, contacts de messagerie, groupes imbriqués), avec UPN enrichi.
+  - **Membres de groupes** — sélection multiple de groupes Microsoft 365 / Sécurité → tous leurs membres.
+  - **Groupes par utilisateur** — sélection multiple d'utilisateurs → tous les groupes dont ils sont membres.
+  - **Propriétaires de groupes / DL** — tous les groupes et listes de distribution avec leurs propriétaires (met en évidence ceux **sans propriétaire**).
+  - **Utilisateurs & licences** — tous les comptes avec type de compte, statut, département, fonction et licences assignées (noms conviviaux).
+- Sélecteur multi-entités avec recherche, « tout sélectionner (filtré) », compteur.
+- **Lecture seule** (aucune mutation, pas de journalisation), **aucune nouvelle permission Graph** (membres / propriétaires / licences déjà couverts) — pas de reconnexion nécessaire.
+- Nouveau helper `listGroupMembersDetailed` (tous types de membres), routes `/api/reports/members`, `/api/reports/owners` (via `$batch`), `/api/reports/user-groups`.
+
+---
+
 ## [1.30.1] — 2026-08-17
 
 ### Amélioration v1.30.1 — Export des groupes d'un utilisateur
