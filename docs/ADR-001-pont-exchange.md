@@ -131,6 +131,7 @@ Mesures obligatoires :
 | Boîte partagée — création | `New-Mailbox -Shared`, `Set-Mailbox` | `SHARED_MAILBOX_CREATE` |
 | Boîte partagée — délégation | `Add-MailboxPermission` (FullAccess), `Add-RecipientPermission` (SendAs), `Set-Mailbox -GrantSendOnBehalfTo` | `MAILBOX_PERMISSION_ADD` / `_REMOVE` |
 | Lecture | `Get-Mailbox`, `Get-Recipient`, `Get-DistributionGroup` | — |
+| Lecture — redirections mail | `Get-Mailbox` (`ForwardingAddress`, `ForwardingSmtpAddress`), `Get-InboxRule`, `Get-TransportRule` | — |
 
 ## 7. Plan de livraison par étapes
 

@@ -2,6 +2,19 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.32.0] — 2026-10-15
+
+### Nouvelle fonctionnalité v1.32.0 — Écran Redirections mail
+
+- **Écran « Redirections mail »** (entrée de menu sous « Boîtes partagées ») : on choisit un compte (recherche avec suggestions) et on obtient :
+  - **Depuis ce compte** : transfert configuré sur la boîte (`ForwardingAddress` vers un destinataire de l'annuaire, `ForwardingSmtpAddress` vers une adresse libre potentiellement externe), avec indication « copie conservée / sans copie locale » ; règles de boîte de réception qui transfèrent, transfèrent en pièce jointe ou redirigent (active / désactivée).
+  - **Vers ce compte** : boîtes dont le transfert pointe vers ce compte. **Analyse complète** optionnelle des règles de boîte de toutes les autres boîtes (utilisateurs + partagées) qui ciblent ce compte — lente sur gros tenant.
+  - **Règles de flux Exchange** qui redirigent / copient vers ce compte, ou dont l'expéditeur / le destinataire est ce compte.
+- Export Excel (une ligne par redirection : sens, mécanisme, source, cible, règle, état, copie conservée), lien direct `?account=`.
+- Nouvel endpoint pont `GET /mailbox/forwarding?mailbox=&scanRules=1`, route `/api/mailboxes/forwarding`. **Lecture seule** (pas de journalisation), garde `isExchangeAdmin`, **aucune nouvelle permission**. Nécessite de reconstruire le conteneur `exo-bridge`.
+
+---
+
 ## [1.31.0] — 2026-08-25
 
 ### Nouvelle fonctionnalité v1.31.0 — Onglet Rapports (exports configurables)

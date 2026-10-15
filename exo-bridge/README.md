@@ -54,6 +54,7 @@ Convention : réponse HTTP 200 + `{ ok, error? }` (évite la page d'erreur HTML 
 | POST | `/mailbox/shared` | `{ displayName, alias }` — création d'une boîte partagée. |
 | GET | `/mailbox/permissions?mailbox=<smtp>` | Délégations : `{ fullAccess, sendAs, sendOnBehalf }`. |
 | POST | `/mailbox/permissions` | `{ mailbox, member, type, action }` — ajout/retrait d'une délégation. |
+| GET | `/mailbox/forwarding?mailbox=<upn\|smtp>&scanRules=1` | Redirections d'un compte : `{ account, outgoing: { mailbox, rules }, incoming: { mailbox, rules, rulesScanned, scannedMailboxes }, transportRules }`. `scanRules=1` parcourt les règles de boîte de **toutes** les boîtes (lent). Lecture seule. |
 
 ## Démarrer et tester
 

@@ -28,6 +28,13 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 - Liste, création et gestion des délégations (via le pont Exchange)
 - **Délégations orphelines** : détection des permissions détenues par un compte supprimé (SID non résolu) — badge « Compte supprimé » dans le panneau (nom retrouvé via la corbeille Azure) + **rapport global** avec nettoyage en un clic
 
+### Redirections mail
+
+- Pour un compte donné (via le pont Exchange, lecture seule) : redirections **depuis** ce compte (transfert de boîte `ForwardingAddress` / `ForwardingSmtpAddress`, règles de boîte de réception qui transfèrent ou redirigent) et **vers** ce compte (boîtes qui lui transfèrent leurs messages)
+- Option **analyse complète** : règles de boîte de toutes les autres boîtes qui ciblent ce compte (lent, parcourt tout le tenant)
+- **Règles de flux Exchange** qui redirigent ou copient vers ce compte, ou portent sur ses messages
+- Export Excel, lien direct `/dashboard/mail-forwarding?account=<adresse>` — rôle Exchange Administrator requis
+
 ### Accès conditionnel & connexions à risque
 
 - **Stratégies d'accès conditionnel** : liste triable (nom, état, utilisateurs/groupes et applications ciblés — noms résolus, contrôles d'octroi, dernière modification), avec détail dépliable par stratégie (plateformes, types de client, emplacements, niveaux de risque, contrôles de session)

@@ -427,6 +427,248 @@ Start-PodeServer -Threads 1 {
         }
     }
 
+    # --- Redirections de messagerie d'un compte (lecture seule) ---
+    # GET /mailbox/forwarding?mailbox=<upn|smtp>&scanRules=1
+    #   outgoing : transfert au niveau boite (ForwardingAddress / ForwardingSmtpAddress)
+    #              + regles de boite de reception (ForwardTo / ForwardAsAttachmentTo / RedirectTo)
+    #   incoming : boites dont le transfert pointe vers ce compte
+    #              + (scanRules=1, lent) regles de boite des autres boites qui ciblent ce compte
+    #   transportRules : regles de flux (Exchange) qui redirigent/copient vers ou depuis ce compte
+    Add-PodeRoute -Method Get -Path '/mailbox/forwarding' -ScriptBlock {
+        try {
+            $mbx = $WebEvent.Query['mailbox']
+            $scanRules = $WebEvent.Query['scanRules'] -eq '1'
+            if ([string]::IsNullOrWhiteSpace($mbx)) {
+                Write-PodeJsonResponse -Value @{ ok = $false; error = 'parametre mailbox requis' }
+                return
+            }
+            Connect-ExoIfNeeded
+
+            $target = Get-Recipient -Identity $mbx -ErrorAction Stop
+
+            # Ensemble des identifiants du compte cible (SMTP + X500 + LegacyExchangeDN), en minuscules
+            $targetKeys = New-Object 'System.Collections.Generic.HashSet[string]'
+            foreach ($a in $target.EmailAddresses) {
+                $s = "$a"
+                if ($s -match '^(smtp|x500):(.+)$') { [void]$targetKeys.Add($matches[2].ToLower()) }
+            }
+            [void]$targetKeys.Add("$($target.PrimarySmtpAddress)".ToLower())
+
+            $resolveCache = @{}
+            function Resolve-Fwd($identity) {
+                $key = "$identity"
+                if ($resolveCache.ContainsKey($key)) { return $resolveCache[$key] }
+                $r = Get-Recipient -Identity $key -ErrorAction SilentlyContinue
+                $res = if ($r) {
+                    $ext = if ($r.ExternalEmailAddress) { "$($r.ExternalEmailAddress)" -replace '^smtp:', '' } else { $null }
+                    @{
+                        id            = $r.ExternalDirectoryObjectId
+                        displayName   = $r.DisplayName
+                        mail          = if ($ext) { $ext } else { "$($r.PrimarySmtpAddress)" }
+                        recipientType = "$($r.RecipientTypeDetails)"
+                        addrs         = @($r.EmailAddresses | ForEach-Object { "$_" } |
+                                          Where-Object { $_ -match '^(smtp|x500):' } |
+                                          ForEach-Object { ($_ -replace '^(smtp|x500):', '').ToLower() })
+                    }
+                } else {
+                    @{ id = $null; displayName = $key; mail = $key; recipientType = 'Unknown'; addrs = @($key.ToLower()) }
+                }
+                $resolveCache[$key] = $res
+                return $res
+            }
+
+            # Cible d'une regle de boite : '"Nom" [SMTP:addr]' ou '"Nom" [EX:/o=...]'
+            function Parse-RuleTarget($raw) {
+                $s = "$raw"
+                $name = if ($s -match '^"([^"]*)"') { $matches[1] } else { $s }
+                if ($s -match '\[SMTP:([^\]]+)\]') {
+                    $addr = $matches[1]
+                    return @{ displayName = $name; mail = $addr; key = $addr.ToLower() }
+                }
+                if ($s -match '\[EX:([^\]]+)\]') {
+                    $dn = $matches[1]
+                    $r = Resolve-Fwd $dn
+                    $k = if ($r.id) { "$($r.mail)".ToLower() } else { $dn.ToLower() }
+                    return @{ displayName = $r.displayName; mail = $r.mail; key = $k }
+                }
+                return @{ displayName = $name; mail = $s; key = $s.ToLower() }
+            }
+
+            function Get-RuleForwards($mailboxId) {
+                $out = @()
+                Get-InboxRule -Mailbox $mailboxId -ErrorAction SilentlyContinue | ForEach-Object {
+                    $rule = $_
+                    foreach ($kind in @('ForwardTo', 'ForwardAsAttachmentTo', 'RedirectTo')) {
+                        foreach ($t in @($rule.$kind)) {
+                            if ($null -eq $t -or "$t" -eq '') { continue }
+                            $p = Parse-RuleTarget $t
+                            $out += @{
+                                ruleName  = "$($rule.Name)"
+                                enabled   = [bool]$rule.Enabled
+                                kind      = $kind
+                                target    = @{ displayName = $p.displayName; mail = $p.mail }
+                                targetKey = $p.key
+                            }
+                        }
+                    }
+                }
+                return $out
+            }
+
+            # ---------- Sortant (depuis ce compte) ----------
+            $hasMailbox = $false
+            $mailboxForward = $null
+            $outgoingRules = @()
+            $m = Get-Mailbox -Identity $mbx -ErrorAction SilentlyContinue
+            if ($m) {
+                $hasMailbox = $true
+                if ($m.LegacyExchangeDN) { [void]$targetKeys.Add("$($m.LegacyExchangeDN)".ToLower()) }
+                if ($m.ForwardingAddress -or $m.ForwardingSmtpAddress) {
+                    $mailboxForward = @{
+                        forwardingAddress     = if ($m.ForwardingAddress) { $x = Resolve-Fwd $m.ForwardingAddress; @{ id = $x.id; displayName = $x.displayName; mail = $x.mail; recipientType = $x.recipientType } } else { $null }
+                        forwardingSmtpAddress = if ($m.ForwardingSmtpAddress) { "$($m.ForwardingSmtpAddress)" -replace '^smtp:', '' } else { $null }
+                        deliverToMailboxAndForward = [bool]$m.DeliverToMailboxAndForward
+                    }
+                }
+                $outgoingRules = @(Get-RuleForwards $m.PrimarySmtpAddress | ForEach-Object {
+                    @{ ruleName = $_.ruleName; enabled = $_.enabled; kind = $_.kind; target = $_.target }
+                })
+            }
+
+            # ---------- Entrant (vers ce compte) ----------
+            $incomingMailbox = @()
+            Get-Mailbox -ResultSize Unlimited -Filter "ForwardingAddress -ne `$null -or ForwardingSmtpAddress -ne `$null" |
+                ForEach-Object {
+                    $src = $_
+                    $hit = $false
+                    $via = $null
+                    if ($src.ForwardingSmtpAddress) {
+                        $addr = ("$($src.ForwardingSmtpAddress)" -replace '^smtp:', '').ToLower()
+                        if ($targetKeys.Contains($addr)) { $hit = $true; $via = 'forwardingSmtpAddress' }
+                    }
+                    if (-not $hit -and $src.ForwardingAddress) {
+                        $x = Resolve-Fwd $src.ForwardingAddress
+                        if (($x.id -and $x.id -eq $target.ExternalDirectoryObjectId) -or
+                            (@($x.addrs | Where-Object { $targetKeys.Contains($_) }).Count -gt 0)) {
+                            $hit = $true; $via = 'forwardingAddress'
+                        }
+                    }
+                    if ($hit) {
+                        $incomingMailbox += @{
+                            source = @{
+                                id          = $src.ExternalDirectoryObjectId
+                                displayName = $src.DisplayName
+                                mail        = "$($src.PrimarySmtpAddress)"
+                                recipientType = "$($src.RecipientTypeDetails)"
+                            }
+                            via = $via
+                            deliverToMailboxAndForward = [bool]$src.DeliverToMailboxAndForward
+                        }
+                    }
+                }
+
+            $incomingRules = @()
+            $scannedMailboxes = 0
+            if ($scanRules) {
+                Get-EXOMailbox -ResultSize Unlimited -RecipientTypeDetails UserMailbox, SharedMailbox |
+                    ForEach-Object {
+                        $src = $_
+                        if ("$($src.ExternalDirectoryObjectId)" -eq "$($target.ExternalDirectoryObjectId)") { return }
+                        $scannedMailboxes++
+                        foreach ($f in (Get-RuleForwards "$($src.PrimarySmtpAddress)")) {
+                            if ($targetKeys.Contains($f.targetKey)) {
+                                $incomingRules += @{
+                                    source   = @{
+                                        id          = $src.ExternalDirectoryObjectId
+                                        displayName = $src.DisplayName
+                                        mail        = "$($src.PrimarySmtpAddress)"
+                                        recipientType = "$($src.RecipientTypeDetails)"
+                                    }
+                                    ruleName = $f.ruleName
+                                    enabled  = $f.enabled
+                                    kind     = $f.kind
+                                }
+                            }
+                        }
+                    }
+            }
+
+            # ---------- Regles de flux (transport) ----------
+            $transport = @()
+            Get-TransportRule -ResultSize Unlimited -ErrorAction SilentlyContinue | ForEach-Object {
+                $tr = $_
+                $actions = @{
+                    RedirectMessageTo = @($tr.RedirectMessageTo)
+                    BlindCopyTo       = @($tr.BlindCopyTo)
+                    CopyTo            = @($tr.CopyTo)
+                    AddToRecipients   = @($tr.AddToRecipients)
+                }
+                $allTargets = @($actions.Values | ForEach-Object { $_ } | Where-Object { $_ })
+                if ($allTargets.Count -eq 0) { return }
+
+                $matchKey = {
+                    param($ids)
+                    foreach ($i in @($ids)) {
+                        if (-not $i) { continue }
+                        $x = Resolve-Fwd $i
+                        if (($x.id -and $x.id -eq $target.ExternalDirectoryObjectId) -or
+                            (@($x.addrs | Where-Object { $targetKeys.Contains($_) }).Count -gt 0)) { return $true }
+                    }
+                    return $false
+                }
+
+                $direction = $null
+                if (& $matchKey $allTargets) { $direction = 'incoming' }
+                elseif ((& $matchKey @($tr.SentTo)) -or (& $matchKey @($tr.From))) { $direction = 'outgoing' }
+                if (-not $direction) { return }
+
+                $targetsOut = @()
+                foreach ($k in $actions.Keys) {
+                    foreach ($i in $actions[$k]) {
+                        if (-not $i) { continue }
+                        $x = Resolve-Fwd $i
+                        $targetsOut += @{ action = $k; displayName = $x.displayName; mail = $x.mail }
+                    }
+                }
+                $transport += @{
+                    name      = "$($tr.Name)"
+                    state     = "$($tr.State)"
+                    mode      = "$($tr.Mode)"
+                    direction = $direction
+                    sentTo    = @($tr.SentTo | ForEach-Object { (Resolve-Fwd $_).mail })
+                    from      = @($tr.From | ForEach-Object { (Resolve-Fwd $_).mail })
+                    targets   = @($targetsOut)
+                }
+            }
+
+            Write-PodeJsonResponse -Value @{
+                ok      = $true
+                account = @{
+                    id            = $target.ExternalDirectoryObjectId
+                    displayName   = $target.DisplayName
+                    mail          = "$($target.PrimarySmtpAddress)"
+                    recipientType = "$($target.RecipientTypeDetails)"
+                    hasMailbox    = $hasMailbox
+                }
+                outgoing = @{
+                    mailbox = $mailboxForward
+                    rules   = @($outgoingRules)
+                }
+                incoming = @{
+                    mailbox          = @($incomingMailbox)
+                    rules            = @($incomingRules)
+                    rulesScanned     = $scanRules
+                    scannedMailboxes = $scannedMailboxes
+                }
+                transportRules = @($transport)
+            }
+        }
+        catch {
+            [Console]::Error.WriteLine("MBX_FORWARDING_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
     # --- Parametres SharePoint par site (PnP, app-only) : un seul Get-PnPTenantSite ---
     Add-PodeRoute -Method Get -Path '/sharepoint/site-settings' -ScriptBlock {
         $adminUrl = if (-not [string]::IsNullOrWhiteSpace($env:SPO_ADMIN_URL)) {

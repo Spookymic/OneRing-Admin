@@ -7,7 +7,7 @@ Ce document permet de reprendre le projet rapidement entre deux sessions Claude.
 Outil Next.js 16 + TypeScript remplaçant les consoles M365 (Entra, Exchange, Admin Center).
 Auth SSO Microsoft (NextAuth v4 + Azure AD). Appels Microsoft Graph API. Audit log PostgreSQL. Échéance : 31/03/2026.
 
-## Version actuelle : 1.31.0 (2026-08-25)
+## Version actuelle : 1.32.0 (2026-10-15)
 
 Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 
@@ -50,6 +50,7 @@ Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 | Écran Journaux de connexion | Terminé | Analyse `/auditLogs/signIns` (24h/7j) : succès/échec, timeline, top apps/pays/IP, MFA, auth legacy — plafonné à 2000 événements, `AuditLog.Read.All` |
 | Écran Postes de travail | Terminé | Vue unifiée Entra/Intune/Autopilot (corrélation deviceId + n° série), « Supprimer partout » (audit `DEVICE_DELETE`, irréversible), badge propriétaire désactivé, tri par colonne, surbrillance doublons de nom — permissions `Device.ReadWrite.All`, `DeviceManagementManagedDevices.ReadWrite.All`, `DeviceManagementServiceConfig.ReadWrite.All` |
 | Écran Rapports | Terminé | Générateur d'exports Excel (consolidé + 1 feuille/entité) : membres DL, membres groupes, groupes par utilisateur, propriétaires groupes/DL, utilisateurs & licences. Routes `/api/reports/{members,owners,user-groups}`, helper `listGroupMembersDetailed`. Lecture seule, aucune nouvelle permission |
+| Écran Redirections mail | Terminé | Pour un compte : transferts de boîte + règles de boîte (sortant), boîtes qui lui transfèrent + scan optionnel des règles de tout le tenant (entrant), règles de flux. Endpoint pont `GET /mailbox/forwarding`, lecture seule, garde `isExchangeAdmin` |
 | Rollback UI | À faire | payloadBefore présent, bouton UI manquant |
 
 ## Adaptations techniques notables
@@ -107,6 +108,9 @@ src/
     client.ts                             # bridgeFetch (X-Bridge-Secret, EXO_BRIDGE_URL)
     distribution-groups.ts                # membres + owners + création DL
     shared-mailboxes.ts                   # boîtes partagées : liste, création, délégations
+    forwarding.ts                         # redirections mail depuis / vers un compte (lecture)
+  app/dashboard/mail-forwarding/page.tsx  # Écran Redirections mail (recherche compte, depuis/vers, règles de flux)
+  app/api/mailboxes/forwarding/route.ts   # GET ?account=&scanRules=0|1 (garde isExchangeAdmin)
   app/dashboard/mailboxes/page.tsx        # Liste boîtes partagées + création + délégations
   app/api/mailboxes/                      # GET/POST liste+création, [id]/permissions GET/POST
   components/mailboxes/                   # create-shared-mailbox, mailbox-delegations-sheet, add-delegation
