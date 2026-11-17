@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Trash2, UserPlus, Shield, Users, KeyRound, UserX, Wifi,
   CheckCircle, XCircle, AlertCircle, Crown, BellOff, PowerOff, Power, Download, UserMinus,
-  ShieldCheck, ShieldAlert,
+  ShieldCheck, ShieldAlert, Copy, Inbox, RefreshCw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -28,6 +28,10 @@ import { apiFetch } from "@/lib/api";
 import { csvCell } from "@/lib/csv";
 import { useAdminSettings } from "@/lib/admin-settings";
 import { OffboardingDialog } from "@/components/users/offboarding-dialog";
+import { CopyAccessDialog, type CopyScope } from "@/components/users/copy-access-dialog";
+import { DELEGATION_LABELS, delegationsOf } from "@/lib/mailbox-access";
+import { useUserSharedMailboxes } from "@/hooks/use-user-shared-mailboxes";
+import { IndexProgress } from "@/components/mailboxes/index-progress";
 import { ObjectInfo } from "@/components/common/object-info";
 import { Loader } from "@/components/ui/loader";
 import { ExportButton } from "@/components/ui/export-button";
@@ -40,7 +44,7 @@ interface Props {
   initialTab?: Tab;
 }
 
-type Tab = "groups" | "licenses" | "signins" | "roles" | "absence";
+type Tab = "groups" | "mailboxes" | "licenses" | "signins" | "roles" | "absence";
 
 function getGroupTypeLabel(group: M365UserGroup) {
   if (group.groupTypes?.includes("Unified")) return { label: "M365", variant: "default" as const };
@@ -65,6 +69,8 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
   const { settings } = useAdminSettings();
   const queryClient = useQueryClient();
   const [offboardOpen, setOffboardOpen] = useState(false);
+  // Copie vers un autre utilisateur : groupes (onglet Groupes) ou boîtes partagées (onglet du même nom)
+  const [copyScope, setCopyScope] = useState<CopyScope | null>(null);
   const [tab, setTab] = useState<Tab>(initialTab ?? "groups");
 
   useEffect(() => {
@@ -85,6 +91,17 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
     queryFn: () => apiFetch<M365UserGroup[]>(`/api/users/${user.id}/groups`),
     enabled: open,
   });
+
+  // ── Boîtes partagées (délégations directes, via l'index du pont Exchange) ──
+  const {
+    data: sharedMailboxesStatus,
+    mailboxes: sharedMailboxes,
+    isLoading: sharedMailboxesLoading,
+    error: sharedMailboxesError,
+    indexing: sharedMailboxesIndexing,
+    refresh: refreshSharedMailboxes,
+    refreshing: sharedMailboxesRefreshing,
+  } = useUserSharedMailboxes(user.id, open && tab === "mailboxes");
 
   const { data: allGroups } = useQuery<(M365Group & { type: GroupType })[]>({
     queryKey: ["groups"],
@@ -426,12 +443,16 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
           {offboardOpen && (
             <OffboardingDialog user={user} open={offboardOpen} onClose={() => setOffboardOpen(false)} />
           )}
+          {copyScope && (
+            <CopyAccessDialog user={user} open scope={copyScope} onClose={() => setCopyScope(null)} />
+          )}
 
           {/* Onglets */}
           <div className="flex gap-1 pt-2 overflow-x-auto pb-0.5 scrollbar-none">
             {(
               [
                 { id: "groups" as Tab,  label: `Groupes (${userGroups?.length ?? 0})`, icon: <Users   className="h-3 w-3 inline mr-1" /> },
+                { id: "mailboxes" as Tab, label: sharedMailboxes ? `Boîtes partagées (${sharedMailboxes.length})` : "Boîtes partagées", icon: <Inbox className="h-3 w-3 inline mr-1" /> },
                 { id: "licenses" as Tab, label: `Licences (${user.assignedLicenses.length})`, icon: <Shield className="h-3 w-3 inline mr-1" /> },
                 { id: "signins" as Tab, label: "Connexions", icon: <Wifi    className="h-3 w-3 inline mr-1" /> },
                 { id: "absence" as Tab, label: "Absence",    icon: <BellOff className="h-3 w-3 inline mr-1" /> },
@@ -484,6 +505,15 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                         })),
                       }]}
                     />
+                    <Button
+                      size="sm" variant="outline"
+                      onClick={() => setCopyScope("groups")}
+                      disabled={!userGroups || userGroups.length === 0}
+                      title="Copier les groupes de cet utilisateur vers un autre utilisateur"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copier vers…
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => setAddOpen(!addOpen)}>
                       <UserPlus className="h-3 w-3 mr-1" />
                       Ajouter
@@ -576,6 +606,103 @@ export function UserGroupsSheet({ user, open, onClose, onResetPassword, initialT
                 </>
               )}
             </>
+          )}
+
+          {/* ── Tab Boîtes partagées ── */}
+          {tab === "mailboxes" && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium text-sm flex items-center gap-2">
+                    <Inbox className="h-4 w-4" />
+                    Boîtes partagées ({sharedMailboxes?.length ?? 0})
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <ExportButton
+                      fileBase={`boites-partagees-${user.userPrincipalName}`}
+                      disabled={!sharedMailboxes || sharedMailboxes.length === 0}
+                      sheets={() => [{
+                        name: "Boîtes partagées",
+                        columns: [
+                          { header: "Nom", key: "nom", width: 36 },
+                          { header: "Adresse mail", key: "mail", width: 34 },
+                          { header: "Accès complet", key: "fullAccess", width: 16 },
+                          { header: "Envoyer en tant que", key: "sendAs", width: 20 },
+                          { header: "Envoyer de la part de", key: "sendOnBehalf", width: 22 },
+                        ],
+                        rows: (sharedMailboxes ?? []).map((m) => ({
+                          nom: m.displayName,
+                          mail: m.mail,
+                          fullAccess: m.fullAccess ? "Oui" : "",
+                          sendAs: m.sendAs ? "Oui" : "",
+                          sendOnBehalf: m.sendOnBehalf ? "Oui" : "",
+                        })),
+                      }]}
+                    />
+                    <Button
+                      size="sm" variant="outline"
+                      onClick={() => setCopyScope("mailboxes")}
+                      disabled={!sharedMailboxes || sharedMailboxes.length === 0}
+                      title="Copier les délégations sur boîtes partagées de cet utilisateur vers un autre utilisateur"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copier vers…
+                    </Button>
+                  </div>
+                </div>
+                {sharedMailboxesLoading ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-foreground/40">Connexion au pont Exchange...</p>
+                    {Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                  </div>
+                ) : sharedMailboxesIndexing && sharedMailboxesStatus ? (
+                  <IndexProgress done={sharedMailboxesStatus.done} total={sharedMailboxesStatus.total} />
+                ) : sharedMailboxesError ? (
+                  sharedMailboxesError.message === "exchange_forbidden" ? (
+                    <PermissionWarning message="Un rôle Exchange Administrator est requis pour afficher les boîtes partagées de l'utilisateur." />
+                  ) : (
+                    <p className="text-sm text-red-500">{sharedMailboxesError.message}</p>
+                  )
+                ) : sharedMailboxes?.length === 0 ? (
+                  <p className="text-sm text-foreground/40 text-center py-4">Aucune boîte partagée</p>
+                ) : (
+                  <div className="space-y-1">
+                    {sharedMailboxes?.map((m) => (
+                      <div key={m.mail} className="rounded-md border px-3 py-2 text-sm min-w-0">
+                        <div className="flex items-center justify-between gap-2 min-w-0">
+                          <span className="truncate font-medium">{m.displayName}</span>
+                          <div className="flex flex-wrap justify-end gap-1 shrink-0">
+                            {delegationsOf(m).map((t) => (
+                              <Badge key={t} variant="outline" className="text-xs">{DELEGATION_LABELS[t]}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="text-xs text-foreground/40 truncate">{m.mail}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {sharedMailboxesStatus?.ready && !sharedMailboxesError && (
+                  <div className="flex items-center justify-between gap-2 mt-3 text-xs text-foreground/40">
+                    <span>
+                      {sharedMailboxesRefreshing
+                        ? `Actualisation en cours (${sharedMailboxesStatus.done}/${sharedMailboxesStatus.total})...`
+                        : sharedMailboxesStatus.builtAt
+                          ? `Analyse du ${format(new Date(sharedMailboxesStatus.builtAt), "dd/MM HH:mm", { locale: fr })} · ${sharedMailboxesStatus.total} boîte(s) partagée(s)`
+                          : null}
+                      {sharedMailboxesStatus.failed > 0 && ` · ${sharedMailboxesStatus.failed} illisible(s)`}
+                    </span>
+                    <Button
+                      size="sm" variant="ghost" className="h-7 px-2 text-xs"
+                      onClick={() => refreshSharedMailboxes()}
+                      disabled={sharedMailboxesRefreshing}
+                      title="Relancer l'analyse des délégations sur toutes les boîtes partagées"
+                    >
+                      <RefreshCw className={`h-3 w-3 mr-1 ${sharedMailboxesRefreshing ? "animate-spin" : ""}`} />
+                      Actualiser
+                    </Button>
+                  </div>
+                )}
+              </div>
           )}
 
           {/* ── Tab Licences ── */}

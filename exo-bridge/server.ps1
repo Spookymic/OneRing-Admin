@@ -427,6 +427,42 @@ Start-PodeServer -Threads 1 {
         }
     }
 
+    # --- Boites partagees accessibles par un ou plusieurs utilisateurs (delegations DIRECTES) ---
+    # GET /mailbox/user-access?users=<upn>[,<upn>...][&refresh=1]
+    #   -> { ok, ready, building, done, total, builtAt, failed, access?: { "<upn>": [ { id, displayName, mail,
+    #        fullAccess, sendAs, sendOnBehalf } ] } }
+    # S'appuie sur l'index des delegations (ExoHelpers.psm1) construit par tranches de quelques secondes :
+    # tant que ready = false, le client rappelle l'endpoint (chaque appel fait avancer la construction).
+    # Index perime (30 min) ou refresh=1 : les donnees precedentes restent servies pendant la reconstruction.
+    # Les delegations obtenues via un groupe ne sont pas remontees.
+    Add-PodeRoute -Method Get -Path '/mailbox/user-access' -ScriptBlock {
+        try {
+            $raw = $WebEvent.Query['users']
+            if ([string]::IsNullOrWhiteSpace($raw)) {
+                Write-PodeJsonResponse -Value @{ ok = $false; error = 'parametre users requis' }
+                return
+            }
+            $requested = @($raw -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Select-Object -Unique)
+            if ($requested.Count -gt 10) {
+                Write-PodeJsonResponse -Value @{ ok = $false; error = 'maximum 10 utilisateurs' }
+                return
+            }
+            Connect-ExoIfNeeded
+            Update-MbxIndex -Refresh ($WebEvent.Query['refresh'] -eq '1')
+
+            $status = Get-MbxIndexStatus
+            $response = @{ ok = $true } + $status
+            if ($status.ready) {
+                $response.access = Get-MbxAccessForUsers $requested
+            }
+            Write-PodeJsonResponse -Value $response
+        }
+        catch {
+            [Console]::Error.WriteLine("MBX_USER_ACCESS_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
     # --- Redirections de messagerie d'un compte (lecture seule) ---
     # GET /mailbox/forwarding?mailbox=<upn|smtp>&scanRules=1
     #   outgoing : transfert au niveau boite (ForwardingAddress / ForwardingSmtpAddress)
@@ -762,6 +798,9 @@ Start-PodeServer -Threads 1 {
                     }
                 }
             }
+
+            # Garde l'index des delegations a jour sans rescan (voir /mailbox/user-access)
+            Update-MbxIndexEntry -Mailbox $mbx -Member $member -Type $type -Action $action
 
             Write-PodeJsonResponse -Value @{ ok = $true }
         }

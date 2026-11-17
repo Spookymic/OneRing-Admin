@@ -51,7 +51,7 @@ La detection du type se fait cote client dans `src/lib/account-types.ts` :
 - Validation Zod obligatoire cote serveur avant tout appel Graph API
 - Les appels Microsoft Graph passent uniquement par `src/services/graph/`
 - Audit obligatoire dans chaque mutation via `logAudit()` de `src/services/audit.ts`
-- Actions audit : `GROUP_MEMBER_ADD/REMOVE`, `GROUP_OWNER_ADD/REMOVE`, `GROUP_CREATE`, `DL_MEMBER_ADD/REMOVE`, `DL_OWNER_ADD/REMOVE`, `DL_CREATE`, `SHARED_MAILBOX_CREATE`, `MAILBOX_PERMISSION_ADD/REMOVE`, `USER_OFFBOARD`, `LOCAL_ADMIN_SET`, `LICENSE_ASSIGN/REMOVE`, `PASSWORD_RESET`
+- Actions audit : `GROUP_MEMBER_ADD/REMOVE`, `GROUP_OWNER_ADD/REMOVE`, `GROUP_CREATE`, `DL_MEMBER_ADD/REMOVE`, `DL_OWNER_ADD/REMOVE`, `DL_CREATE`, `SHARED_MAILBOX_CREATE`, `MAILBOX_PERMISSION_ADD/REMOVE`, `USER_OFFBOARD`, `USER_GROUPS_COPY`, `USER_MAILBOX_ACCESS_COPY`, `COWORK_USAGE_IMPORT/DELETE`, `LOCAL_ADMIN_SET`, `LICENSE_ASSIGN/REMOVE`, `PASSWORD_RESET`
 
 ## Structure des dossiers
 
@@ -61,12 +61,16 @@ src/
     api/
       users/route.ts              # GET tous les comptes (sans filtre userType)
       users/[id]/groups/route.ts  # GET/POST groupes d'un utilisateur
+      users/[id]/groups/copy/     # POST copie des groupes vers un autre utilisateur
+      users/[id]/shared-mailboxes/  # GET boites partagees (delegations directes) + copy/ POST copie
       users/[id]/reset-password/  # POST reset MDP
       groups/route.ts             # GET liste + POST creation
       groups/[id]/members/        # GET/POST membres
       groups/[id]/owners/         # GET/POST owners
       licenses/route.ts           # GET SKUs
       licenses/[userId]/route.ts  # POST assigner/retirer
+      copilot/usage/              # GET usage Microsoft 365 Copilot (rapport Graph, Reports.Read.All)
+      copilot/cowork/             # GET/POST/DELETE imports CSV Copilot Cowork (pas d API Microsoft)
       audit/route.ts              # GET historique
     dashboard/
       page.tsx          # Tableau de bord principal (stats + SKUs + audit recent)

@@ -1,6 +1,8 @@
 export const SKU_FRIENDLY_NAMES: Record<string, string> = {
   "10_ALR_ADDON": "10-Year Audit Log Retention Add On",
   "AAD_BASIC": "Microsoft Entra ID Basic",
+  "BUSINESS_PREMIUM_AND_MICROSOFT_365_COPILOT_FOR_BUSINESS": "Microsoft 365 Business Premium + Copilot",
+  "MICROSOFT_365_COPILOT_FOR_BUSINESS": "Microsoft 365 Copilot Business",
   "AAD_PREMIUM": "Microsoft Entra ID P1",
   "AAD_PREMIUM_FACULTY": "Microsoft Entra ID P1 for Faculty",
   "AAD_PREMIUM_P2": "Microsoft Entra ID P2",

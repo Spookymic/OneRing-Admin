@@ -45,6 +45,10 @@ const actionLabels: Record<string, { label: string; variant: "default" | "second
   TEAMS_STATUS_UPDATE:   { label: "Statut Teams",     variant: "secondary" },
   DEVICE_DELETE:         { label: "Machine supprimée", variant: "destructive" },
   ADMIN_SETTINGS_UPDATE: { label: "Paramètres admin", variant: "secondary" },
+  USER_GROUPS_COPY:      { label: "Copie groupes",    variant: "secondary" },
+  USER_MAILBOX_ACCESS_COPY: { label: "Copie boîtes partagées", variant: "secondary" },
+  COWORK_USAGE_IMPORT:   { label: "Import Cowork",    variant: "secondary" },
+  COWORK_USAGE_DELETE:   { label: "Import Cowork supprimé", variant: "destructive" },
 };
 
 function buildDescription(log: {
@@ -87,6 +91,21 @@ function buildDescription(log: {
 
     case "GROUP_CREATE":
       return `Groupe « ${log.targetName} » créé — type : ${after.groupType ?? "?"}`;
+
+    case "USER_GROUPS_COPY":
+      return `Groupes de ${before.sourceName ?? "?"} copiés vers ${log.targetName} — ` +
+        `${after.added ?? 0} ajouté(s), ${after.already ?? 0} déjà attribué(s), ` +
+        `${after.skipped ?? 0} ignoré(s), ${after.errors ?? 0} erreur(s)`;
+
+    case "COWORK_USAGE_IMPORT":
+      return `Import des données Copilot Cowork « ${log.targetName} » (${after.rowCount ?? "?"} utilisateur(s))`;
+
+    case "COWORK_USAGE_DELETE":
+      return `Suppression de l'import Copilot Cowork « ${log.targetName} »`;
+
+    case "USER_MAILBOX_ACCESS_COPY":
+      return `Délégations boîtes partagées de ${before.sourceName ?? "?"} copiées vers ${log.targetName} — ` +
+        `${after.added ?? 0} ajoutée(s), ${after.already ?? 0} déjà attribuée(s), ${after.errors ?? 0} erreur(s)`;
 
     case "LICENSE_ASSIGN": {
       const name = after.skuName ?? after.addedSkuId ?? "?";

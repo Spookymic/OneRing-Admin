@@ -2,6 +2,55 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.34.0] — 2026-11-17
+
+### Nouvelle fonctionnalité v1.34.0 — Écran Copilot (Microsoft 365 Copilot + Copilot Cowork)
+
+- **Nouvel écran « Copilot »** (menu, après Licences), deux onglets.
+- **Microsoft 365 Copilot** (automatique, rapport Graph v1.0 `/copilot/reports/getMicrosoft365CopilotUsageUserDetail`, CSV version 2, permission `Reports.Read.All` déjà accordée) :
+  - période 7 / 28 / 90 / 180 jours, date de fraîcheur Microsoft (latence ~48 h) ;
+  - synthèse : licences attribuées / achetées, utilisateurs actifs et taux d'adoption, **licences à réaffecter** (aucune activité sur la période), prompts envoyés, jours d'usage moyens ;
+  - jauge par SKU Copilot (détection `isCopilotSku`, hors Copilot Studio) ;
+  - barres « utilisateurs actifs par application » (Copilot Chat, Teams, Word, Excel, PowerPoint, Outlook, OneNote, Loop, Edge, App Microsoft 365) ;
+  - tableau par utilisateur (statut Actif / Inactif / Jamais utilisé / Sans licence, dernière activité, jours d'usage, prompts, applications), filtres, tri, export Excel ;
+  - rapprochement annuaire par UPN (service, compte désactivé) ; rapport anonymisé détecté et signalé.
+- **Copilot Cowork** : Microsoft ne publie **aucune API** (ni Graph ni PowerShell) pour Cowork ni pour la consommation de Copilot Credits — seul l'export CSV du centre d'administration (Copilot → Cowork → Utilisation → Exporter) existe. L'onglet permet :
+  - l'**import du CSV** (colonnes reconnues par mots-clés EN/FR, séparateur `,` ou `;`, dates US ou FR détectées), conservé en base (table `cowork_usage_imports`) et visible par tous les admins ;
+  - l'historique des imports, suppression avec confirmation ;
+  - synthèse (utilisateurs actifs, tâches, tâches par utilisateur, jours actifs), top 10 utilisateurs, répartition tâches lancées / planifiées, tableau triable enrichi du service, export Excel.
+- **Audit** : `COWORK_USAGE_IMPORT`, `COWORK_USAGE_DELETE`.
+- Noms lisibles ajoutés pour `BUSINESS_PREMIUM_AND_MICROSOFT_365_COPILOT_FOR_BUSINESS` et `MICROSOFT_365_COPILOT_FOR_BUSINESS`.
+- Parseur CSV mutualisé (`src/lib/csv-parse.ts`, détection du séparateur et de l'ordre des dates), utilisé aussi par les rapports de stockage.
+- **Base de données** : nouvelle table, créée automatiquement par le conteneur `migrate` (`prisma db push`).
+
+---
+
+## [1.33.0] — 2026-11-17
+
+### Nouvelle fonctionnalité v1.33.0 — Copie des accès (groupes + boîtes partagées) d'un utilisateur vers un autre
+
+- **Fiche utilisateur, bouton « Copier vers… »** dans chacun des deux onglets, chacun limité à son périmètre :
+  - onglet **Groupes** → copie des appartenances directes aux groupes (rôle membre) ;
+  - onglet **Boîtes partagées** → copie des délégations directes (Accès complet, Envoyer en tant que, Envoyer de la part de).
+
+  Même parcours en 3 étapes :
+  1. **Choix de la cible** (recherche par nom / UPN).
+  2. **Aperçu et confirmation** :
+     - *Groupes* : *à ajouter* (coché par défaut, décochable), *déjà attribué*, ou *non copiable* (groupe dynamique, groupe synchronisé depuis l'AD on-premise). Les listes Exchange sont signalées.
+     - *Boîtes partagées* : une ligne par boîte avec ses délégations ; celles déjà détenues par la cible sont marquées ✓ et ne sont pas réappliquées.
+  3. **Rapport final** : Ajouté / Déjà membre / Ignoré / Erreur, avec motif ; export Excel ; bouton **« Annuler la copie »** (avec confirmation) qui retire uniquement les accès ajoutés par la copie.
+- **Fiche utilisateur, nouvel onglet « Boîtes partagées »** (après Groupes) : boîtes sur lesquelles l'utilisateur a une délégation directe, avec le type de délégation ; export Excel et bouton « Copier vers… ». Chargé à l'ouverture de l'onglet (scan Exchange), réservé aux admins Exchange (avertissement sinon).
+- **API** :
+  - `POST /api/users/[id]/groups/copy` (`{ targetUserId, groupIds? }`) : recalcule côté serveur les appartenances de la cible, n'ajoute jamais un groupe déjà attribué, traite les listes de distribution via le pont Exchange (sans rôle Exchange : groupe « Ignoré », le reste continue).
+  - `GET /api/users/[id]/shared-mailboxes` : boîtes partagées de l'utilisateur (garde `isExchangeAdmin`).
+  - `POST /api/users/[id]/shared-mailboxes/copy` (`{ targetUserId, mailboxes? }`) : copie délégation par délégation, saute celles déjà détenues par la cible.
+- **Pont Exchange** : nouvel endpoint `GET /mailbox/user-access?users=<upn>[,<upn>][&refresh=1]` adossé à un **index des délégations** (`ExoHelpers.psm1`). Exchange n'ayant pas de recherche inverse « boîtes où X a l'accès complet », il faut lire chaque boîte partagée : l'index est construit **par tranches de ~8 s** (chaque appel fait avancer la construction et renvoie `done`/`total`), ce qui évite de bloquer le pont mono-thread et de dépasser le timeout HTTP. Une fois prêt, il sert **tous les utilisateurs instantanément** pendant 30 min, puis est reconstruit en arrière-plan en continuant de servir les données précédentes. Les délégations posées par le pont (`POST /mailbox/permissions`) mettent l'index à jour sans rescan. Les trois types (FullAccess, SendAs, SendOnBehalf) sont indexés — `Get-EXORecipientPermission -Trustee` seul est refusé par Exchange (Identity requise), SendAs est donc lu boîte par boîte. Mesuré sur le tenant : 77 boîtes analysées en ~80 s, puis lecture en ~1,5 s. Les délégations héritées d'un groupe ne sont pas remontées. **Nécessite de reconstruire le conteneur exo-bridge.**
+- **Interface** : barre de progression pendant la première analyse (onglet et fenêtre de copie), date de l'analyse et bouton **« Actualiser »** dans l'onglet Boîtes partagées.
+- **Audit** : une entrée par ajout — `GROUP_MEMBER_ADD` / `DL_MEMBER_ADD` / `MAILBOX_PERMISSION_ADD` (annulables individuellement depuis le journal, `copiedFromId` dans le payload) — plus une entrée récapitulative par type : `USER_GROUPS_COPY` (« Copie groupes ») et `USER_MAILBOX_ACCESS_COPY` (« Copie boîtes partagées »).
+- `listUserMemberOf` remonte désormais `onPremisesSyncEnabled`.
+
+---
+
 ## [1.32.0] — 2026-10-15
 
 ### Nouvelle fonctionnalité v1.32.0 — Écran Redirections mail

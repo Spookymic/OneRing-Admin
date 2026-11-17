@@ -15,7 +15,8 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 ### Utilisateurs
 
 - Liste de tous les types de comptes, détection automatique du type, filtres (type, statut, département), tri, colonnes persistées, pagination
-- Panneau latéral : groupes, licences, **connexions** (journal + export CSV), **rôles Azure AD**, **absence** (réponse automatique + statut Teams), **statut MFA / méthodes d'authentification**
+- Panneau latéral : groupes, **boîtes partagées** (délégations directes : accès complet, envoyer en tant que, de la part de), licences, **connexions** (journal + export CSV), **rôles Azure AD**, **absence** (réponse automatique + statut Teams), **statut MFA / méthodes d'authentification**
+- **Copie des accès vers un autre utilisateur** (« Copier vers… ») : depuis l'onglet Groupes (appartenances directes, rôle membre) ou l'onglet Boîtes partagées (délégations). Aperçu avec cases à cocher, accès **déjà attribués signalés dans un rapport final** (Ajouté / Déjà membre / Ignoré / Erreur), export Excel, annulation en un clic ; chaque ajout est journalisé et annulable depuis l'historique. Groupes dynamiques et synchronisés depuis l'AD ignorés avec motif
 - Réinitialisation de mot de passe, activation / désactivation, **offboarding**, actions groupées
 
 ### Groupes & arborescence
@@ -64,6 +65,11 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 
 - Assignation / retrait par SKU, noms conviviaux, vue par utilisateur, ancienneté du compte
 
+### Copilot
+
+- **Microsoft 365 Copilot** (rapport Graph, automatique) : licences attribuées / achetées par SKU, utilisateurs actifs et taux d'adoption, **licences à réaffecter** (aucune activité sur la période), prompts, utilisateurs actifs par application, détail par utilisateur — période 7 / 28 / 90 / 180 jours, export Excel
+- **Copilot Cowork** : Microsoft ne publie pas d'API pour Cowork ni pour les Copilot Credits → **import du CSV** exporté depuis le centre d'administration (Copilot → Cowork → Utilisation → Exporter). Colonnes reconnues en anglais ou en français ; imports conservés et partagés entre administrateurs (historique, suppression) ; synthèse, top utilisateurs, répartition tâches lancées / planifiées, export Excel
+
 ### Stockage
 
 - Espace **OneDrive** et **Exchange** (utilisé / quota — quota Exchange réel via le pont) et **SharePoint** (part du total consommé, type de site, noms résolus via `getAllSites`)
@@ -82,7 +88,7 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 
 ### Exports Excel
 
-- **Exports `.xlsx`** sur tous les écrans en liste (Utilisateurs, Groupes, Licences, Boîtes partagées, Stockage, Sites SharePoint, Accès conditionnel, Journaux de connexion, Comptes supprimés, Délégations orphelines, Secrets & certificats, inactifs, Postes de travail, Historique) — colonnes détaillées, respectent les filtres en cours
+- **Exports `.xlsx`** sur tous les écrans en liste (Utilisateurs, Groupes, Licences, Boîtes partagées, Stockage, Sites SharePoint, Accès conditionnel, Journaux de connexion, Comptes supprimés, Délégations orphelines, Secrets & certificats, inactifs, Postes de travail, Copilot, Historique) — colonnes détaillées, respectent les filtres en cours
 - **Tableau de bord** : export global multi-onglets (« Tout exporter ») + un export par cadre
 
 ### Confort & accessibilité
@@ -130,7 +136,7 @@ Dans le portail Azure → App registrations → New registration :
    Optionnelles (déjà déclarées dans le scope demandé au login ; il reste à accorder le consentement admin Azure pour activer la fonctionnalité — sans elles, la fonctionnalité se désactive proprement) :
    - `AuditLog.Read.All` — journal de connexion détaillé (onglet Connexions) + « créé par » (auteur d'un objet)
    - `Application.Read.All` — alertes d'expiration des secrets/certificats d'applications
-   - `Reports.Read.All` — page **Stockage** (espace OneDrive / Exchange / SharePoint). Rapports avec ~1-2 j de latence. Pour afficher les noms réels plutôt que des identifiants masqués, désactiver l'anonymisation : centre d'admin Microsoft 365 → Paramètres → Rapports → décocher « Afficher les noms masqués ».
+   - `Reports.Read.All` — pages **Stockage** (espace OneDrive / Exchange / SharePoint) et **Copilot** (utilisation Microsoft 365 Copilot ; rôle de lecture des rapports requis pour le compte connecté). Rapports avec ~1-2 j de latence. Pour afficher les noms réels plutôt que des identifiants masqués, désactiver l'anonymisation : centre d'admin Microsoft 365 → Paramètres → Rapports → décocher « Afficher les noms masqués ».
    - `Sites.Read.All` (**type Application**, pas Délégué) — page Stockage / SharePoint : résout les vrais noms et URLs des sites via `/sites/getAllSites` (réservé à l'app-only). Utilise le flux client-credentials de l'app registration (CLIENT_ID/SECRET). Best-effort : sans cette permission applicative consentie, le nom dérivé (URL ou groupe de propriétaires) est affiché à la place.
    - `Policy.Read.All` — page Accès conditionnel : liste des stratégies. Sans elle, l'écran fonctionne mais affiche une bannière « indisponible » sur cette section.
    - `IdentityRiskEvent.Read.All` — page Accès conditionnel : connexions à risque (Identity Protection). Nécessite en plus une licence **Microsoft Entra ID P2** sur le tenant ; sans l'une ou l'autre, la section se désactive proprement.

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   Users, Shield, History, LogOut, LayoutDashboard, Users2,
   Settings, Eye, X, Check, Inbox, Network, KeyRound, Sun, Moon, Monitor, HardDrive, UserX, Globe, ShieldAlert,
-  ChevronDown, Activity, FileSpreadsheet, Forward,
+  ChevronDown, Activity, FileSpreadsheet, Forward, Sparkles,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
@@ -24,6 +24,7 @@ const navItems = [
   { href: "/dashboard/mailboxes", label: "Boîtes partagées", icon: Inbox },
   { href: "/dashboard/mail-forwarding", label: "Redirections mail", icon: Forward },
   { href: "/dashboard/licenses", label: "Licences", icon: Shield },
+  { href: "/dashboard/copilot", label: "Copilot", icon: Sparkles },
   { href: "/dashboard/storage", label: "Stockage", icon: HardDrive },
   { href: "/dashboard/sharepoint-sites", label: "Sites SharePoint", icon: Globe },
   { href: "/dashboard/conditional-access", label: "Accès conditionnel", icon: ShieldAlert },
@@ -242,7 +243,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
         })}
       </nav>
 
-      <p className="text-center text-white/25 text-xs py-3 border-t border-white/10">v1.32.0</p>
+      <p className="text-center text-white/25 text-xs py-3 border-t border-white/10">v1.34.0</p>
     </aside>
   );
 }

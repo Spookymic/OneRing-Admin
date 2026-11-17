@@ -27,6 +27,8 @@ export interface M365UserGroup {
   groupTypes: string[];
   mailEnabled: boolean;
   securityEnabled: boolean;
+  /** Vrai si le groupe est synchronisé depuis l'AD on-premise (membres non modifiables dans le cloud) */
+  onPremisesSyncEnabled?: boolean | null;
 }
 
 const SELECT =
@@ -54,7 +56,7 @@ export async function getUser(accessToken: string, userId: string): Promise<M365
 
 export async function listUserMemberOf(accessToken: string, userId: string): Promise<M365UserGroup[]> {
   const params = new URLSearchParams({
-    $select: "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled",
+    $select: "id,displayName,description,mail,groupTypes,mailEnabled,securityEnabled,onPremisesSyncEnabled",
     $top: "999",
   });
   // graphFetchAll suit @odata.nextLink : sinon plafonné à une page (un utilisateur peut être membre de > 100 groupes).

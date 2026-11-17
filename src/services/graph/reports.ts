@@ -1,5 +1,6 @@
 import { graphFetchCsv, graphFetchAll } from "@/lib/graph";
 import { getAppOnlyGraphToken } from "@/lib/graph-app";
+import { parseCsv } from "@/lib/csv-parse";
 
 /**
  * Rapports d'utilisation du stockage Microsoft 365 (Graph usage reports).
@@ -50,44 +51,6 @@ function siteNameFromOwner(owner: string | undefined): string {
     .trim();
 }
 
-/** Parse un CSV (gère les champs entre guillemets, CRLF, BOM) en objets indexés par en-tête. */
-function parseCsv(text: string): Record<string, string>[] {
-  const clean = text.replace(/^﻿/, "");
-  const rows: string[][] = [];
-  let field = "";
-  let row: string[] = [];
-  let inQuotes = false;
-
-  for (let i = 0; i < clean.length; i++) {
-    const c = clean[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (clean[i + 1] === '"') { field += '"'; i++; }
-        else inQuotes = false;
-      } else field += c;
-    } else if (c === '"') {
-      inQuotes = true;
-    } else if (c === ",") {
-      row.push(field); field = "";
-    } else if (c === "\n") {
-      row.push(field); rows.push(row); row = []; field = "";
-    } else if (c !== "\r") {
-      field += c;
-    }
-  }
-  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
-  if (rows.length === 0) return [];
-
-  const header = rows[0].map((h) => h.trim());
-  return rows
-    .slice(1)
-    .filter((r) => r.length > 1)
-    .map((r) => {
-      const o: Record<string, string> = {};
-      header.forEach((h, idx) => { o[h] = (r[idx] ?? "").trim(); });
-      return o;
-    });
-}
 
 async function fetchReport(
   accessToken: string,

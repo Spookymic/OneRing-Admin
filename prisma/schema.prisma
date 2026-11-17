@@ -67,6 +67,20 @@ model User {
   @@map("users")
 }
 
+/// Imports du CSV « Cowork usage details » (centre d'admin M365 > Copilot > Cowork) — aucune API Microsoft.
+model CoworkUsageImport {
+  id         String   @id @default(uuid())
+  fileName   String
+  importedBy String
+  rowCount   Int
+  /// CoworkUsageRow[] (src/lib/cowork.ts)
+  rows       Json
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("cowork_usage_imports")
+}
+
 model LocalAdmin {
   id             String    @id @default(uuid())
   username       String    @unique
