@@ -84,6 +84,7 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 
 - Écran dédié : **générateur d'exports Excel configurables**. On choisit un rapport, on sélectionne la portée, et on obtient un classeur avec une **feuille consolidée + une feuille par entité**
 - Rapports disponibles : **membres de listes de distribution** (multi-DL), **membres de groupes** (multi-groupes), **groupes par utilisateur** (multi-utilisateurs), **propriétaires de groupes/DL** (met en évidence ceux sans propriétaire), **utilisateurs & licences**
+- Colonne **« Statut du compte »** (Actif / Désactivé) dans tous les rapports listant des utilisateurs (membres, utilisateurs sélectionnés, propriétaires) ; le message de fin signale les comptes désactivés et les groupes dont tous les propriétaires sont désactivés
 - Lecture seule (aucune modification), **aucune permission supplémentaire**
 
 ### Exports Excel

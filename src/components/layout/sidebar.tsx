@@ -243,7 +243,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
         })}
       </nav>
 
-      <p className="text-center text-white/25 text-xs py-3 border-t border-white/10">v1.34.0</p>
+      <p className="text-center text-white/25 text-xs py-3 border-t border-white/10">v1.34.1</p>
     </aside>
   );
 }

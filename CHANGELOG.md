@@ -2,6 +2,20 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.34.1] — 2026-11-24
+
+### Amélioration v1.34.1 — Statut des comptes dans les rapports
+
+- **Onglet Rapports** : colonne **« Statut du compte »** (Actif / Désactivé) dans tous les rapports listant des utilisateurs, feuille consolidée et feuilles par entité :
+  - *Membres de listes de distribution* et *Membres de groupes* : statut de chaque membre de type utilisateur (vide pour les groupes imbriqués, contacts, appareils) ;
+  - *Groupes par utilisateur* : statut de l'utilisateur sélectionné ;
+  - *Propriétaires de groupes / DL* : statut de chaque propriétaire ;
+  - *Utilisateurs & licences* : colonne existante renommée « Statut du compte » pour homogénéité.
+- Statut retrouvé dans la liste des comptes déjà chargée par l'application (par identifiant, puis UPN, puis adresse mail) : aucun appel Graph supplémentaire, aucune nouvelle permission.
+- Le message de fin de génération indique le nombre de comptes désactivés, et pour les propriétaires le nombre de groupes dont **tous** les propriétaires sont désactivés.
+
+---
+
 ## [1.34.0] — 2026-11-17
 
 ### Nouvelle fonctionnalité v1.34.0 — Écran Copilot (Microsoft 365 Copilot + Copilot Cowork)

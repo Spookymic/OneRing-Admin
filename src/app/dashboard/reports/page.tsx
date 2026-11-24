@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,7 @@ const REPORTS: ReportDef[] = [
   {
     id: "dl-members",
     title: "Membres de listes de distribution",
-    description: "Sélectionnez une ou plusieurs listes de distribution : export de tous leurs membres.",
+    description: "Sélectionnez une ou plusieurs listes de distribution : export de tous leurs membres, avec le statut actif / désactivé des comptes.",
     icon: Inbox,
     pick: "groups",
     groupTypes: ["distribution"],
@@ -46,7 +46,7 @@ const REPORTS: ReportDef[] = [
   {
     id: "group-members",
     title: "Membres de groupes",
-    description: "Sélectionnez des groupes (Microsoft 365 / Sécurité) : export de tous leurs membres.",
+    description: "Sélectionnez des groupes (Microsoft 365 / Sécurité) : export de tous leurs membres, avec le statut actif / désactivé des comptes.",
     icon: Users2,
     pick: "groups",
     groupTypes: ["unified", "security", "sharedMailbox"],
@@ -54,14 +54,14 @@ const REPORTS: ReportDef[] = [
   {
     id: "user-groups",
     title: "Groupes par utilisateur",
-    description: "Sélectionnez des utilisateurs : export de tous les groupes dont ils sont membres.",
+    description: "Sélectionnez des utilisateurs : export de tous les groupes dont ils sont membres, avec le statut actif / désactivé du compte.",
     icon: UserSquare,
     pick: "users",
   },
   {
     id: "group-owners",
     title: "Propriétaires de groupes / DL",
-    description: "Export de tous les groupes et listes de distribution avec leurs propriétaires.",
+    description: "Export de tous les groupes et listes de distribution avec leurs propriétaires et le statut actif / désactivé de leur compte.",
     icon: Crown,
     pick: "all-groups",
   },
@@ -97,8 +97,36 @@ function makeSheetNamer() {
   };
 }
 
+/** Colonne « Statut du compte » commune aux rapports listant des utilisateurs. */
+const ACCOUNT_STATUS_COL: XlsxColumn = { header: "Statut du compte", key: "statut", width: 16 };
+const STATUS_ENABLED = "Actif";
+const STATUS_DISABLED = "Désactivé";
+
+type StatusLookup = (o: { id?: string | null; upn?: string | null; mail?: string | null }) => string;
+
+/**
+ * Statut actif/désactivé d'un objet annuaire, retrouvé dans la liste des comptes (id, puis UPN, puis
+ * adresse mail). Chaîne vide si l'objet n'est pas un utilisateur (groupe, contact, appareil…).
+ */
+function buildStatusLookup(users: M365User[]): StatusLookup {
+  const byId = new Map(users.map((u) => [u.id, u]));
+  const byKey = new Map<string, M365User>();
+  for (const u of users) {
+    byKey.set(u.userPrincipalName.toLowerCase(), u);
+    if (u.mail) byKey.set(u.mail.toLowerCase(), u);
+  }
+  return ({ id, upn, mail }) => {
+    const u =
+      (id ? byId.get(id) : undefined) ??
+      (upn ? byKey.get(upn.toLowerCase()) : undefined) ??
+      (mail ? byKey.get(mail.toLowerCase()) : undefined);
+    return u ? (u.accountEnabled ? STATUS_ENABLED : STATUS_DISABLED) : "";
+  };
+}
+
 export default function ReportsPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { settings } = useAdminSettings();
   const [selected, setSelected] = useState<ReportId | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -175,6 +203,19 @@ export default function ReportsPage() {
 
   const dl = (base: string) => `${base}-${format(new Date(), "yyyy-MM-dd")}`;
 
+  /** Liste des comptes (cache partagé, chargée si besoin) → recherche du statut actif/désactivé. */
+  async function getStatusLookup(): Promise<StatusLookup> {
+    const list =
+      users ??
+      (await queryClient.ensureQueryData<M365User[]>({
+        queryKey: ["users"],
+        queryFn: () => apiFetch<M365User[]>("/api/users"),
+      }));
+    return buildStatusLookup(list);
+  }
+
+  const disabledSuffix = (n: number) => (n > 0 ? `, dont ${n} compte(s) désactivé(s)` : "");
+
   async function generate() {
     if (!report) return;
     setGenerating(true);
@@ -205,17 +246,24 @@ export default function ReportsPage() {
         return { id: o.id, name: o.label, type: g ? GROUP_TYPE_LABELS[g.type] : "" };
       }),
     };
-    const { entities } = await apiFetch<{ entities: MembersEntity[] }>("/api/reports/members", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const [{ entities }, statusOf] = await Promise.all([
+      apiFetch<{ entities: MembersEntity[] }>("/api/reports/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+      getStatusLookup(),
+    ]);
+    // Statut uniquement pour les membres de type utilisateur
+    const memberStatus = (m: ReportMemberDto) =>
+      m.kind === "Utilisateur" ? statusOf({ id: m.id, upn: m.userPrincipalName, mail: m.mail }) : "";
 
     const cols: XlsxColumn[] = [
       { header: "Membre", key: "membre", width: 30 },
       { header: "UPN", key: "upn", width: 32 },
       { header: "Email", key: "email", width: 30 },
       { header: "Type membre", key: "kind", width: 16 },
+      ACCOUNT_STATUS_COL,
     ];
     const consCols: XlsxColumn[] = [
       { header: report!.id === "dl-members" ? "Liste de distribution" : "Groupe", key: "entite", width: 30 },
@@ -230,6 +278,7 @@ export default function ReportsPage() {
         e.members.map((m) => ({
           entite: e.name, typeEntite: e.type,
           membre: m.displayName, upn: m.userPrincipalName ?? "", email: m.mail ?? "", kind: m.kind,
+          statut: memberStatus(m),
         }))
       ),
     };
@@ -238,22 +287,28 @@ export default function ReportsPage() {
       columns: cols,
       rows: e.members.map((m) => ({
         membre: m.displayName, upn: m.userPrincipalName ?? "", email: m.mail ?? "", kind: m.kind,
+        statut: memberStatus(m),
       })),
     }));
     const total = entities.reduce((s, e) => s + e.members.length, 0);
+    const disabled = consolidated.rows.filter((r) => r.statut === STATUS_DISABLED).length;
     await downloadXlsx(dl(report!.id === "dl-members" ? "rapport-membres-dl" : "rapport-membres-groupes"), [consolidated, ...perEntity]);
-    toast({ title: "Rapport généré", description: `${entities.length} entité(s), ${total} membre(s).` });
+    toast({ title: "Rapport généré", description: `${entities.length} entité(s), ${total} membre(s)${disabledSuffix(disabled)}.` });
   }
 
   // ── Groupes par utilisateur ────────────────────────────────────────
   async function generateUserGroups() {
     const chosen = pickOptions.filter((o) => picked.has(o.id));
     const payload = { users: chosen.map((o) => ({ id: o.id, name: o.label, upn: o.sub ?? "" })) };
-    const { entities } = await apiFetch<{ entities: UserGroupsEntity[] }>("/api/reports/user-groups", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const [{ entities }, statusOf] = await Promise.all([
+      apiFetch<{ entities: UserGroupsEntity[] }>("/api/reports/user-groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+      getStatusLookup(),
+    ]);
+    const userStatus = (e: UserGroupsEntity) => statusOf({ id: e.id, upn: e.upn });
 
     const cols: XlsxColumn[] = [
       { header: "Groupe", key: "groupe", width: 32 },
@@ -266,38 +321,48 @@ export default function ReportsPage() {
       columns: [
         { header: "Utilisateur", key: "user", width: 28 },
         { header: "UPN", key: "upn", width: 32 },
+        ACCOUNT_STATUS_COL,
         ...cols,
       ],
       rows: entities.flatMap((e) =>
         e.groups.map((g) => ({
-          user: e.name, upn: e.upn,
+          user: e.name, upn: e.upn, statut: userStatus(e),
           groupe: g.displayName, type: groupKindLabel(g), email: g.mail ?? "",
         }))
       ),
     };
+    // Feuille par utilisateur : le statut est le même pour toutes les lignes → colonne répétée
     const perEntity: XlsxSheet[] = entities.map((e) => ({
       name: sheetName(e.name || e.upn),
-      columns: cols,
-      rows: e.groups.map((g) => ({ groupe: g.displayName, type: groupKindLabel(g), email: g.mail ?? "" })),
+      columns: [...cols, ACCOUNT_STATUS_COL],
+      rows: e.groups.map((g) => ({
+        groupe: g.displayName, type: groupKindLabel(g), email: g.mail ?? "", statut: userStatus(e),
+      })),
     }));
     const total = entities.reduce((s, e) => s + e.groups.length, 0);
+    const disabled = entities.filter((e) => userStatus(e) === STATUS_DISABLED).length;
     await downloadXlsx(dl("rapport-groupes-par-utilisateur"), [consolidated, ...perEntity]);
-    toast({ title: "Rapport généré", description: `${entities.length} utilisateur(s), ${total} appartenance(s).` });
+    toast({ title: "Rapport généré", description: `${entities.length} utilisateur(s), ${total} appartenance(s)${disabledSuffix(disabled)}.` });
   }
 
   // ── Propriétaires (tous les groupes/DL) ────────────────────────────
   async function generateOwners() {
     const all = groups ?? [];
     const payload = { entities: all.map((g) => ({ id: g.id, name: g.displayName, type: GROUP_TYPE_LABELS[g.type] })) };
-    const { entities } = await apiFetch<{ entities: OwnersEntity[] }>("/api/reports/owners", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const [{ entities }, statusOf] = await Promise.all([
+      apiFetch<{ entities: OwnersEntity[] }>("/api/reports/owners", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+      getStatusLookup(),
+    ]);
+    const ownerStatus = (o: OwnerDto) => statusOf({ id: o.id, mail: o.mail });
 
     const cols: XlsxColumn[] = [
       { header: "Propriétaire", key: "owner", width: 30 },
       { header: "Email", key: "email", width: 32 },
+      ACCOUNT_STATUS_COL,
     ];
     const sheetName = makeSheetNamer();
     const consolidated: XlsxSheet = {
@@ -309,8 +374,10 @@ export default function ReportsPage() {
       ],
       rows: entities.flatMap((e) =>
         e.owners.length === 0
-          ? [{ entite: e.name, type: e.type, owner: "(aucun propriétaire)", email: "" }]
-          : e.owners.map((o) => ({ entite: e.name, type: e.type, owner: o.displayName, email: o.mail ?? "" }))
+          ? [{ entite: e.name, type: e.type, owner: "(aucun propriétaire)", email: "", statut: "" }]
+          : e.owners.map((o) => ({
+              entite: e.name, type: e.type, owner: o.displayName, email: o.mail ?? "", statut: ownerStatus(o),
+            }))
       ),
     };
     // Une feuille par entité ayant au moins un propriétaire (évite des centaines d'onglets vides)
@@ -319,11 +386,20 @@ export default function ReportsPage() {
       .map((e) => ({
         name: sheetName(e.name),
         columns: cols,
-        rows: e.owners.map((o) => ({ owner: o.displayName, email: o.mail ?? "" })),
+        rows: e.owners.map((o) => ({ owner: o.displayName, email: o.mail ?? "", statut: ownerStatus(o) })),
       }));
     const withoutOwner = entities.filter((e) => e.owners.length === 0).length;
+    // Groupes dont tous les propriétaires sont désactivés (≈ sans propriétaire effectif)
+    const onlyDisabled = entities.filter(
+      (e) => e.owners.length > 0 && e.owners.every((o) => ownerStatus(o) === STATUS_DISABLED)
+    ).length;
     await downloadXlsx(dl("rapport-proprietaires-groupes"), [consolidated, ...perEntity]);
-    toast({ title: "Rapport généré", description: `${entities.length} groupe(s), dont ${withoutOwner} sans propriétaire.` });
+    toast({
+      title: "Rapport généré",
+      description:
+        `${entities.length} groupe(s), dont ${withoutOwner} sans propriétaire` +
+        (onlyDisabled > 0 ? ` et ${onlyDisabled} dont tous les propriétaires sont désactivés` : "") + ".",
+    });
   }
 
   // ── Utilisateurs & licences (client) ───────────────────────────────
@@ -340,7 +416,7 @@ export default function ReportsPage() {
         upn: u.userPrincipalName,
         email: u.mail ?? "",
         type: ACCOUNT_TYPE_CONFIG[type].label,
-        statut: u.accountEnabled ? "Actif" : "Désactivé",
+        statut: u.accountEnabled ? STATUS_ENABLED : STATUS_DISABLED,
         dep: u.department ?? "",
         fonction: u.jobTitle ?? "",
         nbLicences: licenses.length,
@@ -354,7 +430,7 @@ export default function ReportsPage() {
         { header: "UPN", key: "upn", width: 32 },
         { header: "Email", key: "email", width: 30 },
         { header: "Type de compte", key: "type", width: 16 },
-        { header: "Statut", key: "statut", width: 12 },
+        ACCOUNT_STATUS_COL,
         { header: "Département", key: "dep", width: 22 },
         { header: "Fonction", key: "fonction", width: 24 },
         { header: "Nb licences", key: "nbLicences", width: 12 },
