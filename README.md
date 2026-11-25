@@ -117,6 +117,7 @@ docker compose up -d --build
 
 Accéder à l'application : `https://<APP_DOMAIN>` (servi par Caddy en HTTPS).
 Mise en place du domaine et du certificat : voir [docs/Deploiement-domaine.md](docs/Deploiement-domaine.md).
+Mise en production sur un hyperviseur Proxmox VE (VM, secrets, sauvegardes, supervision, mises à jour) : voir [docs/Deploiement-Proxmox.md](docs/Deploiement-Proxmox.md).
 
 ## Configuration Azure AD
 

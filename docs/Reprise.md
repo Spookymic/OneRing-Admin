@@ -167,6 +167,6 @@ npx tsc --noEmit
 
 ## Questions ouvertes
 
-- Hébergement cible : on-premise Docker. Accès par domaine HTTPS via Caddy (`tls internal`) — voir [Deploiement-domaine.md](Deploiement-domaine.md). Reste à trancher : domaine définitif + distribution de la CA interne (GPO) ou bascule DNS-01 pour des certificats publiquement reconnus.
+- Hébergement cible : on-premise Docker. Accès par domaine HTTPS via Caddy (`tls internal`) — voir [Deploiement-domaine.md](Deploiement-domaine.md). Reste à trancher : domaine définitif + distribution de la CA interne (GPO) ou bascule DNS-01 pour des certificats publiquement reconnus. Procédure Proxmox VE complète (VM, sauvegardes `deploy/`, supervision, mises à jour) : [Deploiement-Proxmox.md](Deploiement-Proxmox.md). **Prérequis prod** : remplacer `prisma db push --accept-data-loss` par `prisma migrate deploy`.
 - **Pont Exchange Online** (DL, groupes mail-enabled, boîtes partagées) : cadré dans [ADR-001-pont-exchange.md](ADR-001-pont-exchange.md). Décision : sidecar PowerShell Docker on-premise, livraison par étapes (DL membres en premier). En attente du provisionnement tenant (app reg + certificat + rôle Exchange Admin).
 - ~~Pagination côté serveur pour les tenants de très grande taille (> 999 utilisateurs) ?~~ → l'API gérait déjà la boucle `@odata.nextLink` (`graphFetchAll`) ; ajout d'une pagination d'affichage côté client (v1.28.0) pour le rendu. Une vraie pagination serveur (page/curseur sur l'API + recherche/tri serveur) resterait à évaluer si le rendu redevenait un problème sur un tenant réellement massif.

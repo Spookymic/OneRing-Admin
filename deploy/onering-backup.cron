@@ -1,0 +1,7 @@
+# OneRing Admin — sauvegarde quotidienne de la base a 02:30.
+# Installation : sudo cp deploy/onering-backup.cron /etc/cron.d/onering-backup
+#                (fichier root:root, mode 644, sans extension dans /etc/cron.d)
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 2 * * * root /opt/onering-admin/deploy/backup-db.sh /var/backups/onering >> /var/log/onering-backup.log 2>&1

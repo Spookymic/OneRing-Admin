@@ -2,6 +2,14 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [Non publié]
+
+### Documentation — Déploiement Proxmox VE
+
+- Nouveau guide `docs/Deploiement-Proxmox.md` : VM Debian 12, secrets de production, Entra, HTTPS, recette, sauvegardes, supervision, mises à jour et retour arrière, check-list.
+- Nouveau dossier `deploy/` : `daemon.json` (rotation des logs Docker), `backup-db.sh` (dump quotidien contrôlé avec rétention), `restore-db.sh` (restauration avec confirmation et sauvegarde préalable), `onering-backup.cron`.
+- Point signalé : `migrate` utilise `prisma db push --accept-data-loss`, à remplacer par `prisma migrate deploy` avant la production.
+
 ## [1.34.1] — 2026-11-24
 
 ### Amélioration v1.34.1 — Statut des comptes dans les rapports
