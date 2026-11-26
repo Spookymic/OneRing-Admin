@@ -3,8 +3,9 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import {
-  getAppCreators, getCredentialUsageIndex, listExpiringCredentials, withUsage,
+  getCredentialUsageIndex, listExpiringCredentials, withUsage,
 } from "@/services/graph/applications";
+import { syncAndLoadAppCreators } from "@/services/app-creators";
 
 const querySchema = z.object({
   days: z.coerce.number().int().min(0).max(100_000).default(30),
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
     const [credentials, index, creators] = await Promise.all([
       listExpiringCredentials(session.accessToken, days, now),
       detailed ? getCredentialUsageIndex(session.accessToken) : Promise.resolve(null),
-      detailed ? getAppCreators(session.accessToken) : Promise.resolve(undefined),
+      detailed ? syncAndLoadAppCreators(session.accessToken) : Promise.resolve(undefined),
     ]);
     if (!index) return NextResponse.json({ supported: true, credentials });
     return NextResponse.json({

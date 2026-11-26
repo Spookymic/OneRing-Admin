@@ -51,7 +51,7 @@ La detection du type se fait cote client dans `src/lib/account-types.ts` :
 - Validation Zod obligatoire cote serveur avant tout appel Graph API
 - Les appels Microsoft Graph passent uniquement par `src/services/graph/`
 - Audit obligatoire dans chaque mutation via `logAudit()` de `src/services/audit.ts`
-- Actions audit : `GROUP_MEMBER_ADD/REMOVE`, `GROUP_OWNER_ADD/REMOVE`, `GROUP_CREATE`, `DL_MEMBER_ADD/REMOVE`, `DL_OWNER_ADD/REMOVE`, `DL_CREATE`, `SHARED_MAILBOX_CREATE`, `MAILBOX_PERMISSION_ADD/REMOVE`, `USER_OFFBOARD`, `USER_GROUPS_COPY`, `USER_MAILBOX_ACCESS_COPY`, `COWORK_USAGE_IMPORT/DELETE`, `LOCAL_ADMIN_SET`, `LICENSE_ASSIGN/REMOVE`, `PASSWORD_RESET`
+- Actions audit : `GROUP_MEMBER_ADD/REMOVE`, `GROUP_OWNER_ADD/REMOVE`, `GROUP_CREATE`, `DL_MEMBER_ADD/REMOVE`, `DL_OWNER_ADD/REMOVE`, `DL_CREATE`, `SHARED_MAILBOX_CREATE`, `MAILBOX_PERMISSION_ADD/REMOVE`, `USER_OFFBOARD`, `USER_GROUPS_COPY`, `USER_MAILBOX_ACCESS_COPY`, `COWORK_USAGE_IMPORT/DELETE`, `LOCAL_ADMIN_SET`, `LICENSE_ASSIGN/REMOVE`, `PASSWORD_RESET`, `APP_OWNER_ADD/REMOVE` (annulables), `APP_SECRET_REMOVE` (irréversible)
 
 ## Structure des dossiers
 
@@ -69,6 +69,9 @@ src/
       groups/[id]/owners/         # GET/POST owners
       licenses/route.ts           # GET SKUs
       licenses/[userId]/route.ts  # POST assigner/retirer
+      applications/               # GET inventaire securite des applications (inscriptions, permissions, consentements)
+      applications/[id]/owners/   # POST ajout/retrait proprietaire (garde isAppAdmin, audit, rollback)
+      applications/[id]/secrets/  # DELETE suppression d un secret (irreversible, confirmation SUPPRIMER)
       copilot/usage/              # GET usage Microsoft 365 Copilot (rapport Graph, Reports.Read.All)
       copilot/cowork/             # GET/POST/DELETE imports CSV Copilot Cowork (pas d API Microsoft)
       reports/mfa/                # GET etat MFA de tous les comptes (userRegistrationDetails, repli methodes)

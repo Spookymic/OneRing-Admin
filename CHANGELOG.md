@@ -2,6 +2,47 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.37.0] — 2026-11-26
+
+### Fonctionnalité v1.37.0 — Sécurité des applications
+
+- **Nouvel écran Applications** (menu latéral), en trois onglets, avec un export Excel de trois feuilles :
+  - **Inscriptions** : une ligne par inscription d'application du tenant, avec :
+    - sa date de création et son créateur, ses propriétaires (bouton **désigner** / **ajouter**) ;
+    - son activité : *Active*, *Dormante (90 j+)*, *Jamais utilisée* ou *Récente*, une application créée il y a moins de 90 jours n'étant jamais déclarée dormante ;
+    - ses secrets, certificats, identifiants expirés et de durée excessive ;
+    - ses **identifiants fédérés** (émetteur et sujet : GitHub Actions, Kubernetes, autre tenant…) ;
+    - ses **adresses de redirection risquées** : HTTP non chiffré, joker, tunnel de développement (ngrok…), sous-domaine de plateforme mutualisée réclamable (azurewebsites.net, herokuapp.com…) ;
+    - ses **permissions sensibles**.
+  - Filtres de l'onglet *Inscriptions* : *Permissions sensibles*, *Dormantes*, *Sans propriétaire*, *Identifiants longue durée*, *Redirections risquées*, *Identifiants fédérés*.
+  - **Permissions applicatives** : droits accordés à chaque application d'entreprise (sans utilisateur), groupés par ressource. Chaque permission est classée par niveau de risque :
+    - *Critique* : élévation jusqu'à administrateur général, par exemple `RoleManagement.ReadWrite.Directory`, `AppRoleAssignment.ReadWrite.All`, `Application.ReadWrite.All`, `full_access_as_app` ;
+    - *Élevé* : accès massif aux mails, fichiers et conversations ;
+    - *Standard* pour le reste.
+  - **Consentements délégués** : droits d'agir au nom des utilisateurs. L'onglet indique si le consentement vient d'un administrateur pour toute l'organisation ou de chaque utilisateur (avec leur nombre), les autorisations accordées et leur risque.
+  - Filtres des deux onglets de droits : risque, et origine (*Tierces*, *Éditeur non vérifié*, *Internes*, *Microsoft*, *Identités managées*). Le filtre *Tierces* est actif par défaut sur les consentements.
+- **Secrets & certificats** :
+  - **durée de validité** de chaque identifiant, et filtre **Durée excessive** : plus de 12 mois pour un secret, plus de 24 mois pour un certificat ;
+  - lien **désigner** sur les applications sans propriétaire ;
+  - bouton **Supprimer** sur chaque secret, en rouge pour les inutilisés.
+- **Actions** :
+  - **Ajouter un propriétaire** : étape de confirmation, audit `APP_OWNER_ADD`, annulation immédiate depuis le message de confirmation ou depuis l'Historique (rollback `APP_OWNER_REMOVE`).
+  - **Supprimer un secret** : **irréversible**, car la valeur d'un secret ne peut pas être recréée. La confirmation est renforcée : il faut saisir `SUPPRIMER`. Un avertissement s'affiche si le secret a servi récemment. Audit `APP_SECRET_REMOVE`, avec le nom, le keyId et les dates du secret. Les certificats ne sont pas concernés, leur retrait exigeant une preuve de possession de la clé.
+  - Les deux actions vérifient d'abord que le compte connecté a le rôle Administrateur d'applications, Administrateur d'applications cloud ou Administrateur général (`src/lib/app-admin-guard.ts`).
+- **Créateur des applications conservé** : les événements *Add application* du journal d'audit Entra, purgés au bout d'environ 30 jours, sont recopiés dans la table `app_creations`. La copie a lieu à chaque consultation et chaque jour, par une tâche de fond démarrée par `src/instrumentation.ts` avec le jeton applicatif.
+- Le toast (`use-toast`) accepte un bouton d'action, utilisé pour l'annulation immédiate.
+- **Sources Graph** :
+  - `/applications`, avec propriétaires puis identifiants fédérés, en deux appels car un seul `$expand` est autorisé ;
+  - `/servicePrincipals?$expand=appRoleAssignments`, plus les rôles des ressources par `$batch` ;
+  - `/oauth2PermissionGrants` ;
+  - les rapports d'activité déjà utilisés en 1.36.0.
+- **Nouvelles routes** :
+  - `GET /api/applications` ;
+  - `POST /api/applications/[id]/owners` ;
+  - `DELETE /api/applications/[id]/secrets`.
+- Les modifications passent par les droits délégués existants (`Directory.ReadWrite.All`). Si Graph les refuse, ajouter `Application.ReadWrite.All` (délégué) à l'inscription OneRing, avec consentement administrateur.
+- Tests : `src/lib/app-security.test.ts`.
+
 ## [1.36.0] — 2026-11-26
 
 ### Fonctionnalité v1.36.0 — Utilisation des secrets, certificats et applications

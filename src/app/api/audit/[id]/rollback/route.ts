@@ -12,6 +12,8 @@ import {
 import { getUser, updateUserEnabled } from "@/services/graph/users";
 import { assignLicense, removeLicense } from "@/services/graph/licenses";
 import { isExchangeAdmin } from "@/lib/exchange-guard";
+import { isAppAdmin } from "@/lib/app-admin-guard";
+import { addApplicationOwner, removeApplicationOwner } from "@/services/graph/applications";
 import {
   setDistributionGroupMember,
   setDistributionGroupOwner,
@@ -26,6 +28,7 @@ export const ROLLBACKABLE: AuditAction[] = [
   "DL_OWNER_ADD", "DL_OWNER_REMOVE",
   "MAILBOX_PERMISSION_ADD", "MAILBOX_PERMISSION_REMOVE",
   "ACCOUNT_DISABLE", "ACCOUNT_ENABLE",
+  "APP_OWNER_ADD", "APP_OWNER_REMOVE",
 ];
 
 export async function POST(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -168,6 +171,28 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
           targetId: log.targetId, targetName: log.targetName, targetType: "Mailbox",
           payloadBefore: wasAdd ? { member, type, rollbackOf: id } : {},
           payloadAfter: wasAdd ? {} : { member, type, rollbackOf: id },
+        });
+        break;
+      }
+
+      case "APP_OWNER_ADD":
+      case "APP_OWNER_REMOVE": {
+        if (!(await isAppAdmin(token))) {
+          return NextResponse.json({ error: "app_forbidden" }, { status: 403 });
+        }
+        const wasAdd = action === "APP_OWNER_ADD";
+        const payload = wasAdd ? after : before;
+        const ownerId = payload.userId as string | undefined;
+        if (!ownerId) return NextResponse.json({ error: "Données insuffisantes" }, { status: 422 });
+        if (wasAdd) await removeApplicationOwner(token, log.targetId, ownerId);
+        else await addApplicationOwner(token, log.targetId, ownerId);
+        inverse = wasAdd ? "APP_OWNER_REMOVE" : "APP_OWNER_ADD";
+        summary = `Propriétaire « ${payload.userName ?? ownerId} » ${wasAdd ? "retiré" : "rétabli"} (rollback)`;
+        await logAudit({
+          userId: session.user.email, userUpn: session.user.email, action: inverse,
+          targetId: log.targetId, targetName: log.targetName, targetType: "Application",
+          payloadBefore: wasAdd ? { ...payload, rollbackOf: id } : {},
+          payloadAfter: wasAdd ? {} : { ...payload, rollbackOf: id },
         });
         break;
       }

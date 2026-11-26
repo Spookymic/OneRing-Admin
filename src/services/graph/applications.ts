@@ -1,10 +1,13 @@
-import { graphFetchAll } from "@/lib/graph";
+import { graphFetch, graphFetchAll } from "@/lib/graph";
 import {
   latest,
   usageStatus,
   type AppSignInActivity,
   type UsageStatus,
 } from "@/lib/credential-usage";
+import { isLongLived, validityDays, type AppCreator, type AppOwner } from "@/lib/app-security";
+
+export type { AppCreator, AppOwner } from "@/lib/app-security";
 
 export interface ExpiringCredential {
   appObjectId: string;
@@ -14,8 +17,12 @@ export interface ExpiringCredential {
   name: string | null;
   /** Identifiant de l'identifiant (clé de rapprochement avec les rapports d'activité). */
   keyId: string | null;
+  startDateTime: string | null;
   endDateTime: string;
   daysLeft: number; // négatif = déjà expiré
+  /** Durée de validité totale (jours) et dépassement de la durée recommandée. */
+  validityDays: number | null;
+  longLived: boolean;
   /** Date de création de l'inscription d'application. */
   appCreatedDateTime: string | null;
   /** Propriétaires de l'inscription (le créateur via le portail en fait partie d'office). */
@@ -24,30 +31,20 @@ export interface ExpiringCredential {
   lastUsed?: string | null;
   usage?: UsageStatus;
   app?: AppSignInActivity | null;
-  /** Créateur exact d'après le journal d'audit (conservé ~30 j) ; null si plus ancien. */
+  /** Créateur exact d'après le journal d'audit (conservé en base au-delà des ~30 j d'Entra). */
   appCreator?: AppCreator | null;
 }
 
-export interface AppOwner {
-  displayName: string;
-  userPrincipalName: string | null;
-  /** Utilisateur ou application (principal de service). */
-  kind: "user" | "servicePrincipal" | "other";
-}
-
-export interface AppCreator {
-  by: string;
-  at: string;
-}
-
-interface RawCredential {
+export interface RawCredential {
   keyId?: string | null;
   displayName?: string | null;
+  startDateTime?: string | null;
   endDateTime?: string | null;
 }
 
-interface RawOwner {
+export interface RawOwner {
   "@odata.type"?: string;
+  id?: string | null;
   displayName?: string | null;
   userPrincipalName?: string | null;
 }
@@ -62,11 +59,12 @@ interface RawApp {
   keyCredentials?: RawCredential[];
 }
 
-function toOwner(o: RawOwner): AppOwner {
+export function toOwner(o: RawOwner): AppOwner {
   const t = (o["@odata.type"] ?? "").replace("#microsoft.graph.", "");
   return {
     displayName: o.displayName ?? o.userPrincipalName ?? "(sans nom)",
     userPrincipalName: o.userPrincipalName ?? null,
+    id: o.id ?? null,
     kind: t === "user" || t === "servicePrincipal" ? t : "other",
   };
 }
@@ -92,6 +90,7 @@ export async function listExpiringCredentials(
     const end = new Date(c.endDateTime).getTime();
     const daysLeft = Math.ceil((end - now) / 86_400_000);
     if (daysLeft <= withinDays) {
+      const validity = validityDays(c.startDateTime, c.endDateTime);
       out.push({
         appObjectId: app.id,
         appId: app.appId,
@@ -99,8 +98,11 @@ export async function listExpiringCredentials(
         type,
         name: c.displayName ?? null,
         keyId: c.keyId ?? null,
+        startDateTime: c.startDateTime ?? null,
         endDateTime: c.endDateTime,
         daysLeft,
+        validityDays: validity,
+        longLived: isLongLived(type, validity),
         appCreatedDateTime: app.createdDateTime ?? null,
         appOwners: (app.owners ?? []).map(toOwner),
       });
@@ -182,16 +184,22 @@ interface RawAuditEvent {
     user?: { userPrincipalName?: string | null; displayName?: string | null } | null;
     app?: { displayName?: string | null } | null;
   } | null;
-  targetResources?: { id?: string | null; type?: string | null }[];
+  targetResources?: { id?: string | null; type?: string | null; displayName?: string | null }[];
+}
+
+export interface AppCreationEvent extends AppCreator {
+  appObjectId: string;
+  appName: string | null;
 }
 
 /**
- * Créateurs des inscriptions d'applications d'après le journal d'audit Entra (« Add application »).
- * Un seul appel paginé. Le journal n'est conservé que ~30 jours (7 sans licence P1) :
- * les applications plus anciennes n'y figurent pas. Best-effort : map vide en cas de refus.
+ * Créations d'inscriptions d'applications d'après le journal d'audit Entra (« Add application »).
+ * Un seul appel paginé. Le journal n'est conservé que ~30 jours (7 sans licence P1) : les
+ * événements sont recopiés en base (`src/services/app-creators.ts`) pour ne pas les perdre.
+ * Best-effort : liste vide en cas de refus.
  */
-export async function getAppCreators(accessToken: string): Promise<Map<string, AppCreator>> {
-  const map = new Map<string, AppCreator>();
+export async function listAppCreationEvents(accessToken: string): Promise<AppCreationEvent[]> {
+  const out: AppCreationEvent[] = [];
   try {
     const filter = encodeURIComponent("activityDisplayName eq 'Add application'");
     const events = await graphFetchAll<RawAuditEvent>(
@@ -205,12 +213,14 @@ export async function getAppCreators(accessToken: string): Promise<Map<string, A
         e.initiatedBy?.user?.displayName ??
         e.initiatedBy?.app?.displayName ??
         null;
-      if (target?.id && by && e.activityDateTime) map.set(target.id, { by, at: e.activityDateTime });
+      if (target?.id && by && e.activityDateTime) {
+        out.push({ appObjectId: target.id, appName: target.displayName ?? null, by, at: e.activityDateTime });
+      }
     }
   } catch (error) {
     console.error("[applications] journal d'audit indisponible:", error instanceof Error ? error.message.slice(0, 120) : error);
   }
-  return map;
+  return out;
 }
 
 /** Ajoute la dernière utilisation, le statut et le créateur (journal d'audit) à chaque identifiant. */
@@ -229,5 +239,50 @@ export function withUsage(
       app: index.supported ? (index.byAppId.get(c.appId) ?? null) : null,
       appCreator: creators.get(c.appObjectId) ?? null,
     };
+  });
+}
+
+// ── Modifications (Application.ReadWrite.All ou Directory.ReadWrite.All + rôle d'administration des applications) ──
+
+export interface ApplicationBasic {
+  id: string;
+  appId: string;
+  displayName: string;
+  passwordCredentials: RawCredential[];
+}
+
+export async function getApplicationBasic(accessToken: string, appObjectId: string): Promise<ApplicationBasic> {
+  const app = await graphFetch<Partial<ApplicationBasic> & { id: string }>(
+    accessToken,
+    `/applications/${encodeURIComponent(appObjectId)}?$select=id,appId,displayName,passwordCredentials`
+  );
+  return {
+    id: app.id,
+    appId: app.appId ?? "",
+    displayName: app.displayName ?? app.id,
+    passwordCredentials: app.passwordCredentials ?? [],
+  };
+}
+
+export async function addApplicationOwner(accessToken: string, appObjectId: string, directoryObjectId: string): Promise<void> {
+  await graphFetch(accessToken, `/applications/${encodeURIComponent(appObjectId)}/owners/$ref`, {
+    method: "POST",
+    body: JSON.stringify({ "@odata.id": `https://graph.microsoft.com/v1.0/directoryObjects/${directoryObjectId}` }),
+  });
+}
+
+export async function removeApplicationOwner(accessToken: string, appObjectId: string, directoryObjectId: string): Promise<void> {
+  await graphFetch(
+    accessToken,
+    `/applications/${encodeURIComponent(appObjectId)}/owners/${encodeURIComponent(directoryObjectId)}/$ref`,
+    { method: "DELETE" }
+  );
+}
+
+/** Supprime définitivement un secret client (la valeur ne peut pas être recréée). */
+export async function removeApplicationSecret(accessToken: string, appObjectId: string, keyId: string): Promise<void> {
+  await graphFetch(accessToken, `/applications/${encodeURIComponent(appObjectId)}/removePassword`, {
+    method: "POST",
+    body: JSON.stringify({ keyId }),
   });
 }

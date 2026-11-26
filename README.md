@@ -79,7 +79,11 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 
 ### Sécurité & administration
 
-- **Secrets & certificats** d'applications : expiration et **dernière utilisation** de chaque secret / certificat et de son application (connexions applicatives et déléguées), origine de chaque application (date de création, créateur d'après le journal d'audit si récent, sinon propriétaires), filtres **« À renouveler en priorité »** (expire sous 30 j et encore utilisé), **« Inutilisés »** (90 j+ ou jamais, candidats à la suppression) et **« Sans propriétaire »**. Source : rapports d'activité Entra (préversion), `AuditLog.Read.All` + rôle de lecture
+- **Applications** : inventaire de sécurité en trois onglets.
+  - **Inscriptions** : créateur (conservé en base au-delà des 30 j du journal Entra), propriétaires avec ajout (annulable), activité (dormantes / jamais utilisées), identifiants fédérés, adresses de redirection risquées, permissions sensibles.
+  - **Permissions applicatives** et **Consentements délégués** : niveau de risque de chaque permission (critique / élevé / standard), origine de l'application (interne, Microsoft, tierce, identité managée) et éditeur vérifié ou non.
+  - Lecture : `Application.Read.All`, `Directory.Read.All`.
+- **Secrets & certificats** d'applications : durée de validité (filtre « Durée excessive » : secret > 12 mois, certificat > 24 mois), suppression d'un secret (irréversible, confirmation par saisie de `SUPPRIMER`, audit) ; expiration et **dernière utilisation** de chaque secret / certificat et de son application (connexions applicatives et déléguées), origine de chaque application (date de création, créateur d'après le journal d'audit si récent, sinon propriétaires), filtres **« À renouveler en priorité »** (expire sous 30 j et encore utilisé), **« Inutilisés »** (90 j+ ou jamais, candidats à la suppression) et **« Sans propriétaire »**. Source : rapports d'activité Entra (préversion), `AuditLog.Read.All` + rôle de lecture
 - **Administration** : paramètres d'interface (masquer des actions sensibles), mots-clés de détection de type, configuration SSO, **comptes administrateur locaux (accès de secours) avec 2FA TOTP**, santé du pont Exchange, export/import des paramètres
 - **Historique** d'audit complet (Qui/Quand/Quoi/Cible), rétention configurable, rollback, export CSV
 

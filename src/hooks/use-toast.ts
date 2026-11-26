@@ -4,14 +4,17 @@ interface ToastOptions {
   title?: string;
   description?: string;
   variant?: "default" | "destructive";
+  /** Bouton d'action dans le toast (ex. « Annuler » pour un rollback immédiat). */
+  action?: { label: string; onClick: () => void };
 }
 
 export function useToast() {
-  function toast({ title, description, variant }: ToastOptions) {
+  function toast({ title, description, variant, action }: ToastOptions) {
+    const opts = { description, ...(action ? { action, duration: 10_000 } : {}) };
     if (variant === "destructive") {
-      sonnerToast.error(title, { description });
+      sonnerToast.error(title, opts);
     } else {
-      sonnerToast.success(title, { description });
+      sonnerToast.success(title, opts);
     }
   }
 

@@ -103,3 +103,15 @@ model VerificationToken {
   @@unique([identifier, token])
   @@map("verification_tokens")
 }
+
+/// Créateurs des inscriptions d'applications, recopiés depuis le journal d'audit Entra
+/// (« Add application », conservé ~30 j seulement) pour ne pas les perdre.
+model AppCreation {
+  appObjectId String   @id
+  appName     String?
+  createdBy   String
+  createdAt   DateTime
+  recordedAt  DateTime @default(now())
+
+  @@map("app_creations")
+}

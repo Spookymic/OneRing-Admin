@@ -26,6 +26,7 @@ const ROLLBACKABLE = new Set([
   "DL_MEMBER_ADD", "DL_MEMBER_REMOVE", "DL_OWNER_ADD", "DL_OWNER_REMOVE",
   "MAILBOX_PERMISSION_ADD", "MAILBOX_PERMISSION_REMOVE",
   "ACCOUNT_DISABLE", "ACCOUNT_ENABLE",
+  "APP_OWNER_ADD", "APP_OWNER_REMOVE",
 ]);
 
 const actionLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -49,6 +50,9 @@ const actionLabels: Record<string, { label: string; variant: "default" | "second
   USER_MAILBOX_ACCESS_COPY: { label: "Copie boîtes partagées", variant: "secondary" },
   COWORK_USAGE_IMPORT:   { label: "Import Cowork",    variant: "secondary" },
   COWORK_USAGE_DELETE:   { label: "Import Cowork supprimé", variant: "destructive" },
+  APP_OWNER_ADD:         { label: "Propriétaire d'app ajouté", variant: "default" },
+  APP_OWNER_REMOVE:      { label: "Propriétaire d'app retiré", variant: "destructive" },
+  APP_SECRET_REMOVE:     { label: "Secret d'app supprimé", variant: "destructive" },
 };
 
 function buildDescription(log: {
@@ -61,6 +65,13 @@ function buildDescription(log: {
   const before = log.payloadBefore ?? {};
 
   switch (log.action) {
+    case "APP_OWNER_ADD":
+      return `${after.userName ?? "Utilisateur"} désigné propriétaire de l'application « ${log.targetName} »`;
+    case "APP_OWNER_REMOVE":
+      return `${before.userName ?? "Utilisateur"} retiré des propriétaires de l'application « ${log.targetName} »`;
+    case "APP_SECRET_REMOVE":
+      return `Secret « ${before.secretName ?? before.keyId ?? "?"} » supprimé de l'application « ${log.targetName} » (irréversible)`;
+
     case "GROUP_MEMBER_ADD":
       if (after.addedUserName)
         return `${after.addedUserName} ajouté au groupe « ${log.targetName} »`;

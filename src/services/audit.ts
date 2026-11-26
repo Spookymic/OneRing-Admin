@@ -31,7 +31,10 @@ export type AuditAction =
   | "OOO_UPDATE"
   | "TEAMS_STATUS_UPDATE"
   | "DEVICE_DELETE"
-  | "ADMIN_SETTINGS_UPDATE";
+  | "ADMIN_SETTINGS_UPDATE"
+  | "APP_OWNER_ADD"
+  | "APP_OWNER_REMOVE"
+  | "APP_SECRET_REMOVE";
 
 interface AuditParams {
   userId: string;

@@ -17,6 +17,13 @@ import {
   isRemovalCandidate, isRenewPriority,
   type AppSignInActivity, type UsageStatus,
 } from "@/lib/credential-usage";
+import {
+  CERT_MAX_VALIDITY_DAYS, SECRET_MAX_VALIDITY_DAYS, formatValidity,
+} from "@/lib/app-security";
+import { Button } from "@/components/ui/button";
+import { Trash2, UserPlus } from "lucide-react";
+import { AddAppOwnerDialog } from "@/components/applications/add-app-owner-dialog";
+import { RemoveSecretDialog, type SecretToRemove } from "@/components/applications/remove-secret-dialog";
 
 interface Cred {
   appObjectId: string;
@@ -25,8 +32,11 @@ interface Cred {
   type: "secret" | "certificate";
   name: string | null;
   keyId: string | null;
+  startDateTime: string | null;
   endDateTime: string;
   daysLeft: number;
+  validityDays: number | null;
+  longLived: boolean;
   appCreatedDateTime: string | null;
   appOwners: { displayName: string; userPrincipalName: string | null; kind: string }[];
   lastUsed?: string | null;
@@ -38,7 +48,7 @@ interface Cred {
 const ownerNames = (c: Cred) => c.appOwners.map((o) => o.userPrincipalName ?? o.displayName).join(", ");
 
 /** Origine de l'application : date de création, créateur (journal d'audit) ou propriétaires. */
-function AppOrigin({ c }: { c: Cred }) {
+function AppOrigin({ c, onAddOwner }: { c: Cred; onAddOwner: () => void }) {
   const created = c.appCreatedDateTime ? `Créée le ${format(new Date(c.appCreatedDateTime), "dd/MM/yyyy")}` : "Date de création inconnue";
   return (
     <div className="text-xs text-foreground/50">
@@ -48,7 +58,12 @@ function AppOrigin({ c }: { c: Cred }) {
       ) : c.appOwners.length > 0 ? (
         <> · propriétaire(s) : <span className="text-foreground/70">{ownerNames(c)}</span></>
       ) : (
-        <> · <span className="text-amber-700 dark:text-amber-400 font-medium">aucun propriétaire</span></>
+        <>
+          {" · "}<span className="text-amber-700 dark:text-amber-400 font-medium">aucun propriétaire</span>{" "}
+          <button type="button" onClick={onAddOwner} className="inline-flex items-center gap-0.5 text-primary hover:underline">
+            <UserPlus className="size-3" /> désigner
+          </button>
+        </>
       )}
     </div>
   );
@@ -60,7 +75,7 @@ interface CredResponse {
   credentials: Cred[];
 }
 
-type Filter = "all" | "renew" | "unused" | "noowner";
+type Filter = "all" | "renew" | "unused" | "noowner" | "longlived";
 
 const USAGE_BADGE: Record<UsageStatus, string> = {
   recent: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
@@ -82,6 +97,8 @@ function appActivityText(a: AppSignInActivity | null | undefined): string {
 export default function CredentialsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [ownerTarget, setOwnerTarget] = useState<{ id: string; displayName: string } | null>(null);
+  const [secretTarget, setSecretTarget] = useState<SecretToRemove | null>(null);
 
   // days élevé → renvoie tous les secrets/certificats ; usage=1 → dernière utilisation
   const { data, isLoading, error } = useQuery<CredResponse>({
@@ -97,7 +114,11 @@ export default function CredentialsPage() {
 
   const noOwner = (c: Cred) => c.appOwners.length === 0;
   const matchesFilter = (c: Cred) =>
-    filter === "all" ? true : filter === "renew" ? renew(c) : filter === "unused" ? unused(c) : noOwner(c);
+    filter === "all" ? true
+      : filter === "renew" ? renew(c)
+        : filter === "unused" ? unused(c)
+          : filter === "longlived" ? c.longLived
+            : noOwner(c);
 
   const creds = all
     .filter(matchesFilter)
@@ -112,6 +133,7 @@ export default function CredentialsPage() {
   const renewCount = all.filter(renew).length;
   const unusedCount = all.filter(unused).length;
   const noOwnerCount = all.filter(noOwner).length;
+  const longLivedCount = all.filter((c) => c.longLived).length;
 
   if (error) {
     return (
@@ -162,7 +184,10 @@ export default function CredentialsPage() {
                 { header: "Type", key: "type", width: 14 },
                 { header: "Identifiant", key: "nom", width: 28 },
                 { header: "Key ID", key: "keyId", width: 38 },
+                { header: "Création", key: "start", width: 14 },
                 { header: "Expiration", key: "exp", width: 14 },
+                { header: "Durée de validité (j)", key: "validity", width: 18 },
+                { header: "Durée excessive", key: "longLived", width: 16 },
                 { header: "Jours restants", key: "jours", width: 14 },
                 { header: "Dernière utilisation", key: "used", width: 18 },
                 { header: "Statut d'utilisation", key: "usage", width: 30 },
@@ -180,7 +205,10 @@ export default function CredentialsPage() {
                 type: c.type === "certificate" ? "Certificat" : "Secret",
                 nom: c.name ?? "",
                 keyId: c.keyId ?? "",
+                start: fmtDate(c.startDateTime),
                 exp: format(new Date(c.endDateTime), "dd/MM/yyyy"),
+                validity: c.validityDays ?? "",
+                longLived: c.longLived ? "Oui" : "",
                 jours: c.daysLeft,
                 used: fmtDate(c.lastUsed),
                 usage: USAGE_STATUS_LABELS[c.usage ?? "unknown"],
@@ -219,9 +247,16 @@ export default function CredentialsPage() {
                 {chip("renew", "À renouveler en priorité", renewCount)}
                 {chip("unused", `Inutilisés (${STALE_DAYS} j+) ou jamais`, unusedCount)}
                 {chip("noowner", "Sans propriétaire", noOwnerCount)}
+                {chip("longlived", "Durée excessive", longLivedCount)}
               </div>
             )}
-            {!usageOn && data && chip("noowner", "Sans propriétaire", noOwnerCount)}
+            {!usageOn && data && (
+              <div className="flex flex-wrap gap-2">
+                {chip("all", "Tous", all.length)}
+                {chip("noowner", "Sans propriétaire", noOwnerCount)}
+                {chip("longlived", "Durée excessive", longLivedCount)}
+              </div>
+            )}
           </div>
           {filter !== "all" && (
             <p className="text-xs text-foreground/50 mb-3">
@@ -229,7 +264,9 @@ export default function CredentialsPage() {
                 ? `Expire dans ${RENEW_WITHIN_DAYS} jours ou moins (ou déjà expiré) et utilisé ces ${STALE_DAYS} derniers jours : risque de panne, à renouveler d'abord.`
                 : filter === "unused"
                   ? "Aucune utilisation depuis 90 jours, ou jamais : candidat à la suppression après vérification avec le propriétaire de l'application (un traitement annuel peut ne pas apparaître)."
-                  : "Application sans propriétaire : personne n'est responsable de son renouvellement. Désigner un propriétaire (Entra → Inscriptions d'applications → Propriétaires)."}
+                  : filter === "longlived"
+                    ? `Validité supérieure à ${Math.round(SECRET_MAX_VALIDITY_DAYS / 30.4)} mois pour un secret ou ${Math.round(CERT_MAX_VALIDITY_DAYS / 30.4)} mois pour un certificat : un identifiant fuité reste exploitable longtemps. Microsoft recommande 6 mois pour les secrets ; au renouvellement, choisir une durée plus courte.`
+                    : "Application sans propriétaire : personne n'est responsable de son renouvellement. Utiliser « désigner » pour lui attribuer un propriétaire."}
             </p>
           )}
           <div className="rounded-md border bg-card">
@@ -242,13 +279,14 @@ export default function CredentialsPage() {
                   <th className="p-3 text-sm font-medium text-left">Expiration</th>
                   <th className="p-3 text-sm font-medium text-left">Restant</th>
                   {usageOn && <th className="p-3 text-sm font-medium text-left">Dernière utilisation</th>}
+                  <th className="p-3 text-sm font-medium text-right"><span className="sr-only">Actions</span></th>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading
                   ? (
                       <TableRow>
-                        <TableCell colSpan={6}>
+                        <TableCell colSpan={7}>
                           <div className="py-10"><Loader label="Chargement des secrets & certificats…" /></div>
                         </TableCell>
                       </TableRow>
@@ -257,7 +295,7 @@ export default function CredentialsPage() {
                       <TableRow key={`${c.appObjectId}-${c.keyId ?? i}`}>
                         <TableCell>
                           <div className="font-medium">{c.appName}</div>
-                          <AppOrigin c={c} />
+                          <AppOrigin c={c} onAddOwner={() => setOwnerTarget({ id: c.appObjectId, displayName: c.appName })} />
                           {usageOn && <div className="text-xs text-foreground/50">{appActivityText(c.app)}</div>}
                         </TableCell>
                         <TableCell>
@@ -268,6 +306,14 @@ export default function CredentialsPage() {
                         <TableCell className="text-sm text-gray-500 dark:text-gray-400">{c.name ?? "—"}</TableCell>
                         <TableCell className="text-sm">
                           {format(new Date(c.endDateTime), "dd MMM yyyy", { locale: fr })}
+                          {c.validityDays != null && (
+                            <div
+                              className={`text-xs ${c.longLived ? "text-amber-700 dark:text-amber-400 font-medium" : "text-foreground/50"}`}
+                              title={c.longLived ? "Durée de validité supérieure à la durée recommandée" : undefined}
+                            >
+                              validité {formatValidity(c.validityDays)}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell
                           className={`text-sm font-medium ${
@@ -289,11 +335,27 @@ export default function CredentialsPage() {
                             </div>
                           </TableCell>
                         )}
+                        <TableCell className="text-right">
+                          {c.type === "secret" && c.keyId && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Supprimer ce secret (irréversible)"
+                              aria-label={`Supprimer le secret ${c.name ?? ""} de ${c.appName}`}
+                              onClick={() => setSecretTarget({
+                                appObjectId: c.appObjectId, appName: c.appName, keyId: c.keyId ?? "", name: c.name,
+                                lastUsed: c.lastUsed, usage: c.usage,
+                              })}
+                            >
+                              <Trash2 className={unused(c) ? "text-red-600" : "text-foreground/40"} />
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                 {!isLoading && creds.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-gray-400 py-8">
+                    <TableCell colSpan={7} className="text-center text-gray-400 py-8">
                       Aucun secret / certificat.
                     </TableCell>
                   </TableRow>
@@ -305,8 +367,11 @@ export default function CredentialsPage() {
             <p className="text-xs text-foreground/40 mt-3">
               Source : rapports d&apos;activité Entra (préversion). « Aucune utilisation enregistrée » = jamais vu par Microsoft
               depuis le début du suivi. Avant de supprimer, vérifier avec le propriétaire de l&apos;application.
+              Les certificats se retirent depuis Entra (leur suppression exige une preuve de possession de la clé).
             </p>
           )}
+          <AddAppOwnerDialog app={ownerTarget} onClose={() => setOwnerTarget(null)} />
+          <RemoveSecretDialog secret={secretTarget} onClose={() => setSecretTarget(null)} />
         </>
       )}
     </div>
