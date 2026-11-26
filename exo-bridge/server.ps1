@@ -705,6 +705,62 @@ Start-PodeServer -Threads 1 {
         }
     }
 
+    # --- Synthese des transferts au niveau boite, sur tout le tenant (tableau de bord) ---
+    # ForwardingAddress / ForwardingSmtpAddress uniquement : filtre cote serveur, un seul appel.
+    # Les regles de boite de reception ne sont PAS parcourues (une requete par boite, trop lent).
+    # external = domaine de destination absent des domaines acceptes du tenant.
+    Add-PodeRoute -Method Get -Path '/mailbox/forwarding-summary' -ScriptBlock {
+        try {
+            Connect-ExoIfNeeded
+            $accepted = New-Object 'System.Collections.Generic.HashSet[string]'
+            Get-AcceptedDomain | ForEach-Object { [void]$accepted.Add("$($_.DomainName)".ToLower()) }
+
+            $isExternal = {
+                param($addr)
+                if ([string]::IsNullOrWhiteSpace($addr) -or $addr -notmatch '@') { return $false }
+                $domain = ($addr -split '@')[-1].ToLower()
+                return -not $accepted.Contains($domain)
+            }
+
+            $forwards = @()
+            Get-Mailbox -ResultSize Unlimited -Filter "ForwardingAddress -ne `$null -or ForwardingSmtpAddress -ne `$null" |
+                ForEach-Object {
+                    $src = $_
+                    $target = $null
+                    $via = $null
+                    if ($src.ForwardingSmtpAddress) {
+                        $target = ("$($src.ForwardingSmtpAddress)" -replace '^smtp:', '')
+                        $via = 'forwardingSmtpAddress'
+                    }
+                    elseif ($src.ForwardingAddress) {
+                        $r = Get-Recipient -Identity "$($src.ForwardingAddress)" -ErrorAction SilentlyContinue
+                        # Contact de messagerie : l'adresse reelle est ExternalEmailAddress
+                        $target = if ($r -and $r.ExternalEmailAddress) { "$($r.ExternalEmailAddress)" -replace '^smtp:', '' }
+                                  elseif ($r) { "$($r.PrimarySmtpAddress)" }
+                                  else { "$($src.ForwardingAddress)" }
+                        $via = 'forwardingAddress'
+                    }
+                    $forwards += @{
+                        source = @{
+                            id            = $src.ExternalDirectoryObjectId
+                            displayName   = $src.DisplayName
+                            mail          = "$($src.PrimarySmtpAddress)"
+                            recipientType = "$($src.RecipientTypeDetails)"
+                        }
+                        target                     = $target
+                        via                        = $via
+                        external                   = [bool](& $isExternal $target)
+                        deliverToMailboxAndForward = [bool]$src.DeliverToMailboxAndForward
+                    }
+                }
+            Write-PodeJsonResponse -Value @{ ok = $true; forwards = @($forwards) }
+        }
+        catch {
+            [Console]::Error.WriteLine("MBX_FORWARDING_SUMMARY_ERROR: " + ($_ | Out-String))
+            Write-PodeJsonResponse -Value @{ ok = $false; error = $_.Exception.Message }
+        }
+    }
+
     # --- Parametres SharePoint par site (PnP, app-only) : un seul Get-PnPTenantSite ---
     Add-PodeRoute -Method Get -Path '/sharepoint/site-settings' -ScriptBlock {
         $adminUrl = if (-not [string]::IsNullOrWhiteSpace($env:SPO_ADMIN_URL)) {

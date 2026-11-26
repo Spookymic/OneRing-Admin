@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader } from "@/components/ui/loader";
 import { ExportButton } from "@/components/ui/export-button";
 import { apiFetch } from "@/lib/api";
+import { ForwardingOverview } from "@/components/mail-forwarding/forwarding-overview";
 import type { M365User } from "@/services/graph/users";
 import type {
   InboxRuleForwardKind,
@@ -222,10 +223,13 @@ export default function MailForwardingPage() {
       </form>
 
       {!query && (
-        <div className="rounded-md border bg-card p-6 text-sm text-foreground/60">
-          Choisissez un compte pour afficher les redirections configurées <strong>depuis</strong> sa boîte
-          (transfert de boîte, règles de boîte de réception) et <strong>vers</strong> ce compte
-          (autres boîtes qui lui transfèrent leurs messages), ainsi que les règles de flux Exchange concernées.
+        <div className="space-y-6">
+          <p className="text-sm text-foreground/60">
+            Choisissez un compte pour afficher les redirections configurées <strong>depuis</strong> sa boîte
+            (transfert de boîte, règles de boîte de réception) et <strong>vers</strong> ce compte
+            (autres boîtes qui lui transfèrent leurs messages), ainsi que les règles de flux Exchange concernées.
+          </p>
+          <ForwardingOverview initialExternalOnly={searchParams.get("view") === "external"} onAnalyze={run} />
         </div>
       )}
 

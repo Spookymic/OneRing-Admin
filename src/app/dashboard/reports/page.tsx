@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import {
   FileSpreadsheet, Inbox, Users2, UserSquare, Crown, Shield,
-  Search, Check, Download, CheckCheck, X,
+  Search, Check, Download, CheckCheck, X, ShieldCheck, UserCog,
 } from "lucide-react";
 import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
@@ -20,10 +20,19 @@ import { getSkuFriendlyName } from "@/lib/license-names";
 import type { M365User } from "@/services/graph/users";
 import type { M365Group, GroupType } from "@/services/graph/groups";
 import type { SubscribedSku } from "@/services/graph/licenses";
+import { mfaReportQuery, adminReportQuery } from "@/hooks/use-identity-reports";
+import {
+  authMethodLabel, isCriticalRole, mfaOrigin, summarizeAdmins, summarizeMfa, summarizeMfaByOrigin,
+  MFA_ORIGIN_LABELS,
+  type AdminAssignment, type AdminPrincipalType,
+} from "@/lib/identity-reports";
 
 type GroupWithType = M365Group & { type: GroupType };
-type ReportId = "dl-members" | "group-members" | "user-groups" | "group-owners" | "users-licenses";
-type PickKind = "groups" | "users" | "all-groups" | "all-users";
+type ReportId =
+  | "dl-members" | "group-members" | "user-groups" | "group-owners" | "users-licenses"
+  | "mfa-status" | "admin-accounts";
+/** "tenant" : rapport sans sélection, couvrant tout le tenant et chargé à la génération. */
+type PickKind = "groups" | "users" | "all-groups" | "all-users" | "tenant";
 
 interface ReportDef {
   id: ReportId;
@@ -72,7 +81,32 @@ const REPORTS: ReportDef[] = [
     icon: Shield,
     pick: "all-users",
   },
+  {
+    id: "mfa-status",
+    title: "État MFA des comptes",
+    description: "Liste des comptes avec MFA actif / inactif, méthodes enregistrées et méthode par défaut. Comparatif internes / invités et feuilles dédiées aux comptes sans MFA de chaque origine.",
+    icon: ShieldCheck,
+    pick: "tenant",
+  },
+  {
+    id: "admin-accounts",
+    title: "Comptes administrateurs",
+    description: "Comptes détenant un rôle Entra (attributions actives et éligibles PIM, y compris via groupe), avec rôles critiques, statut du compte et état MFA.",
+    icon: UserCog,
+    pick: "tenant",
+  },
 ];
+
+const PRINCIPAL_TYPE_LABELS: Record<AdminPrincipalType, string> = {
+  user: "Utilisateur",
+  group: "Groupe",
+  servicePrincipal: "Application",
+  other: "Autre",
+};
+
+const MFA_ON = "Actif";
+const MFA_OFF = "Inactif";
+const yesNo = (v: boolean | null | undefined) => (v == null ? "" : v ? "Oui" : "Non");
 
 const GROUP_TYPE_LABELS: Record<GroupType, string> = {
   unified: "M365",
@@ -134,6 +168,12 @@ export default function ReportsPage() {
   const [generating, setGenerating] = useState(false);
 
   const report = REPORTS.find((r) => r.id === selected) ?? null;
+
+  // Lien direct depuis le tableau de bord : /dashboard/reports?report=<id>
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("report");
+    if (id && REPORTS.some((r) => r.id === id)) setSelected(id as ReportId);
+  }, []);
 
   const { data: groups, isLoading: groupsLoading } = useQuery<GroupWithType[]>({
     queryKey: ["groups"],
@@ -228,6 +268,10 @@ export default function ReportsPage() {
         await generateOwners();
       } else if (report.id === "users-licenses") {
         generateUsersLicenses();
+      } else if (report.id === "mfa-status") {
+        await generateMfa();
+      } else if (report.id === "admin-accounts") {
+        await generateAdmins();
       }
     } catch (e: any) {
       toast({ title: "Erreur", description: e?.message ?? "Génération impossible", variant: "destructive" });
@@ -441,15 +485,275 @@ export default function ReportsPage() {
     toast({ title: "Rapport généré", description: `${rows.length} compte(s).` });
   }
 
+  /** Liste des comptes (cache partagé) : type de compte et statut. */
+  async function getUsers(): Promise<M365User[]> {
+    return (
+      users ??
+      (await queryClient.ensureQueryData<M365User[]>({
+        queryKey: ["users"],
+        queryFn: () => apiFetch<M365User[]>("/api/users"),
+      }))
+    );
+  }
+
+  const accountTypeLabel = (u: M365User | undefined, fallback: string | null) =>
+    u
+      ? ACCOUNT_TYPE_CONFIG[detectAccountType(u, settings.customRoomPatterns, settings.customEquipmentPatterns)].label
+      : fallback === "Guest" ? "Invité" : (fallback ?? "");
+
+  // ── État MFA ───────────────────────────────────────────────────────
+  async function generateMfa() {
+    const [mfa, list, admins] = await Promise.all([
+      queryClient.fetchQuery(mfaReportQuery),
+      getUsers(),
+      // Colonne « Administrateur » : best-effort, le rapport reste utile sans elle
+      queryClient.fetchQuery(adminReportQuery).catch(() => null),
+    ]);
+    if (!mfa.supported) {
+      toast({ title: "État MFA indisponible", description: mfa.reason, variant: "destructive" });
+      return;
+    }
+    const byId = new Map(list.map((u) => [u.id, u]));
+    const adminIds = new Set(admins ? summarizeAdmins(admins.assignments).userIds : []);
+
+    const rows = mfa.users
+      .map((r) => {
+        const u = byId.get(r.id);
+        const enabled = u?.accountEnabled ?? r.accountEnabled;
+        return {
+          nom: r.displayName,
+          upn: r.userPrincipalName,
+          origine: MFA_ORIGIN_LABELS[mfaOrigin(r)],
+          type: accountTypeLabel(u, r.userType),
+          statut: enabled == null ? "" : enabled ? STATUS_ENABLED : STATUS_DISABLED,
+          admin: admins ? yesNo(adminIds.has(r.id)) : "",
+          mfa: r.mfaRegistered ? MFA_ON : MFA_OFF,
+          methodes: r.methods.map(authMethodLabel).join(", "),
+          defaut: r.defaultMethod ? authMethodLabel(r.defaultMethod) : "",
+          sansMdp: yesNo(r.passwordlessCapable),
+          maj: r.lastUpdated ? format(new Date(r.lastUpdated), "dd/MM/yyyy") : "",
+          _enabled: enabled === true,
+          _guest: mfaOrigin(r) === "guest",
+        };
+      })
+      .sort((a, b) =>
+        a.origine.localeCompare(b.origine) || a.mfa.localeCompare(b.mfa) || a.nom.localeCompare(b.nom, "fr"));
+
+    const cols: XlsxColumn[] = [
+      { header: "Nom", key: "nom", width: 28 },
+      { header: "UPN", key: "upn", width: 34 },
+      { header: "Origine", key: "origine", width: 10 },
+      { header: "Type de compte", key: "type", width: 16 },
+      ACCOUNT_STATUS_COL,
+      { header: "Administrateur", key: "admin", width: 14 },
+      { header: "MFA", key: "mfa", width: 10 },
+      { header: "Méthodes enregistrées", key: "methodes", width: 50 },
+      { header: "Méthode par défaut", key: "defaut", width: 26 },
+      { header: "Sans mot de passe", key: "sansMdp", width: 16 },
+      { header: "Mis à jour le", key: "maj", width: 14 },
+    ];
+    const enabledRows = mfa.users.filter((r) => byId.get(r.id)?.accountEnabled === true);
+    const byOrigin = summarizeMfaByOrigin(mfa.users, byId);
+    const internalAll = summarizeMfa(enabledRows.filter((r) => mfaOrigin(r) === "internal"));
+    const enabledAll = summarizeMfa(enabledRows);
+    const adminsWithoutMfa = rows.filter((r) => r.admin === "Oui" && r.mfa === MFA_OFF && r._enabled).length;
+    const internalMissing = rows.filter((r) => r.mfa === MFA_OFF && r._enabled && !r._guest);
+    const guestMissing = rows.filter((r) => r.mfa === MFA_OFF && r._enabled && r._guest);
+
+    const synthese: XlsxSheet = {
+      name: "Synthèse",
+      columns: [
+        { header: "Indicateur", key: "k", width: 58 },
+        { header: "Valeur", key: "v", width: 70 },
+      ],
+      rows: [
+        { k: "Source", v: mfa.source === "registrationDetails" ? "Rapport Entra « User registration details »" : "Méthodes d'authentification lues compte par compte (comptes activés)" },
+        { k: "MFA internes (comptes utilisateurs actifs)", v: `${byOrigin.internal.enabled} / ${byOrigin.internal.total} (${byOrigin.internal.percent} %)` },
+        { k: "MFA invités (invités activés)", v: `${byOrigin.guest.enabled} / ${byOrigin.guest.total} (${byOrigin.guest.percent} %)` },
+        { k: "Écart internes − invités", v: `${byOrigin.internal.percent - byOrigin.guest.percent} points` },
+        { k: "Administrateurs activés sans MFA", v: admins ? adminsWithoutMfa : "Rôles non lisibles" },
+        { k: "Détail par origine", v: "Feuille « Internes vs invités »" },
+        {
+          k: "Note sur les invités",
+          v: "Seules les méthodes enregistrées dans CE tenant sont visibles. Un invité qui fait son MFA dans son " +
+            "tenant d'origine apparaît « Inactif » ici ; c'est attendu si les paramètres d'accès inter-locataires " +
+            "font confiance au MFA du tenant d'origine.",
+        },
+        { k: "Généré le", v: format(new Date(mfa.generatedAt), "dd/MM/yyyy HH:mm") },
+      ],
+    };
+
+    const compareRow = (origine: string, perimetre: string, s: ReturnType<typeof summarizeMfa>) => ({
+      origine, perimetre, total: s.total, actif: s.enabled, inactif: s.disabled, pct: `${s.percent} %`,
+    });
+    const comparison: XlsxSheet = {
+      name: "Internes vs invités",
+      columns: [
+        { header: "Origine", key: "origine", width: 12 },
+        { header: "Périmètre", key: "perimetre", width: 62 },
+        { header: "Comptes", key: "total", width: 10 },
+        { header: "MFA actif", key: "actif", width: 11 },
+        { header: "MFA inactif", key: "inactif", width: 12 },
+        { header: "% MFA", key: "pct", width: 9 },
+      ],
+      rows: [
+        compareRow("Interne", "Comptes utilisateurs actifs (membres activés et licenciés)", byOrigin.internal),
+        compareRow("Interne", "Tous les comptes internes activés (y compris boîtes partagées, salles, comptes de service)", internalAll),
+        compareRow("Invité", "Invités activés", byOrigin.guest),
+        compareRow("Total", "Tous les comptes activés", enabledAll),
+      ],
+    };
+
+    // ExcelJS ne retient que les clés déclarées en colonnes : _enabled / _guest n'apparaissent pas dans le fichier.
+    await downloadXlsx(dl("rapport-mfa"), [
+      synthese,
+      comparison,
+      { name: "Internes sans MFA", columns: cols, rows: internalMissing },
+      { name: "Invités sans MFA", columns: cols, rows: guestMissing },
+      { name: "Tous les comptes", columns: cols, rows },
+    ]);
+    toast({
+      title: "Rapport généré",
+      description:
+        `MFA internes : ${byOrigin.internal.percent} % (${byOrigin.internal.enabled}/${byOrigin.internal.total}) · ` +
+        `invités : ${byOrigin.guest.percent} % (${byOrigin.guest.enabled}/${byOrigin.guest.total})` +
+        (adminsWithoutMfa > 0 ? ` — ${adminsWithoutMfa} administrateur(s) sans MFA.` : "."),
+    });
+  }
+
+  // ── Comptes administrateurs ────────────────────────────────────────
+  async function generateAdmins() {
+    const [admins, mfa] = await Promise.all([
+      queryClient.fetchQuery(adminReportQuery),
+      // Colonne « MFA » : best-effort
+      queryClient.fetchQuery(mfaReportQuery).catch(() => null),
+    ]);
+    const mfaById = new Map(
+      mfa?.supported ? mfa.users.map((r) => [r.id, r.mfaRegistered]) : []
+    );
+    const mfaOf = (a: AdminAssignment) =>
+      a.principalType !== "user" || !mfa?.supported
+        ? ""
+        : mfaById.has(a.principalId) ? (mfaById.get(a.principalId) ? MFA_ON : MFA_OFF) : "Inconnu";
+    const statusOf = (a: AdminAssignment) =>
+      a.accountEnabled == null ? "" : a.accountEnabled ? STATUS_ENABLED : STATUS_DISABLED;
+    const kindLabel = (a: AdminAssignment) => (a.kind === "active" ? "Active" : "Éligible (PIM)");
+
+    // Une ligne par compte : rôles regroupés
+    const byPrincipal = new Map<string, AdminAssignment[]>();
+    for (const a of admins.assignments) {
+      // Les groupes portent le rôle mais leurs membres sont listés individuellement
+      const list = byPrincipal.get(a.principalId) ?? [];
+      list.push(a);
+      byPrincipal.set(a.principalId, list);
+    }
+    const perAccount = [...byPrincipal.values()]
+      .map((list) => {
+        const a = list[0];
+        const roles = [...new Set(list.map((x) => x.roleName))].sort((x, y) => x.localeCompare(y, "fr"));
+        const kinds = new Set(list.map(kindLabel));
+        const groupsVia = [...new Set(list.map((x) => x.viaGroup).filter((g): g is string => !!g))];
+        return {
+          nom: a.displayName,
+          upn: a.userPrincipalName ?? "",
+          typePrincipal: PRINCIPAL_TYPE_LABELS[a.principalType],
+          statut: statusOf(a),
+          mfa: mfaOf(a),
+          critique: list.some((x) => isCriticalRole(x.roleTemplateId)) ? "Oui" : "Non",
+          nbRoles: roles.length,
+          roles: roles.join(", "),
+          attribution: [...kinds].join(" + "),
+          via: groupsVia.join(", "),
+        };
+      })
+      .sort((x, y) => y.critique.localeCompare(x.critique) || x.nom.localeCompare(y.nom, "fr"));
+
+    const detail = admins.assignments.map((a) => ({
+      nom: a.displayName,
+      upn: a.userPrincipalName ?? "",
+      typePrincipal: PRINCIPAL_TYPE_LABELS[a.principalType],
+      statut: statusOf(a),
+      mfa: mfaOf(a),
+      role: a.roleName,
+      critique: isCriticalRole(a.roleTemplateId) ? "Oui" : "Non",
+      attribution: kindLabel(a),
+      via: a.viaGroup ?? "",
+    }));
+
+    const s = summarizeAdmins(admins.assignments);
+    const userRows = perAccount.filter((r) => r.typePrincipal === PRINCIPAL_TYPE_LABELS.user);
+    const withoutMfa = userRows.filter((r) => r.mfa === MFA_OFF && r.statut === STATUS_ENABLED).length;
+
+    const baseCols: XlsxColumn[] = [
+      { header: "Nom", key: "nom", width: 28 },
+      { header: "UPN", key: "upn", width: 34 },
+      { header: "Type", key: "typePrincipal", width: 13 },
+      ACCOUNT_STATUS_COL,
+      { header: "MFA", key: "mfa", width: 10 },
+    ];
+    await downloadXlsx(dl("rapport-administrateurs"), [
+      {
+        name: "Synthèse",
+        columns: [
+          { header: "Indicateur", key: "k", width: 52 },
+          { header: "Valeur", key: "v", width: 40 },
+        ],
+        rows: [
+          { k: "Comptes utilisateurs administrateurs", v: s.users },
+          { k: "  dont administrateurs généraux", v: s.globalAdmins },
+          { k: "  dont détenteurs d'un rôle critique", v: s.criticalUsers },
+          { k: "  dont comptes désactivés (rôle à retirer)", v: s.disabledUsers },
+          { k: "  dont comptes activés sans MFA", v: mfa?.supported ? withoutMfa : "État MFA indisponible" },
+          { k: "Applications détenant un rôle", v: s.servicePrincipals },
+          { k: "Attributions éligibles (PIM)", v: admins.eligibleSupported ? "Incluses" : "Non lisibles (licence P2 ou permission)" },
+          { k: "Rôles critiques", v: "Administrateur général, de rôle privilégié, d'authentification privilégié, de la sécurité, de l'accès conditionnel" },
+          { k: "Généré le", v: format(new Date(admins.generatedAt), "dd/MM/yyyy HH:mm") },
+        ],
+      },
+      {
+        name: "Par compte",
+        columns: [
+          ...baseCols,
+          { header: "Rôle critique", key: "critique", width: 13 },
+          { header: "Nb rôles", key: "nbRoles", width: 9 },
+          { header: "Rôles", key: "roles", width: 60 },
+          { header: "Attribution", key: "attribution", width: 22 },
+          { header: "Via groupe", key: "via", width: 28 },
+        ],
+        rows: perAccount,
+      },
+      {
+        name: "Attributions",
+        columns: [
+          ...baseCols,
+          { header: "Rôle", key: "role", width: 38 },
+          { header: "Rôle critique", key: "critique", width: 13 },
+          { header: "Attribution", key: "attribution", width: 16 },
+          { header: "Via groupe", key: "via", width: 28 },
+        ],
+        rows: detail,
+      },
+    ]);
+    toast({
+      title: "Rapport généré",
+      description:
+        `${s.users} administrateur(s), dont ${s.globalAdmins} administrateur(s) général(aux)` +
+        (withoutMfa > 0 ? `, ${withoutMfa} sans MFA` : "") +
+        (s.disabledUsers > 0 ? `, ${s.disabledUsers} désactivé(s)` : "") + ".",
+    });
+  }
+
   // Bouton de génération : activable ?
   const canGenerate =
     !!report &&
     !generating &&
-    (needsPicker
-      ? picked.size > 0
-      : report.pick === "all-groups"
-        ? !!groups && groups.length > 0
-        : !!users && users.length > 0);
+    (report.pick === "tenant"
+      ? true
+      : needsPicker
+        ? picked.size > 0
+        : report.pick === "all-groups"
+          ? !!groups && groups.length > 0
+          : !!users && users.length > 0);
 
   return (
     <div>
@@ -560,9 +864,11 @@ export default function ReportsPage() {
             </div>
           ) : (
             <p className="text-sm text-foreground/60">
-              {report.pick === "all-groups"
-                ? `Ce rapport couvre tous les groupes et listes de distribution${groups ? ` (${groups.length})` : ""}.`
-                : `Ce rapport couvre tous les comptes utilisateurs${users ? ` (${users.length})` : ""}.`}
+              {report.pick === "tenant"
+                ? "Ce rapport couvre tout le tenant ; les données sont lues dans Microsoft Entra à la génération."
+                : report.pick === "all-groups"
+                  ? `Ce rapport couvre tous les groupes et listes de distribution${groups ? ` (${groups.length})` : ""}.`
+                  : `Ce rapport couvre tous les comptes utilisateurs${users ? ` (${users.length})` : ""}.`}
               {" "}Cliquez sur « Générer l'export ».
             </p>
           )}

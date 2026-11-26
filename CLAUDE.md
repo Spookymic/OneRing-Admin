@@ -71,6 +71,10 @@ src/
       licenses/[userId]/route.ts  # POST assigner/retirer
       copilot/usage/              # GET usage Microsoft 365 Copilot (rapport Graph, Reports.Read.All)
       copilot/cowork/             # GET/POST/DELETE imports CSV Copilot Cowork (pas d API Microsoft)
+      reports/mfa/                # GET etat MFA de tous les comptes (userRegistrationDetails, repli methodes)
+      reports/admins/             # GET comptes administrateurs (roles Entra actifs + eligibles PIM)
+      dashboard/posture/          # GET acces conditionnel, confiance MFA invites, synchro AD (Policy.Read.All)
+      mailboxes/forwarding/summary/  # GET transferts au niveau boite de tout le tenant (pont Exchange)
       audit/route.ts              # GET historique
     dashboard/
       page.tsx          # Tableau de bord principal (stats + SKUs + audit recent)

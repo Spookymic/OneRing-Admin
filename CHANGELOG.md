@@ -2,7 +2,50 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
-## [Non publié]
+## [1.35.0] — 2026-11-26
+
+### Fonctionnalité v1.35.0 — Rapports État MFA et Comptes administrateurs
+
+- **Onglet Rapports**, deux nouveaux rapports couvrant tout le tenant :
+  - **État MFA des comptes** : MFA actif / inactif, méthodes enregistrées, méthode par défaut, capacité sans mot de passe, **origine (Interne / Invité)**, type et statut du compte, colonne *Administrateur*. Feuilles :
+    - *Synthèse* : taux MFA des internes, des invités et écart en points ;
+    - *Internes vs invités* : comptes, MFA actif, MFA inactif et pourcentage, pour les comptes utilisateurs internes, tous les comptes internes activés, les invités activés et le total ;
+    - *Internes sans MFA*, *Invités sans MFA* et *Tous les comptes*.
+  - Pour les invités, seules les méthodes enregistrées **dans ce tenant** sont visibles. Un invité qui fait son MFA dans son tenant d'origine apparaît donc « Inactif » ; c'est normal si les paramètres d'accès inter-locataires font confiance à ce MFA. La synthèse le rappelle.
+  - **Comptes administrateurs** : détenteurs d'un rôle Entra, y compris via un groupe attribuable à un rôle (colonne *Via groupe*), avec les rôles critiques signalés (administrateur général, de rôle privilégié, d'authentification privilégié, de la sécurité, de l'accès conditionnel), le statut du compte et l'état MFA. Feuilles *Synthèse*, *Par compte* et *Attributions*.
+- **Tableau de bord**, deux nouvelles cartes cliquables qui ouvrent le rapport correspondant :
+  - **MFA activé — internes** : taux MFA des comptes utilisateurs actifs (membres activés et licenciés, hors boîtes partagées, salles et comptes de service), avec en sous-titre le taux des invités activés pour comparaison.
+  - **Administrateurs** : nombre de comptes, dont administrateurs généraux et administrateurs sans MFA.
+- Sources Graph :
+  - MFA : `/reports/authenticationMethods/userRegistrationDetails`, qui demande une licence Entra ID P1 et un rôle de lecture des rapports. En cas de refus, l'application lit les méthodes compte par compte par `$batch`, limité aux membres activés.
+  - Administrateurs : `/directoryRoles` et leurs membres, les groupes étant développés en membres transitifs. Les attributions éligibles PIM (`roleEligibilityScheduleInstances`) sont incluses si le tenant a Entra ID P2 ; sinon, la synthèse indique qu'elles ne sont pas lisibles.
+- Le rapport d'inscription Entra écrit `userType` en minuscules (`guest`), contrairement à la liste des comptes (`Guest`). La valeur est normalisée et la détection de l'origine ignore la casse.
+- Correctif technique : l'appel PIM envoie un `Accept-Language` explicite, car le service rejette la valeur `*` envoyée par défaut par `fetch` (400 *CultureNotFoundException*).
+- Nouvelles routes en lecture seule : `GET /api/reports/mfa` et `GET /api/reports/admins`. Les deux rapports partagent leur cache avec le tableau de bord (React Query, 10 min). Aucune nouvelle permission n'est requise.
+- Lien direct vers un rapport : `/dashboard/reports?report=<id>`.
+- Tests : `src/lib/identity-reports.test.ts` (synthèses, périmètre MFA, rôles critiques).
+
+### Fonctionnalité v1.35.0 — Tableau de bord : sécurité du tenant et usage
+
+- **Nouvelles anomalies**, désormais triées par gravité :
+  - *Administrateurs sans MFA* (gravité haute) ;
+  - *Comptes désactivés détenant encore un rôle d'administrateur* (haute) ;
+  - *Trop d'administrateurs généraux* : 5 ou plus, Microsoft recommandant d'en avoir moins de 5 (moyenne) ;
+  - *Boîtes partagées / salles dont la connexion est autorisée* (moyenne). Les boîtes partagées sont identifiées par le pont Exchange ; sans pont, seules les salles et équipements détectés par nom sont contrôlés.
+- **Cadre « Sécurité du tenant »**, quatre tuiles avec statut OK / À vérifier / Indisponible :
+  - *Accès conditionnel* : stratégies actives et en mode rapport ; MFA imposé aux administrateurs généraux et à tous les utilisateurs ; paramètres de sécurité par défaut. Les exclusions ne sont pas évaluées.
+  - *MFA des invités* : MFA du tenant d'origine accepté ou non, par défaut et par organisation partenaire. Associé au taux MFA des invités, il indique si ce taux est un vrai problème.
+  - *Redirections externes* : boîtes transférées vers un domaine non accepté. Nouvelle route du pont `GET /mailbox/forwarding-summary`, un seul appel filtré ; les règles de boîte ne sont pas incluses.
+  - *Synchronisation AD* : âge de la dernière synchronisation, alerte au-delà de 3 h ; « annuaire 100 % cloud » si la synchronisation n'est pas activée.
+- **Cartes d'usage** : *Adoption Copilot (28 j)* (utilisateurs actifs, licences inutilisées) et *Espaces remplis à 90 % ou plus* (boîtes aux lettres et OneDrive). Elles partagent le cache des écrans Copilot et Stockage.
+- Nouvelles routes en lecture seule :
+  - `GET /api/dashboard/posture` (`Policy.Read.All` et `Organization.Read.All`, déjà déclarées). Chaque bloc est indépendant : un refus n'en bloque pas un autre.
+  - `GET /api/mailboxes/forwarding/summary`, réservée aux comptes ayant un rôle Exchange.
+- **Écran Redirections mail : vue d'ensemble du tenant**, affichée tant qu'aucun compte n'est analysé. Avant, la tuile du tableau de bord menait à un écran vide.
+  - Contenu : tous les transferts au niveau boîte, avec badge *Externe*, filtre « vers l'extérieur uniquement », recherche, export Excel et bouton *Analyser* par boîte.
+  - La tuile ouvre `/dashboard/mail-forwarding?view=external`, déjà filtré.
+- Cartes cliquables du tableau de bord : le chevron est placé en haut à droite. Le composant `Card` est en colonne, ce qui le faisait tomber sous le texte.
+- Tests : `src/lib/security-posture.test.ts` (évaluation des stratégies, héritage de la confiance par les partenaires, synchronisation bloquée).
 
 ### Documentation — Déploiement Proxmox VE
 

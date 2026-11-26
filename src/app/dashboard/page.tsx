@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Shield, History, TrendingUp, CheckCircle, XCircle, Crown, AlertTriangle, Download, EyeOff, ChevronRight, X } from "lucide-react";
+import { Users, Shield, History, TrendingUp, CheckCircle, XCircle, Crown, AlertTriangle, Download, EyeOff, ChevronRight, X, ShieldCheck, UserCog } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
@@ -21,6 +21,11 @@ import { apiFetch } from "@/lib/api";
 import { downloadXlsx, type XlsxSheet } from "@/lib/xlsx";
 import { UserGroupsSheet } from "@/components/users/user-groups-sheet";
 import { GroupMembersSheet } from "@/components/groups/group-members-sheet";
+import { mfaReportQuery, adminReportQuery } from "@/hooks/use-identity-reports";
+import { summarizeAdmins, summarizeMfaByOrigin } from "@/lib/identity-reports";
+import { GLOBAL_ADMIN_RECOMMENDED_MAX } from "@/lib/security-posture";
+import { SecurityPosturePanel } from "@/components/dashboard/security-posture-panel";
+import { UsageCards } from "@/components/dashboard/usage-cards";
 
 const actionLabels: Record<string, string> = {
   GROUP_MEMBER_ADD: "Ajout membre",
@@ -39,6 +44,8 @@ const actionLabels: Record<string, string> = {
   TEAMS_STATUS_UPDATE: "Statut Teams",
   DEVICE_DELETE: "Machine supprimée",
 };
+
+const SEVERITY_RANK = { high: 0, medium: 1, low: 2 } as const;
 
 /** Libellé court de type de groupe pour les pastilles d'anomalie */
 const GROUP_TYPE_SHORT: Record<string, string> = {
@@ -65,15 +72,18 @@ function StatCard({
   sub,
   icon: Icon,
   loading,
+  href,
 }: {
   title: string;
   value: string | number;
   sub?: string;
   icon: React.ElementType;
   loading?: boolean;
+  /** Rend la carte cliquable (ex. vers le rapport détaillé). */
+  href?: string;
 }) {
-  return (
-    <Card className="p-5 flex items-start gap-4">
+  const card = (
+    <Card className={`relative p-5 flex items-start gap-4 h-full ${href ? "transition-colors hover:bg-foreground/5" : ""}`}>
       <div className="p-2 rounded-lg bg-primary/10">
         <Icon className="h-5 w-5 text-primary" />
       </div>
@@ -86,8 +96,14 @@ function StatCard({
         )}
         {sub && !loading && <p className="text-xs text-foreground/40 mt-0.5">{sub}</p>}
       </div>
+      {href && <ChevronRight className="absolute top-5 right-5 h-4 w-4 text-foreground/30" />}
     </Card>
   );
+  return href ? (
+    <Link href={href} title="Ouvrir le rapport détaillé" className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+      {card}
+    </Link>
+  ) : card;
 }
 
 function exportStatsCSV(
@@ -354,6 +370,34 @@ export default function DashboardPage() {
       }
     : null;
 
+  // MFA (périmètre : comptes utilisateurs actifs) et comptes administrateurs — partagés avec Rapports
+  const { data: mfaReport, isLoading: mfaLoading, isError: mfaError } = useQuery(mfaReportQuery);
+  const { data: adminReport, isLoading: adminLoading, isError: adminError } = useQuery(adminReportQuery);
+  const usersById = new Map((users ?? []).map((u) => [u.id, u]));
+  // Différentiel internes (comptes utilisateurs actifs) / invités activés
+  const mfaStats = mfaReport?.supported && users ? summarizeMfaByOrigin(mfaReport.users, usersById) : null;
+  const adminStats = adminReport ? summarizeAdmins(adminReport.assignments) : null;
+  const adminsWithoutMfaIds =
+    adminStats && mfaReport?.supported
+      ? (() => {
+          const mfaById = new Map(mfaReport.users.map((r) => [r.id, r.mfaRegistered]));
+          return adminStats.userIds.filter(
+            (id) => usersById.get(id)?.accountEnabled === true && mfaById.get(id) === false
+          );
+        })()
+      : [];
+  const adminsWithoutMfa = adminStats && mfaReport?.supported ? adminsWithoutMfaIds.length : null;
+
+  // Vraies boîtes partagées (pont Exchange) — même cache que l'écran Boîtes partagées.
+  // Indisponible (pont arrêté, pas de rôle Exchange) : seules salles/équipements sont contrôlés.
+  const { data: sharedMailboxes } = useQuery<{ id: string }[]>({
+    queryKey: ["shared-mailboxes"],
+    queryFn: () => apiFetch<{ id: string }[]>("/api/mailboxes"),
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+  const sharedMailboxIds = sharedMailboxes ? new Set(sharedMailboxes.map((m) => m.id)) : null;
+
   // Répartition des comptes désactivés (accountEnabled=false) par type primaire
   const disabledByType = users
     ? (() => {
@@ -461,6 +505,43 @@ export default function DashboardPage() {
           }),
           severity: "low" as const,
         },
+        // ── Alertes de sécurité (rôles, MFA, connexion des ressources) ──
+        {
+          id: "admins-no-mfa",
+          label: "Administrateurs sans MFA",
+          hint: "Comptes activés détenant un rôle Entra sans aucune méthode MFA enregistrée : risque majeur de prise de contrôle du tenant.",
+          users: adminsWithoutMfaIds.map((id) => usersById.get(id)).filter((u): u is M365User => !!u),
+          severity: "high" as const,
+        },
+        {
+          id: "admins-disabled",
+          label: "Comptes désactivés détenant encore un rôle d'administrateur",
+          hint: "Retirer le rôle lors de l'offboarding : une réactivation du compte rendrait immédiatement les droits.",
+          users: (adminStats?.disabledUserIds ?? []).map((id) => usersById.get(id)).filter((u): u is M365User => !!u),
+          severity: "high" as const,
+        },
+        {
+          id: "too-many-global-admins",
+          label: `administrateurs généraux — Microsoft recommande d'en avoir moins de ${GLOBAL_ADMIN_RECOMMENDED_MAX}`,
+          hint: "Réduire au strict nécessaire (2 à 4, dont un compte de secours) et attribuer des rôles moins privilégiés aux autres.",
+          users:
+            (adminStats?.globalAdmins ?? 0) >= GLOBAL_ADMIN_RECOMMENDED_MAX
+              ? adminStats!.globalAdminIds.map((id) => usersById.get(id)).filter((u): u is M365User => !!u)
+              : [],
+          severity: "medium" as const,
+        },
+        {
+          id: "resource-signin-enabled",
+          label: "Boîtes partagées / salles dont la connexion est autorisée",
+          hint: "Ces comptes n'ont pas besoin de se connecter : un mot de passe utilisable est une porte d'entrée. Bloquer la connexion (désactiver le compte) ne coupe pas la boîte aux lettres.",
+          users: users.filter((u) => {
+            if (!u.accountEnabled) return false;
+            if (sharedMailboxIds?.has(u.id)) return true;
+            const t = detectAccountType(u);
+            return t === "room" || t === "equipment";
+          }),
+          severity: "medium" as const,
+        },
       ].filter((a) => a.users.length > 0)
     : [];
 
@@ -472,7 +553,9 @@ export default function DashboardPage() {
       activeUsers: a.users.filter((u) => !dismissed.has(`${a.id}:${u.id}`)),
       dismissedUsers: a.users.filter((u) => dismissed.has(`${a.id}:${u.id}`)),
     }))
-    .filter((a) => a.activeUsers.length > 0);
+    .filter((a) => a.activeUsers.length > 0)
+    // Les plus graves d'abord (tri stable : l'ordre de déclaration est conservé à gravité égale)
+    .sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]);
 
   const totalDismissed =
     allAnomalies.filter((a) => dismissed.has(a.id)).length +
@@ -738,7 +821,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4">
         <StatCard
           title="Utilisateurs"
           value={userStats?.total ?? 0}
@@ -764,7 +847,43 @@ export default function DashboardPage() {
           icon={TrendingUp}
           loading={usersLoading}
         />
+        <StatCard
+          title="MFA activé — internes"
+          value={mfaStats ? `${mfaStats.internal.percent} %` : "—"}
+          sub={
+            mfaStats
+              ? `Internes ${mfaStats.internal.enabled}/${mfaStats.internal.total} · ` +
+                `Invités ${mfaStats.guest.percent} % (${mfaStats.guest.enabled}/${mfaStats.guest.total})`
+              : mfaError
+                ? "Indisponible"
+                : mfaReport && !mfaReport.supported
+                  ? "Indisponible (droits ou licence)"
+                  : undefined
+          }
+          icon={ShieldCheck}
+          loading={mfaLoading || usersLoading}
+          href="/dashboard/reports?report=mfa-status"
+        />
+        <StatCard
+          title="Administrateurs"
+          value={adminStats?.users ?? "—"}
+          sub={
+            adminStats
+              ? `${adminStats.globalAdmins} admin. généraux` +
+                (adminsWithoutMfa != null ? ` · ${adminsWithoutMfa} sans MFA` : "")
+              : adminError ? "Indisponible" : undefined
+          }
+          icon={UserCog}
+          loading={adminLoading}
+          href="/dashboard/reports?report=admin-accounts"
+        />
       </div>
+
+      {/* Usage : adoption Copilot, espaces proches du quota */}
+      <UsageCards />
+
+      {/* Sécurité du tenant : accès conditionnel, MFA invités, redirections externes, synchro AD */}
+      <SecurityPosturePanel guestMfa={mfaStats?.guest ?? null} />
 
       {/* Anomalies */}
       {!usersLoading && (anomalies.length > 0 || totalDismissed > 0) && (

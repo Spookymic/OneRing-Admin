@@ -58,6 +58,26 @@ export interface MailForwardingReport {
   transportRules: TransportRuleForward[];
 }
 
+export interface ForwardingSummaryItem {
+  source: ForwardRecipient;
+  target: string;
+  via: "forwardingAddress" | "forwardingSmtpAddress";
+  /** Domaine de destination absent des domaines acceptés du tenant. */
+  external: boolean;
+  deliverToMailboxAndForward: boolean;
+}
+
+/**
+ * Transferts configurés au niveau boîte sur tout le tenant (un seul appel Exchange).
+ * Les règles de boîte de réception ne sont pas incluses (parcours boîte par boîte, trop lent).
+ */
+export async function getForwardingSummary(): Promise<ForwardingSummaryItem[]> {
+  const data = await bridgeFetch<{ forwards?: ForwardingSummaryItem[]; [key: string]: unknown }>(
+    "/mailbox/forwarding-summary"
+  );
+  return data.forwards ?? [];
+}
+
 /**
  * Redirections de messagerie configurées depuis et vers un compte.
  * scanRules = parcourt les règles de boîte de TOUTES les boîtes du tenant (lent).

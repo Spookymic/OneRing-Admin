@@ -6,9 +6,11 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 
 ### Tableau de bord
 
-- KPIs tenant (utilisateurs, groupes, licences), répartition par type de compte, actifs / désactivés
+- KPIs tenant (utilisateurs, groupes, licences, **MFA activé**, **administrateurs**), répartition par type de compte, actifs / désactivés. Les cartes MFA et Administrateurs ouvrent le rapport détaillé correspondant
 - Abonnements Microsoft 365 avec jauge de consommation, audit récent
-- **Détection d'anomalies** : comptes désactivés licenciés, invités licenciés, boîtes partagées/ressources licenciées, désactivés/ressources encore membres de groupes, **groupes à propriétaire désactivé**, groupes sans propriétaire, groupes vides, licences en conflit
+- **Sécurité du tenant** (4 tuiles avec statut OK / À vérifier) : accès conditionnel (stratégies actives, MFA imposé aux administrateurs généraux et à tous les utilisateurs, paramètres de sécurité par défaut), **confiance MFA envers les invités** (accès inter-locataires, par défaut et par partenaire), **redirections mail vers l'extérieur** (transferts au niveau boîte), **synchronisation AD** (alerte au-delà de 3 h)
+- **Usage** : adoption Microsoft 365 Copilot sur 28 jours (licences inutilisées) et boîtes aux lettres / OneDrive remplis à 90 % ou plus
+- **Détection d'anomalies**, les plus graves en premier : **administrateurs sans MFA**, **comptes désactivés détenant un rôle**, **trop d'administrateurs généraux** (5 ou plus), **boîtes partagées / salles dont la connexion est autorisée**, comptes désactivés licenciés, invités licenciés, boîtes partagées/ressources licenciées, désactivés/ressources encore membres de groupes, **groupes à propriétaire désactivé**, groupes sans propriétaire, groupes vides, licences en conflit
 - **Utilisateurs & invités inactifs** (nécessite Entra Premium), pages dédiées
 - Export CSV des anomalies, export PDF du tableau de bord
 
@@ -31,6 +33,7 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 
 ### Redirections mail
 
+- **Vue d'ensemble du tenant** (affichée tant qu'aucun compte n'est analysé) : tous les transferts au niveau boîte, avec badge **Externe** quand la destination n'est pas un domaine accepté, filtre « vers l'extérieur uniquement », recherche, export Excel et bouton *Analyser* par boîte. Lien direct filtré : `/dashboard/mail-forwarding?view=external` (utilisé par le tableau de bord)
 - Pour un compte donné (via le pont Exchange, lecture seule) : redirections **depuis** ce compte (transfert de boîte `ForwardingAddress` / `ForwardingSmtpAddress`, règles de boîte de réception qui transfèrent ou redirigent) et **vers** ce compte (boîtes qui lui transfèrent leurs messages)
 - Option **analyse complète** : règles de boîte de toutes les autres boîtes qui ciblent ce compte (lent, parcourt tout le tenant)
 - **Règles de flux Exchange** qui redirigent ou copient vers ce compte, ou portent sur ses messages
@@ -83,9 +86,11 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 ### Rapports
 
 - Écran dédié : **générateur d'exports Excel configurables**. On choisit un rapport, on sélectionne la portée, et on obtient un classeur avec une **feuille consolidée + une feuille par entité**
-- Rapports disponibles : **membres de listes de distribution** (multi-DL), **membres de groupes** (multi-groupes), **groupes par utilisateur** (multi-utilisateurs), **propriétaires de groupes/DL** (met en évidence ceux sans propriétaire), **utilisateurs & licences**
+- Rapports disponibles : **membres de listes de distribution** (multi-DL), **membres de groupes** (multi-groupes), **groupes par utilisateur** (multi-utilisateurs), **propriétaires de groupes/DL** (met en évidence ceux sans propriétaire), **utilisateurs & licences**, **état MFA des comptes**, **comptes administrateurs**
+- **État MFA** : MFA actif / inactif par compte, méthodes enregistrées, méthode par défaut, capacité sans mot de passe, origine (Interne / Invité), colonne Administrateur ; **comparatif internes / invités** et feuilles dédiées aux internes et aux invités sans MFA. Pour un invité, seules les méthodes enregistrées dans ce tenant sont visibles : un invité qui fait son MFA dans son tenant d'origine apparaît « Inactif ». Source : rapport Entra *User registration details* (licence Entra ID P1), avec repli automatique sur la lecture des méthodes compte par compte
+- **Comptes administrateurs** : tous les détenteurs d'un rôle Entra (attributions actives, y compris via un groupe attribuable à un rôle ; attributions éligibles PIM si licence Entra ID P2), rôles critiques signalés, statut du compte et état MFA ; feuilles Synthèse, Par compte, Attributions
 - Colonne **« Statut du compte »** (Actif / Désactivé) dans tous les rapports listant des utilisateurs (membres, utilisateurs sélectionnés, propriétaires) ; le message de fin signale les comptes désactivés et les groupes dont tous les propriétaires sont désactivés
-- Lecture seule (aucune modification), **aucune permission supplémentaire**
+- Lecture seule (aucune modification), **aucune permission supplémentaire**. Pour l'état MFA, le compte connecté doit avoir un rôle de lecture des rapports (ex. Lecteur général)
 
 ### Exports Excel
 
@@ -133,7 +138,7 @@ Dans le portail Azure → App registrations → New registration :
    - `Directory.ReadWrite.All` — rôles d'annuaire et opérations annuaire
    - `Organization.Read.All` — abonnements / SKUs de licences
    - `MailboxSettings.ReadWrite` — réponses automatiques (absence)
-   - `UserAuthenticationMethod.Read.All` — statut MFA / méthodes d'authentification par utilisateur
+   - `UserAuthenticationMethod.Read.All` — statut MFA / méthodes d'authentification par utilisateur ; avec `AuditLog.Read.All`, rapport **État MFA** et carte MFA du tableau de bord
 
    Optionnelles (déjà déclarées dans le scope demandé au login ; il reste à accorder le consentement admin Azure pour activer la fonctionnalité — sans elles, la fonctionnalité se désactive proprement) :
    - `AuditLog.Read.All` — journal de connexion détaillé (onglet Connexions) + « créé par » (auteur d'un objet)
