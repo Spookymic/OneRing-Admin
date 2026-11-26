@@ -79,7 +79,7 @@ Outil d'administration centralisé pour Microsoft 365, conçu pour remplacer les
 
 ### Sécurité & administration
 
-- **Secrets & certificats** d'applications proches de l'expiration
+- **Secrets & certificats** d'applications : expiration et **dernière utilisation** de chaque secret / certificat et de son application (connexions applicatives et déléguées), origine de chaque application (date de création, créateur d'après le journal d'audit si récent, sinon propriétaires), filtres **« À renouveler en priorité »** (expire sous 30 j et encore utilisé), **« Inutilisés »** (90 j+ ou jamais, candidats à la suppression) et **« Sans propriétaire »**. Source : rapports d'activité Entra (préversion), `AuditLog.Read.All` + rôle de lecture
 - **Administration** : paramètres d'interface (masquer des actions sensibles), mots-clés de détection de type, configuration SSO, **comptes administrateur locaux (accès de secours) avec 2FA TOTP**, santé du pont Exchange, export/import des paramètres
 - **Historique** d'audit complet (Qui/Quand/Quoi/Cible), rétention configurable, rollback, export CSV
 
@@ -142,7 +142,7 @@ Dans le portail Azure → App registrations → New registration :
 
    Optionnelles (déjà déclarées dans le scope demandé au login ; il reste à accorder le consentement admin Azure pour activer la fonctionnalité — sans elles, la fonctionnalité se désactive proprement) :
    - `AuditLog.Read.All` — journal de connexion détaillé (onglet Connexions) + « créé par » (auteur d'un objet)
-   - `Application.Read.All` — alertes d'expiration des secrets/certificats d'applications
+   - `Application.Read.All` — alertes d'expiration des secrets/certificats d'applications ; avec `AuditLog.Read.All`, dernière utilisation des secrets/certificats et des applications
    - `Reports.Read.All` — pages **Stockage** (espace OneDrive / Exchange / SharePoint) et **Copilot** (utilisation Microsoft 365 Copilot ; rôle de lecture des rapports requis pour le compte connecté). Rapports avec ~1-2 j de latence. Pour afficher les noms réels plutôt que des identifiants masqués, désactiver l'anonymisation : centre d'admin Microsoft 365 → Paramètres → Rapports → décocher « Afficher les noms masqués ».
    - `Sites.Read.All` (**type Application**, pas Délégué) — page Stockage / SharePoint : résout les vrais noms et URLs des sites via `/sites/getAllSites` (réservé à l'app-only). Utilise le flux client-credentials de l'app registration (CLIENT_ID/SECRET). Best-effort : sans cette permission applicative consentie, le nom dérivé (URL ou groupe de propriétaires) est affiché à la place.
    - `Policy.Read.All` — page Accès conditionnel : liste des stratégies. Sans elle, l'écran fonctionne mais affiche une bannière « indisponible » sur cette section.

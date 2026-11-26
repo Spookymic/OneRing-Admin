@@ -2,6 +2,22 @@
 
 All notable changes to OneRing Admin are documented in this file.
 
+## [1.36.0] — 2026-11-26
+
+### Fonctionnalité v1.36.0 — Utilisation des secrets, certificats et applications
+
+- **Écran Secrets & certificats** :
+  - nouvelle colonne **Dernière utilisation** pour chaque secret ou certificat, avec un statut *Utilisé*, *Inutilisé depuis 90 j+* ou *Aucune utilisation enregistrée* ;
+  - sous le nom de chaque application, sa dernière connexion et sa nature : applicative (secret ou certificat) et/ou au nom d'utilisateurs ;
+  - filtres **À renouveler en priorité**, pour ce qui expire sous 30 jours (ou est déjà expiré) et est encore utilisé, et **Inutilisés**, pour ce qui n'a pas servi depuis 90 jours ou jamais. Ces derniers sont des candidats à la suppression, à vérifier avec le propriétaire, un traitement annuel pouvant ne pas apparaître ;
+  - **origine de l'application** sous son nom : date de création, puis créateur exact d'après le journal d'audit (*Add application*, conservé environ 30 jours). Pour les applications plus anciennes, ses **propriétaires**, le créateur depuis le portail en faisant partie d'office. Sinon, la mention *aucun propriétaire* ;
+  - filtre **Sans propriétaire** : personne n'est responsable du renouvellement de ces applications ;
+  - export Excel enrichi : Key ID, date de création, créateur, propriétaires, dernière utilisation, statut, priorité et activité de l'application.
+- **Tableau de bord** : chaque élément du cadre *Certificats / secrets à renouveler* indique s'il est encore utilisé, ou s'il vaut mieux le supprimer que le renouveler.
+- Sources : rapports Entra `appCredentialSignInActivities` et `servicePrincipalSignInActivities` (API beta, préversion), rapprochés par `keyId` et `appId`. Ils requièrent `AuditLog.Read.All`, déjà déclarée, et un rôle de lecture. Sans ces droits, l'écran fonctionne comme avant et affiche un bandeau.
+- La route `GET /api/security/expiring-credentials` accepte un nouveau paramètre `usage=1` ; ses paramètres sont maintenant validés par Zod.
+- Tests : `src/lib/credential-usage.test.ts`.
+
 ## [1.35.0] — 2026-11-26
 
 ### Fonctionnalité v1.35.0 — Rapports État MFA et Comptes administrateurs

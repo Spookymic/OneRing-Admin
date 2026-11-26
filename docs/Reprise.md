@@ -7,7 +7,7 @@ Ce document permet de reprendre le projet rapidement entre deux sessions Claude.
 Outil Next.js 16 + TypeScript remplaçant les consoles M365 (Entra, Exchange, Admin Center).
 Auth SSO Microsoft (NextAuth v4 + Azure AD). Appels Microsoft Graph API. Audit log PostgreSQL. Échéance : 31/03/2026.
 
-## Version actuelle : 1.35.0 (2026-11-26)
+## Version actuelle : 1.36.0 (2026-11-26)
 
 Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 
@@ -50,6 +50,7 @@ Voir [CHANGELOG.md](../CHANGELOG.md) pour le détail des modifications.
 | Écran Journaux de connexion | Terminé | Analyse `/auditLogs/signIns` (24h/7j) : succès/échec, timeline, top apps/pays/IP, MFA, auth legacy — plafonné à 2000 événements, `AuditLog.Read.All` |
 | Écran Postes de travail | Terminé | Vue unifiée Entra/Intune/Autopilot (corrélation deviceId + n° série), « Supprimer partout » (audit `DEVICE_DELETE`, irréversible), badge propriétaire désactivé, tri par colonne, surbrillance doublons de nom — permissions `Device.ReadWrite.All`, `DeviceManagementManagedDevices.ReadWrite.All`, `DeviceManagementServiceConfig.ReadWrite.All` |
 | Écran Rapports | Terminé | Générateur d'exports Excel (consolidé + 1 feuille/entité) : membres DL, membres groupes, groupes par utilisateur, propriétaires groupes/DL, utilisateurs & licences, état MFA, comptes administrateurs (v1.35.0, `src/services/graph/identity-reports.ts`, routes `/api/reports/{mfa,admins}`, cache partagé avec le tableau de bord), colonne « Statut du compte » (Actif / Désactivé, rapprochée de la liste des comptes côté client). Routes `/api/reports/{members,owners,user-groups}`, helper `listGroupMembersDetailed`. Lecture seule, aucune nouvelle permission |
+| Utilisation des secrets & applications | Terminé | Écran Secrets & certificats : dernière utilisation par secret/certificat (keyId) et par application, origine (création, créateur via audit, propriétaires), filtres « À renouveler en priorité » / « Inutilisés » / « Sans propriétaire », indication sur le tableau de bord (v1.36.0, `src/lib/credential-usage.ts`, rapports beta `appCredentialSignInActivities` + `servicePrincipalSignInActivities`, route `expiring-credentials?usage=1`) |
 | Écran Copilot | Terminé | Onglet Microsoft 365 Copilot : rapport Graph v1.0 `getMicrosoft365CopilotUsageUserDetail` (CSV v2, D7/D28/D90/D180) + SKU Copilot + annuaire → adoption, licences à réaffecter, usage par application. Onglet Cowork : pas d'API Microsoft → import du CSV du centre d'admin (`parseCoworkCsv`), table `cowork_usage_imports`, audit `COWORK_USAGE_IMPORT/DELETE` |
 | Copie des accès utilisateur | Terminé | Fiche user → Groupes → « Copier vers… » : groupes + délégations boîtes partagées, aperçu (à ajouter / déjà attribué / non copiable), rapport final exportable, annulation. `POST /api/users/[id]/groups/copy` et `/shared-mailboxes/copy`, audit `USER_GROUPS_COPY` / `USER_MAILBOX_ACCESS_COPY` + une entrée par ajout |
 | Boîtes partagées d'un utilisateur | Terminé | Onglet « Boîtes partagées » de la fiche user (export + copie), `GET /api/users/[id]/shared-mailboxes`, endpoint pont `GET /mailbox/user-access` (délégations directes) adossé à un index construit par tranches de ~8 s puis mis en cache 30 min (`ExoHelpers.psm1`), progression côté UI (`useUserSharedMailboxes`), garde `isExchangeAdmin` |

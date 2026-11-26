@@ -24,6 +24,7 @@ import { GroupMembersSheet } from "@/components/groups/group-members-sheet";
 import { mfaReportQuery, adminReportQuery } from "@/hooks/use-identity-reports";
 import { summarizeAdmins, summarizeMfaByOrigin } from "@/lib/identity-reports";
 import { GLOBAL_ADMIN_RECOMMENDED_MAX } from "@/lib/security-posture";
+import { USAGE_STATUS_LABELS, type UsageStatus } from "@/lib/credential-usage";
 import { SecurityPosturePanel } from "@/components/dashboard/security-posture-panel";
 import { UsageCards } from "@/components/dashboard/usage-cards";
 
@@ -304,13 +305,20 @@ export default function DashboardPage() {
   const inactiveUsers = inactiveData?.users ?? [];
 
   // Certificats / secrets d'app registrations expirant bientôt
-  type Cred = { appObjectId: string; appId: string; appName: string; type: "secret" | "certificate"; name: string | null; endDateTime: string; daysLeft: number };
+  // usage=1 : dernière utilisation, pour distinguer « à renouveler » de « à supprimer plutôt »
+  type Cred = { appObjectId: string; appId: string; appName: string; type: "secret" | "certificate"; name: string | null; endDateTime: string; daysLeft: number; usage?: UsageStatus };
   const { data: credData } = useQuery<{ supported: boolean; credentials: Cred[] }>({
-    queryKey: ["expiring-credentials"],
-    queryFn: () => apiFetch<{ supported: boolean; credentials: Cred[] }>("/api/security/expiring-credentials"),
+    queryKey: ["expiring-credentials", "usage"],
+    queryFn: () => apiFetch<{ supported: boolean; credentials: Cred[] }>("/api/security/expiring-credentials?usage=1"),
     staleTime: 10 * 60 * 1000,
   });
   const expiringCreds = credData?.credentials ?? [];
+  const credUsageHint = (c: Cred) =>
+    !c.usage || c.usage === "unknown"
+      ? ""
+      : c.usage === "recent"
+        ? "encore utilisé"
+        : "inutilisé : supprimer plutôt que renouveler ?";
 
   // Licences gaspillées : comptes désactivés + inactifs encore licenciés
   const disabledLicensedUsers = (users ?? []).filter((u) => !u.accountEnabled && u.assignedLicenses.length > 0);
@@ -710,6 +718,7 @@ export default function DashboardPage() {
       { header: "Expiration", key: "exp", width: 14 },
       { header: "Jours restants", key: "jours", width: 14 },
       { header: "Statut", key: "statut", width: 14 },
+      { header: "Utilisation", key: "usage", width: 30 },
     ],
     rows: expiringCreds.map((c) => ({
       app: c.appName,
@@ -718,6 +727,7 @@ export default function DashboardPage() {
       exp: c.endDateTime ? format(new Date(c.endDateTime), "dd/MM/yyyy") : "",
       jours: c.daysLeft,
       statut: c.daysLeft < 0 ? "Expiré" : c.daysLeft <= 7 ? "Critique" : "Bientôt",
+      usage: c.usage ? USAGE_STATUS_LABELS[c.usage] : "",
     })),
   });
 
@@ -1128,6 +1138,7 @@ export default function DashboardPage() {
                   {c.name ? ` « ${c.name} »` : ""}
                 </span>
                 <span className="shrink-0 font-medium">
+                  {credUsageHint(c) && <span className="font-normal opacity-70 mr-2">{credUsageHint(c)}</span>}
                   {c.daysLeft < 0 ? `expiré depuis ${-c.daysLeft} j` : `dans ${c.daysLeft} j`}
                 </span>
               </div>
